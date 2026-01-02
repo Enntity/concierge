@@ -81,7 +81,7 @@ const appNavigationMap = {
 // Legacy navigation for backward compatibility
 export const navigation = Object.values(appNavigationMap);
 
-const routesToCollapseSidebarFor = ["/workspaces/"];
+const routesToCollapseSidebarFor = ["/workspaces/", "/applet/view"];
 
 export const shouldForceCollapse = (pathname) => {
     return (
@@ -412,18 +412,29 @@ export default React.forwardRef(function Sidebar(
                                                 </span>
                                             </div>
                                             {item.name === "Chat" && (
-                                                <Plus
+                                                <button
                                                     className={cn(
-                                                        "h-6 w-6 ml-auto p-1 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-800 hover:text-sky-800 dark:hover:text-sky-300 cursor-pointer",
+                                                        "h-6 w-6 ml-auto p-1 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-800 hover:text-sky-800 dark:hover:text-sky-300 cursor-pointer flex items-center justify-center",
                                                         isCollapsed
-                                                            ? "hidden group-hover:inline"
-                                                            : "inline",
+                                                            ? "hidden group-hover:flex"
+                                                            : "flex",
+                                                        addChat.isPending && "opacity-50 cursor-not-allowed"
                                                     )}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        handleNewChat();
+                                                        if (!addChat.isPending) {
+                                                            handleNewChat();
+                                                        }
                                                     }}
-                                                />
+                                                    disabled={addChat.isPending}
+                                                    title={addChat.isPending ? t("Creating chat...") : t("New Chat")}
+                                                >
+                                                    {addChat.isPending ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Plus className="h-6 w-6" />
+                                                    )}
+                                                </button>
                                             )}
                                             {item.type === "applet" &&
                                                 item.workspaceId && (

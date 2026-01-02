@@ -39,7 +39,8 @@ export default function Layout({ children }) {
     const handleShowOptions = () => setShowOptions(true);
     const handleCloseOptions = () => setShowOptions(false);
 
-    const showChatbox = statePosition !== "closed" && pathname !== "/chat";
+    const showChatbox = statePosition !== "closed" && pathname !== "/chat" && !pathname?.startsWith("/applet/view");
+    const isAppletView = pathname?.startsWith("/applet/view");
 
     useEffect(() => {
         setSidebarOpen(false);
@@ -253,11 +254,15 @@ export default function Layout({ children }) {
                     <div className="relative flex-col">
                         <ProgressProvider>
                             <main
-                                className={`p-2 bg-slate-50 dark:bg-gray-900 flex ${showChatbox ? "gap-2" : ""}`}
+                                className={`${isAppletView ? "p-0" : "p-2"} bg-slate-50 dark:bg-gray-900 flex ${showChatbox ? "gap-2" : ""}`}
                                 ref={contentRef}
                             >
                                 <div
-                                    className={`${showChatbox ? "grow" : "w-full"} bg-white dark:bg-gray-800 dark:border-gray-700 rounded-md border p-3 lg:p-4 lg:pb-3 overflow-auto`}
+                                    className={`${showChatbox ? "grow" : "w-full"} ${
+                                        isAppletView 
+                                            ? "bg-transparent border-0 rounded-none p-0" 
+                                            : "bg-white dark:bg-gray-800 dark:border-gray-700 rounded-md border p-3 lg:p-4 lg:pb-3"
+                                    } overflow-auto`}
                                     style={{
                                         height: "calc((var(--vh, 1vh) * 100) - 105px)",
                                     }}

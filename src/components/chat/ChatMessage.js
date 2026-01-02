@@ -16,13 +16,103 @@ import { visit } from "unist-util-visit";
 import MediaCard from "./MediaCard";
 import MermaidDiagram from "../code/MermaidDiagram";
 import MermaidPlaceholder from "../code/MermaidPlaceholder";
+import AppletCard from "./AppletCard";
+import AppletPlaceholder from "./AppletPlaceholder";
 import { isVideoUrl } from "../../utils/mediaUtils";
 import { getYoutubeEmbedUrl } from "../../utils/urlUtils";
+
+/**
+ * Parse applet code block content
+ * Supports two formats:
+ * 1. URL reference: ```applet url="https://example.com" title="My App" height="400"```
+ * 2. Inline HTML: ```applet title="Calculator" height="300"
+ *    <html>...</html>
+ *    ```
+ */
+function parseAppletContent(codeString) {
+    // Guard against empty/invalid input
+    if (!codeString || typeof codeString !== 'string') {
+        return { src: null, title: null, height: 300, html: null };
+    }
+    
+    const trimmed = codeString.trim();
+    if (!trimmed) {
+        return { src: null, title: null, height: 300, html: null };
+    }
+    
+    // Check if the first line contains attributes (url=, title=, height=)
+    const lines = trimmed.split('\n');
+    const firstLine = lines[0];
+    
+    // Extract attributes from first line
+    // URL can be quoted or unquoted, and may be incomplete (missing closing quote)
+    // Try quoted first, then unquoted/incomplete
+    let urlMatch = firstLine.match(/url\s*=\s*["']([^"']+)["']/i);
+    if (!urlMatch) {
+        // Try unquoted or incomplete URL (capture until whitespace or end of line)
+        urlMatch = firstLine.match(/url\s*=\s*["']?([^\s"']+)/i);
+    }
+    
+    const titleMatch = firstLine.match(/title\s*=\s*["']([^"']+)["']/i);
+    const heightMatch = firstLine.match(/height\s*=\s*["']?(\d+)["']?/i);
+    
+    const result = {
+        src: urlMatch ? urlMatch[1] : null,
+        title: titleMatch ? titleMatch[1] : null,
+        height: heightMatch ? parseInt(heightMatch[1], 10) : 300,
+        html: null,
+    };
+    
+    // If URL is provided, that's the only content needed
+    if (result.src) {
+        return result;
+    }
+    
+    // Otherwise, check if first line has any attributes
+    const hasAttributes = urlMatch || titleMatch || heightMatch;
+    
+    // If first line has attributes, HTML starts from line 2
+    // Otherwise, entire content is HTML
+    if (hasAttributes) {
+        const htmlContent = lines.slice(1).join('\n').trim();
+        result.html = htmlContent || null;
+    } else {
+        result.html = trimmed || null;
+    }
+    
+    return result;
+}
 
 function transformToCitation(content) {
     return content
         .replace(/\[doc(\d+)\]/g, ":cd_source[$1]")
         .replace(/\[upload\]/g, ":cd_upload");
+}
+
+// Transform applet code fences to move info string attributes into the code block content
+// This is needed because react-markdown doesn't pass the info string to code components
+// Input:  ```applet title="..." url="..."\n```
+// Output: ```applet\ntitle="..." url="..."\n```
+function transformAppletFences(content) {
+    if (!content || typeof content !== 'string') return content;
+    
+    // Match applet/html-applet code fences with attributes on the info string
+    // Captures: language, attributes, and content between fences
+    const appletFenceRegex = /```(applet|html-applet)\s+([^\n`]+)([\s\S]*?)```/g;
+    
+    return content.replace(appletFenceRegex, (match, lang, attrs, body) => {
+        // Move attributes to the first line of the body
+        const trimmedAttrs = attrs.trim();
+        const trimmedBody = body.trim();
+        
+        if (trimmedBody) {
+            // Has body content - prepend attrs as first line
+            return "```" + lang + "\n" + trimmedAttrs + "\n" + trimmedBody + "\n```";
+        } else {
+            // No body content (URL-only) - attrs become the body
+            return "```" + lang + "\n" + trimmedAttrs + "\n```";
+        }
+    });
 }
 
 // Rehype plugin to restore currency placeholders after markdown parsing
@@ -281,6 +371,52 @@ function convertMessageToMarkdown(
                     );
                 }
             }
+
+            // Handle inline applets
+            // Note: transformAppletFences() preprocesses the markdown to move info string
+            // attributes into the code block body, so all content is in children
+            if (language === "applet" || language === "html-applet") {
+                // Safely convert children to string, handling undefined/null
+                const codeString = Array.isArray(children)
+                    ? children.join("")
+                    : (children != null ? String(children) : "");
+                
+                // Skip if no content
+                if (!codeString || !codeString.trim()) {
+                    return null;
+                }
+                
+                const stableKey = `applet-${simpleHash(codeString)}`;
+
+                if (finalRender) {
+                    const { src, title, height, html } = parseAppletContent(codeString);
+                    
+                    // Must have either src (URL) or html content
+                    if (!src && !html) {
+                        return null;
+                    }
+                    
+                    return (
+                        <AppletCard
+                            key={stableKey}
+                            src={src}
+                            html={html}
+                            title={title}
+                            height={height}
+                            onLoad={onLoad}
+                        />
+                    );
+                } else {
+                    // During streaming, show placeholder
+                    return (
+                        <AppletPlaceholder
+                            key={stableKey}
+                            spinnerKey={stableKey}
+                        />
+                    );
+                }
+            }
+
             return match ? (
                 <CodeBlock
                     key={`codeblock-${++componentIndex}`}
@@ -295,14 +431,21 @@ function convertMessageToMarkdown(
             );
         },
         pre({ children }) {
-            // Check if the child is a code element with mermaid language
-            const isMermaid = React.Children.toArray(children).some(
+            // Check if the child is a code element with mermaid or applet language
+            const childArray = React.Children.toArray(children);
+            const isMermaid = childArray.some(
                 (child) =>
                     React.isValidElement(child) &&
                     child.props.className?.includes("language-mermaid"),
             );
+            const isApplet = childArray.some(
+                (child) =>
+                    React.isValidElement(child) &&
+                    (child.props.className?.includes("language-applet") ||
+                     child.props.className?.includes("language-html-applet")),
+            );
 
-            if (isMermaid) {
+            if (isMermaid || isApplet) {
                 return <>{children}</>;
             }
             return <pre>{children}</pre>;
@@ -404,7 +547,7 @@ function convertMessageToMarkdown(
                 rehypeRaw,
                 [restoreCurrency, currencyPlaceholders],
             ]}
-            children={transformToCitation(modifiedPayload)}
+            children={transformToCitation(transformAppletFences(modifiedPayload))}
         />
     );
 }
