@@ -1,61 +1,44 @@
-import authConfig from "./config/index";
-
-if (!authConfig) {
-    throw new Error("Config not found");
-}
-
-const { auth } = authConfig;
+import { auth } from "./auth";
 
 export const config = {
-    matcher: "/((?!graphql).*)",
+    matcher: [
+        // Match all paths except static files and Next.js internals
+        "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    ],
 };
 
-const isAuthorized = (request) => {
-    if (auth?.provider === "entra") {
-        const emailName = request.headers
-            .get("X-MS-CLIENT-PRINCIPAL-NAME")
-            ?.toLowerCase();
+// Paths that don't require authentication
+const PUBLIC_PATHS = [
+    "/auth/login",
+    "/api/auth",
+    "/privacy",
+    "/published",
+];
 
-        // If we have Azure headers, validate domain
-        if (emailName) {
-            const allowedEmailDomains = process.env.ENTRA_AUTHORIZED_DOMAINS
-                ? process.env.ENTRA_AUTHORIZED_DOMAINS.split(",").map(
-                      (emailDomain) => emailDomain.toLowerCase(),
-                  )
-                : [];
-
-            if (!allowedEmailDomains.length) {
-                return false;
-            }
-
-            const emailDomain = emailName.split("@")[1];
-            if (!allowedEmailDomains.includes(emailDomain)) {
-                return false;
-            }
-
-            return true;
-        }
-
-        // For local development, check for local auth cookie
-        if (process.env.NODE_ENV !== "production") {
-            const cookieHeader = request.headers.get("cookie");
-            if (cookieHeader && cookieHeader.includes("local_auth_token")) {
-                // Allow local auth in development
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    return true;
+const isPublicPath = (pathname) => {
+    return PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 };
 
-export function middleware(request) {
-    if (!isAuthorized(request)) {
-        return Response.json(
-            { success: false, message: "Unauthorized" },
-            { status: 401 },
-        );
+export default auth((request) => {
+    const { pathname } = request.nextUrl;
+
+    // Allow public paths
+    if (isPublicPath(pathname)) {
+        return;
     }
-}
+
+    // Check if authenticated
+    if (request.auth?.user) {
+        return;
+    }
+
+    // Not authenticated - redirect to login or return 401 for API routes
+    if (pathname.startsWith("/api/")) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Redirect to login with callback
+    const loginUrl = new URL("/auth/login", request.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return Response.redirect(loginUrl);
+});

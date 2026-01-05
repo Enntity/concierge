@@ -1,6 +1,7 @@
 "use client";
 import { ApolloNextAppProvider } from "@apollo/experimental-nextjs-app-support";
 import React, { useContext, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { getClient } from "./graphql";
 import "./i18n";
 
@@ -21,28 +22,23 @@ import { ThemeProvider } from "./contexts/ThemeProvider";
 import { AutoTranscribeProvider } from "./contexts/AutoTranscribeContext";
 import Layout from "./layout/Layout";
 import "./tailwind.css";
-import { AuthProvider } from "./components/AuthProvider";
-import { AuthErrorDialog } from "./components/AuthErrorDialog";
-import { AuthLoadingOverlay } from "./components/AuthLoadingOverlay";
+
+// Routes that don't require authentication
+const PUBLIC_ROUTES = ["/auth/login", "/privacy", "/published"];
 
 const NEXT_PUBLIC_AMPLITUDE_API_KEY = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY;
 
-// Skip Amplitude initialization in test environment
-if (typeof document !== "undefined" && process.env.NODE_ENV !== "test") {
+// Only initialize Amplitude if API key is present and not in test environment
+if (
+    typeof document !== "undefined" &&
+    process.env.NODE_ENV !== "test" &&
+    NEXT_PUBLIC_AMPLITUDE_API_KEY
+) {
     try {
-        console.log(
-            "Initializing Amplitude with API key:",
-            NEXT_PUBLIC_AMPLITUDE_API_KEY ? "present" : "missing",
-        );
         amplitude.init(NEXT_PUBLIC_AMPLITUDE_API_KEY, {
             defaultTracking: true,
             logLevel: amplitude.Types.LogLevel.Warn,
         });
-        console.log("Amplitude initialized successfully");
-
-        // Test event to verify tracking
-        amplitude.track("Test Event", { timestamp: new Date().toISOString() });
-        console.log("Test event sent successfully");
     } catch (error) {
         console.error("Failed to initialize Amplitude:", error);
     }
@@ -61,6 +57,10 @@ const App = ({
     neuralspaceEnabled,
     useBlueGraphQL,
 }) => {
+    const pathname = usePathname();
+    const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname?.startsWith(route));
+    
+    // Only fetch user data for authenticated routes
     const { data: currentUser } = useCurrentUser();
     const { data: serverUserState, refetch: refetchServerUserState } =
         useUserState();
@@ -100,6 +100,11 @@ const App = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedUserState]);
 
+    // For public routes, render children directly without requiring auth
+    if (isPublicRoute) {
+        return children;
+    }
+
     if (!currentUser) {
         return null;
     }
@@ -129,30 +134,24 @@ const App = ({
             >
                 <StoreProvider>
                     <AutoTranscribeProvider>
-                        <AuthProvider>
-                            <React.StrictMode>
-                                <AuthContext.Provider
-                                    value={{
-                                        user: currentUser,
-                                        userState,
-                                        refetchUserState,
-                                        debouncedUpdateUserState,
-                                    }}
-                                >
-                                    <ThemeProvider savedTheme={theme}>
-                                        <LanguageProvider
-                                            savedLanguage={language}
-                                        >
-                                            <Layout>
-                                                <Body>{children}</Body>
-                                            </Layout>
-                                            <AuthErrorDialog />
-                                            <AuthLoadingOverlay />
-                                        </LanguageProvider>
-                                    </ThemeProvider>
-                                </AuthContext.Provider>
-                            </React.StrictMode>
-                        </AuthProvider>
+                        <React.StrictMode>
+                            <AuthContext.Provider
+                                value={{
+                                    user: currentUser,
+                                    userState,
+                                    refetchUserState,
+                                    debouncedUpdateUserState,
+                                }}
+                            >
+                                <ThemeProvider savedTheme={theme}>
+                                    <LanguageProvider savedLanguage={language}>
+                                        <Layout>
+                                            <Body>{children}</Body>
+                                        </Layout>
+                                    </LanguageProvider>
+                                </ThemeProvider>
+                            </AuthContext.Provider>
+                        </React.StrictMode>
                     </AutoTranscribeProvider>
                 </StoreProvider>
             </ServerContext.Provider>

@@ -9,13 +9,9 @@ import { split, HttpLink, from } from "@apollo/client";
 import { onError } from "@apollo/client/link/error";
 import { getMainDefinition } from "@apollo/client/utilities";
 import config from "../config";
-import { triggerAuthRefresh, checkAuthHeaders } from "./utils/auth";
 
 const CORTEX_GRAPHQL_API_URL =
     process.env.CORTEX_GRAPHQL_API_URL || "http://localhost:4000/graphql";
-
-// Track authentication state for GraphQL
-let isGraphQLRefreshing = false;
 
 const getClient = (serverUrl, useBlueGraphQL) => {
     let graphqlEndpoint;
@@ -35,61 +31,26 @@ const getClient = (serverUrl, useBlueGraphQL) => {
         }),
     );
 
-    // Add error handling link for authentication errors
-    const errorLink = onError(
-        ({ networkError, graphQLErrors, operation, forward }) => {
-            // Skip auth error handling for auth-related endpoints
-            if (
-                operation.operationName?.includes("auth") ||
-                operation.operationName?.includes("Auth") ||
-                operation.operationName?.includes("login")
-            ) {
-                return;
-            }
-
-            // Handle 401 Unauthorized errors
-            if (networkError && networkError.statusCode === 401) {
-                if (!isGraphQLRefreshing) {
-                    isGraphQLRefreshing = true;
-
-                    (async () => {
-                        try {
-                            // Check if we need to refresh auth
-                            const isAuthenticated = await checkAuthHeaders();
-                            if (!isAuthenticated) {
-                                await triggerAuthRefresh();
-                            }
-                        } catch (error) {
-                            console.error("GraphQL auth refresh error:", error);
-                        } finally {
-                            isGraphQLRefreshing = false;
-                        }
-                    })();
+    // Error handling link
+    const errorLink = onError(({ networkError, graphQLErrors }) => {
+        if (networkError) {
+            console.error("GraphQL network error:", networkError);
+            // On 401, redirect to login (unless already there)
+            if (networkError.statusCode === 401 && typeof window !== "undefined") {
+                if (window.location.pathname !== "/auth/login") {
+                    window.location.href = `/auth/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
                 }
             }
+        }
 
-            // Handle other network errors
-            if (networkError) {
-                console.error("GraphQL network error:", networkError);
-                // Don't retry connection refused errors - they indicate the service is down
-                if (
-                    networkError.statusCode === 0 ||
-                    networkError.message?.includes("ECONNREFUSED")
-                ) {
-                    return;
-                }
-            }
-
-            // Handle GraphQL errors
-            if (graphQLErrors) {
-                graphQLErrors.forEach(({ message, locations, path }) => {
-                    console.error(
-                        `GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`,
-                    );
-                });
-            }
-        },
-    );
+        if (graphQLErrors) {
+            graphQLErrors.forEach(({ message, locations, path }) => {
+                console.error(
+                    `GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`,
+                );
+            });
+        }
+    });
 
     const splitLink = split(
         ({ query }) => {
@@ -384,6 +345,7 @@ const GRAMMAR_AR = gql`
         }
     }
 `;
+
 const GREETING = gql`
     query Greeting(
         $text: String!
@@ -1012,7 +974,6 @@ const getWorkspacePromptQuery = (pathwayName) => {
     `;
 };
 
-// Agent-specific query with agentContext and researchMode
 const getWorkspaceAgentQuery = (pathwayName) => {
     return gql`
         query ${pathwayName}(

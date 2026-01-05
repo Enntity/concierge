@@ -11,20 +11,21 @@ $navbar-light-color: #fff;
 $navbar-light-active-color: #fff;
 $navbar-nav-link-padding-x: 1rem;
 $font-family-sans-serif:
-    Roboto,
-    Inter,
+    "Inter",
+    var(--font-inter),
     system-ui,
     -apple-system,
-    Segoe UI,
-    Helvetica Neue,
-    Noto Sans,
-    Liberation Sans,
+    "Segoe UI",
+    "Roboto",
+    "Helvetica Neue",
+    "Noto Sans",
+    "Liberation Sans",
     Arial,
     sans-serif,
-    Apple Color Emoji,
-    Segoe UI Emoji,
-    Segoe UI Symbol,
-    Noto Color Emoji;
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji";
 $font-family-serif:
     Playfair Display,
     Georgia,

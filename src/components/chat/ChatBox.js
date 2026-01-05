@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { LanguageContext } from "../../contexts/LanguageProvider";
+import { ThemeContext } from "../../contexts/ThemeProvider";
 import { setChatBoxPosition } from "../../stores/chatSlice"; // Ensure you have this action in your slice
 import ChatContent from "./ChatContent";
 import config from "../../../config";
@@ -33,6 +34,7 @@ import {
 function ChatBox() {
     const { user } = useContext(AuthContext);
     const { aiName } = user;
+    const { theme } = useContext(ThemeContext);
 
     const statePosition = useSelector((state) => state.chat?.chatBox?.position);
     const lastOpenPosition = useSelector(
@@ -185,7 +187,7 @@ function ChatBox() {
                         >
                             <img
                                 className="m-0"
-                                src={config?.global?.getLogo(language)}
+                                src={theme === "dark" ? "/app/assets/logo_dark.png" : config?.global?.getLogo(language)}
                                 alt={config?.global?.siteTitle}
                             />
                             <br></br>

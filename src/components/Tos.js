@@ -1,9 +1,10 @@
 "use client";
 
 import i18next from "i18next";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import config from "../../config";
+import { ThemeContext } from "../contexts/ThemeProvider";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -18,7 +19,8 @@ const Tos = ({ showTos, setShowTos }) => {
     const { getLogo, getTosContent } = config.global;
     const { language } = i18next;
     const { t } = useTranslation();
-    const logo = getLogo(language);
+    const { theme } = useContext(ThemeContext);
+    const logo = theme === "dark" ? "/app/assets/logo_dark.png" : getLogo(language);
     const tosContent = getTosContent(language);
     const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
 
