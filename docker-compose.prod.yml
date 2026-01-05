@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # Traefik - Reverse proxy with automatic SSL
   traefik:
@@ -46,16 +44,15 @@ services:
     env_file:
       - .env
     environment:
-      # Override/ensure these critical values
       - NODE_ENV=production
-      # Redis on Cortex server via private network
-      - REDIS_CONNECTION_STRING=redis://default:${REDIS_PASSWORD}@10.0.0.2:6379
       - AUTH_TRUST_HOST=true
       - NEXTAUTH_URL=https://${DOMAIN}
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     networks:
       - web
     extra_hosts:
-      # Allow container to reach Cortex server's private IP
       - "cortex-redis:10.0.0.2"
     labels:
       - "traefik.enable=true"
@@ -74,10 +71,10 @@ services:
     env_file:
       - .env
     environment:
-      # Override/ensure these critical values
       - NODE_ENV=production
-      # Redis on Cortex server via private network
-      - REDIS_CONNECTION_STRING=redis://default:${REDIS_PASSWORD}@10.0.0.2:6379
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     networks:
       - web
     extra_hosts:
