@@ -88,6 +88,8 @@ jobs:
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          REPO_LOWER: ${{ github.repository }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -95,15 +97,18 @@ jobs:
           script: |
             cd /opt/concierge
             
+            # Repository name must be lowercase for Docker
+            REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+            
             # Login to GitHub Container Registry
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             # Pull the new image
-            docker pull ghcr.io/${{ github.repository }}:latest
+            docker pull ghcr.io/${REPO_NAME}:latest
             
             # Update the stack with zero-downtime
             export IMAGE_TAG=latest
-            export GITHUB_REPOSITORY=${{ github.repository }}
+            export GITHUB_REPOSITORY=${REPO_NAME}
             
             # Load environment variables
             set -a
