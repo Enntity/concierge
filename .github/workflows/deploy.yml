@@ -23,6 +23,7 @@ jobs:
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: read
       packages: write

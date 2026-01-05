@@ -27,7 +27,6 @@ services:
     networks:
       - web
     labels:
-      # Dashboard (optional - access at traefik.yourdomain.com)
       - "traefik.enable=true"
       - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
@@ -52,8 +51,6 @@ services:
       - 8.8.4.4
     networks:
       - web
-    extra_hosts:
-      - "cortex-redis:10.0.0.2"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=Host(`${DOMAIN}`)"
@@ -77,8 +74,6 @@ services:
       - 8.8.4.4
     networks:
       - web
-    extra_hosts:
-      - "cortex-redis:10.0.0.2"
 
 networks:
   web:
@@ -86,4 +81,3 @@ networks:
 
 volumes:
   traefik-certificates:
-
