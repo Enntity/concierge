@@ -1,10 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
-// Validate required environment variables
-if (!process.env.AUTH_SECRET) {
-    throw new Error("AUTH_SECRET environment variable is required");
-}
+// Note: AUTH_SECRET is required at runtime. NextAuth will throw if missing.
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     providers: [
