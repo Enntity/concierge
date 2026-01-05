@@ -27,15 +27,14 @@ jest.mock("axios", () => {
     };
 });
 
-let axiosClient;
-
 describe("axiosClient", () => {
     beforeAll(() => {
         if (typeof window === "undefined") {
             global.window = {};
         }
         window.location = { pathname: "/", href: "" };
-        axiosClient = require("../axios-client").default;
+        // Initialize axios-client to register interceptors
+        void require("../axios-client").default;
     });
 
     beforeEach(() => {

@@ -65,9 +65,6 @@ export default function AIModal({
             text,
             args,
             onSelectCallback,
-            action,
-            close,
-            onCommit,
         ],
     );
 
