@@ -1,15 +1,20 @@
 // In Next.js, this file would be called: app/providers.jsx
 "use client";
+import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NotificationProvider } from "../src/contexts/NotificationContext";
+import { PrefetchOnMount } from "../src/hooks/usePrefetch";
 
 function makeQueryClient() {
     return new QueryClient({
         defaultOptions: {
             queries: {
-                // With SSR, we usually want to set some default staleTime
-                // above 0 to avoid refetching immediately on the client
-                staleTime: 60 * 1000,
+                // Aggressive caching for snappy navigation
+                staleTime: 2 * 60 * 1000, // 2 minutes before data is considered stale
+                gcTime: 10 * 60 * 1000, // 10 minutes cache time (formerly cacheTime)
+                refetchOnWindowFocus: false, // Don't refetch on tab focus
+                refetchOnMount: false, // Use cached data on mount
+                retry: 1, // Only retry once on failure
             },
         },
     });
@@ -39,8 +44,12 @@ export default function Providers({ children }) {
     const queryClient = getQueryClient();
 
     return (
-        <QueryClientProvider client={queryClient}>
-            <NotificationProvider>{children}</NotificationProvider>
-        </QueryClientProvider>
+        <SessionProvider>
+            <QueryClientProvider client={queryClient}>
+                <NotificationProvider>
+                    <PrefetchOnMount>{children}</PrefetchOnMount>
+                </NotificationProvider>
+            </QueryClientProvider>
+        </SessionProvider>
     );
 }

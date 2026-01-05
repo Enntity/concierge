@@ -19,6 +19,46 @@ The following environment variable is needed to deliver user feedback to Slack:
 
 - `SLACK_WEBHOOK_URL` - the is the URL of the Slack webhook you've configured to deliver the message to whichever channel you want to deliver it to.
 
+### Authentication
+
+Concierge supports multiple authentication providers. Configure the following environment variables based on your needs:
+
+#### Google OAuth (Sign in with Google)
+
+To enable Google authentication:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Navigate to "APIs & Services" > "Credentials"
+4. Click "Create Credentials" > "OAuth client ID"
+5. Configure the OAuth consent screen if prompted
+6. Select "Web application" as the application type
+7. Add authorized redirect URIs:
+   - Development: `http://localhost:3000/api/auth/callback/google`
+   - Production: `https://your-domain.com/api/auth/callback/google`
+8. Copy the Client ID and Client Secret
+
+Set the following environment variables:
+
+- `AUTH_GOOGLE_ID` - Your Google OAuth Client ID
+- `AUTH_GOOGLE_SECRET` - Your Google OAuth Client Secret
+- `AUTH_SECRET` - A random secret string for encrypting tokens (generate with `openssl rand -base64 32`)
+- `AUTH_ALLOWED_DOMAINS` (optional) - Comma-separated list of allowed email domains (e.g., `company.com,partner.org`)
+
+Example:
+```bash
+AUTH_GOOGLE_ID=your-client-id.apps.googleusercontent.com
+AUTH_GOOGLE_SECRET=your-client-secret
+AUTH_SECRET=your-random-secret-key
+AUTH_ALLOWED_DOMAINS=yourcompany.com
+```
+
+#### Azure Entra ID (Enterprise SSO)
+
+For Azure App Service deployments with built-in authentication:
+
+- `ENTRA_AUTHORIZED_DOMAINS` - Comma-separated list of authorized email domains for Entra ID authentication
+
 ## Available Scripts
 
 In the project directory, you can run:

@@ -20,11 +20,13 @@ import {
 } from "../../app/queries/chats";
 import { useCurrentUser } from "../../app/queries/users";
 import { useWorkspace } from "../../app/queries/workspaces";
+import { usePrefetchOnHover } from "../hooks/usePrefetch";
 
 import classNames from "../../app/utils/class-names";
 import config from "../../config";
 import SendFeedbackModal from "../components/help/SendFeedbackModal";
 import { LanguageContext } from "../contexts/LanguageProvider";
+import { ThemeContext } from "../contexts/ThemeProvider";
 import ChatNavigationItem from "./ChatNavigationItem";
 import { cn } from "@/lib/utils";
 
@@ -134,6 +136,7 @@ export default React.forwardRef(function Sidebar(
     const router = useRouter();
     const { getLogo, getSidebarLogo } = config.global;
     const { language } = useContext(LanguageContext);
+    const { theme } = useContext(ThemeContext);
     const { t } = useTranslation();
     const { data: chatsData = [], isLoading: chatsLoading } =
         useGetActiveChats();
@@ -149,6 +152,7 @@ export default React.forwardRef(function Sidebar(
 
     const deleteChat = useDeleteChat();
     const addChat = useAddChat();
+    const prefetchOnHover = usePrefetchOnHover();
 
     const isCollapsed =
         (propIsCollapsed || shouldForceCollapse(pathname)) && !isMobile;
@@ -316,17 +320,17 @@ export default React.forwardRef(function Sidebar(
 
             <div
                 className={cn(
-                    "flex h-16 shrink-0 items-center gap-2",
-                    isCollapsed ? "-mx-2" : "justify-start",
+                    "flex h-16 shrink-0 items-center justify-center",
+                    isCollapsed ? "-mx-2" : "",
                 )}
             >
-                <Link className="flex items-center gap-2" href="/">
+                <Link className="flex items-center justify-center w-full h-full" href="/">
                     <img
                         className={cn(
-                            "w-auto object-contain",
-                            isCollapsed ? "max-h-12 group-hover:h-12" : "h-12",
+                            "object-contain opacity-85 scale-150",
+                            isCollapsed ? "max-h-14 group-hover:h-14" : "h-14 max-w-full",
                         )}
-                        src={getLogo(language)}
+                        src={theme === "dark" ? "/app/assets/logo_dark.png" : getLogo(language)}
                         alt="Your Company"
                     />
                     <div
@@ -376,6 +380,11 @@ export default React.forwardRef(function Sidebar(
                                     <li
                                         key={item.name}
                                         className="rounded-md cursor-pointer group"
+                                        onMouseEnter={() => {
+                                            if (item.href) {
+                                                prefetchOnHover(item.href);
+                                            }
+                                        }}
                                     >
                                         <div
                                             className={classNames(

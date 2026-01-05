@@ -24,6 +24,29 @@ module.exports = {
             },
         },
         extend: {
+            fontFamily: {
+                sans: [
+                    "var(--font-inter)",
+                    "Inter",
+                    "system-ui",
+                    "-apple-system",
+                    "Segoe UI",
+                    "Roboto",
+                    "Helvetica Neue",
+                    "Arial",
+                    "sans-serif",
+                ],
+            },
+            letterSpacing: {
+                tighter: "-0.02em",
+                tight: "-0.015em",
+                normal: "-0.011em",
+                wide: "0.01em",
+            },
+            lineHeight: {
+                relaxed: "1.65",
+                loose: "1.75",
+            },
             keyframes: {
                 "accordion-down": {
                     from: { height: "0" },

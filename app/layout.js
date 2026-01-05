@@ -2,7 +2,6 @@ import { Inter } from "next/font/google";
 import { cookies } from "next/headers";
 import config from "../config";
 import App from "../src/App";
-import { getCurrentUser } from "./api/utils/auth";
 import Providers from "./providers";
 import classNames from "./utils/class-names";
 import {
@@ -12,7 +11,14 @@ import {
 } from "@tanstack/react-query";
 import { headers } from "next/headers";
 
-const font = Inter({ subsets: ["latin"] });
+const font = Inter({
+    subsets: ["latin"],
+    display: "swap",
+    variable: "--font-inter",
+    weight: ["300", "400", "500", "600", "700"],
+    adjustFontFallback: true,
+    preload: true,
+});
 const neuralspaceEnabled = process.env.ENABLE_NEURALSPACE === "true";
 
 export default async function RootLayout({ children }) {
@@ -30,25 +36,13 @@ export default async function RootLayout({ children }) {
     const language = cookieStore.get("i18next")?.value || "en";
     const theme = cookieStore.get("theme")?.value || "light";
 
-    // This is optional, but it will make the initial load faster
-    // The approach is outlined here (look at the app router example, not the pages router example )
-    // https://tanstack.com/query/v5/docs/framework/react/guides/advanced-ssr#prefetching-and-dehydrating-data
+    // QueryClient for hydration - user data is fetched client-side
+    // to ensure apps are properly populated via /api/users/me
     const queryClient = new QueryClient();
-    await queryClient.prefetchQuery({
-        queryKey: ["currentUser"],
-        queryFn: async () => {
-            return (await getCurrentUser()).toJSON();
-        },
-        staleTime: Infinity,
-    });
 
     return (
         <html lang={language} dir={language === "ar" ? "rtl" : "ltr"}>
             <head>
-                <link
-                    rel="stylesheet"
-                    href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
-                />
                 <link
                     rel="stylesheet"
                     href="https://fonts.googleapis.com/css?family=Playfair Display"
@@ -57,7 +51,7 @@ export default async function RootLayout({ children }) {
             </head>
             <body
                 id="labeeb-root"
-                className={classNames(theme, font.className)}
+                className={classNames(theme, font.className, font.variable)}
             >
                 <Providers>
                     <HydrationBoundary state={dehydrate(queryClient)}>

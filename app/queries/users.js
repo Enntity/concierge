@@ -1,76 +1,81 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePathname } from "next/navigation";
 import axios from "../utils/axios-client";
 
+// Routes that don't require authentication
+const PUBLIC_ROUTES = ["/auth/login", "/privacy", "/published"];
+
+function useIsPublicRoute() {
+    const pathname = usePathname();
+    return PUBLIC_ROUTES.some((route) => pathname?.startsWith(route));
+}
+
 export function useCurrentUser() {
-    const query = useQuery({
+    const isPublicRoute = useIsPublicRoute();
+    
+    return useQuery({
         queryKey: ["currentUser"],
-        queryFn: async ({ queryKey }) => {
-            const { data } = await axios.get(`/api/users/me`);
+        queryFn: async () => {
+            const { data } = await axios.get("/api/users/me");
             return data;
         },
-        staleTime: Infinity,
+        staleTime: 10 * 60 * 1000, // 10 minutes - user data rarely changes
+        gcTime: 30 * 60 * 1000, // 30 minutes cache
+        enabled: !isPublicRoute,
+        retry: false,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
     });
-
-    return query;
 }
 
 export function useUpdateCurrentUser() {
     const queryClient = useQueryClient();
 
-    const mutation = useMutation({
+    return useMutation({
         mutationFn: async ({ data }) => {
-            const response = await axios.put(`/api/users/me`, data);
+            const response = await axios.put("/api/users/me", data);
             return response.data;
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ["currentUser"] });
         },
     });
-
-    return mutation;
 }
 
 export function useUserState() {
-    const query = useQuery({
+    const isPublicRoute = useIsPublicRoute();
+    
+    return useQuery({
         queryKey: ["userState"],
         queryFn: async () => {
-            try {
-                const { data } = await axios.get(`/api/users/me/state`);
-
-                return data;
-            } catch (error) {
-                console.error("useUserState: API call failed:", error);
-                throw error;
-            }
+            const { data } = await axios.get("/api/users/me/state");
+            return data;
         },
-        staleTime: Infinity,
-        retry: 3,
-        retryDelay: 1000,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 30 * 60 * 1000, // 30 minutes cache
+        enabled: !isPublicRoute,
+        retry: false,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
     });
-
-    return query;
 }
 
 export function useUpdateUserState() {
     const queryClient = useQueryClient();
 
-    const mutation = useMutation({
+    return useMutation({
         mutationFn: async (data) => {
-            const response = await axios.put(`/api/users/me/state`, data);
+            const response = await axios.put("/api/users/me/state", data);
             return response.data;
         },
         onMutate: async ({ data }) => {
             await queryClient.cancelQueries({ queryKey: ["userState"] });
-            const previousUserState = await queryClient.getQueryData([
-                "userState",
-            ]);
+            const previousUserState = queryClient.getQueryData(["userState"]);
 
-            queryClient.setQueryData(["userState"], (old) => {
-                return {
-                    ...old,
-                    ...data,
-                };
-            });
+            queryClient.setQueryData(["userState"], (old) => ({
+                ...old,
+                ...data,
+            }));
 
             return { previousUserState };
         },
@@ -78,6 +83,4 @@ export function useUpdateUserState() {
             queryClient.setQueryData(["userState"], data);
         },
     });
-
-    return mutation;
 }
