@@ -36,7 +36,10 @@ const getClient = (serverUrl, useBlueGraphQL) => {
         if (networkError) {
             console.error("GraphQL network error:", networkError);
             // On 401, redirect to login (unless already there)
-            if (networkError.statusCode === 401 && typeof window !== "undefined") {
+            if (
+                networkError.statusCode === 401 &&
+                typeof window !== "undefined"
+            ) {
                 if (window.location.pathname !== "/auth/login") {
                     window.location.href = `/auth/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`;
                 }
@@ -359,14 +362,6 @@ const GREETING = gql`
             contextId: $contextId
             aiName: $aiName
         ) {
-            result
-        }
-    }
-`;
-
-const STYLE_GUIDE = gql`
-    query StyleGuide($text: String!, $async: Boolean) {
-        styleguide(text: $text, async: $async) {
             result
         }
     }
@@ -1097,7 +1092,6 @@ const QUERIES = {
     JIRA_STORY,
     getWorkspacePromptQuery,
     getWorkspaceAgentQuery,
-    STYLE_GUIDE,
     ENTITIES,
     STORY_ANGLES,
     SUMMARIZE_TURBO,
@@ -1191,7 +1185,6 @@ export {
     TOPICS,
     KEYWORDS,
     STORY_ANGLES,
-    STYLE_GUIDE,
     ENTITIES,
     QUERIES,
     SUBSCRIPTIONS,

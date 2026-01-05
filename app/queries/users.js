@@ -12,7 +12,7 @@ function useIsPublicRoute() {
 
 export function useCurrentUser() {
     const isPublicRoute = useIsPublicRoute();
-    
+
     return useQuery({
         queryKey: ["currentUser"],
         queryFn: async () => {
@@ -44,7 +44,7 @@ export function useUpdateCurrentUser() {
 
 export function useUserState() {
     const isPublicRoute = useIsPublicRoute();
-    
+
     return useQuery({
         queryKey: ["userState"],
         queryFn: async () => {

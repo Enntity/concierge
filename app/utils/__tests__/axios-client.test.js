@@ -53,25 +53,31 @@ describe("axiosClient", () => {
 
         it("should redirect to login on 401 error", async () => {
             window.location.pathname = "/chat";
-            
+
             const error = { response: { status: 401 } };
-            await expect(interceptors.response.error(error)).rejects.toEqual(error);
-            
+            await expect(interceptors.response.error(error)).rejects.toEqual(
+                error,
+            );
+
             expect(window.location.href).toContain("/auth/login");
         });
 
         it("should not redirect if already on login page", async () => {
             window.location.pathname = "/auth/login";
-            
+
             const error = { response: { status: 401 } };
-            await expect(interceptors.response.error(error)).rejects.toEqual(error);
-            
+            await expect(interceptors.response.error(error)).rejects.toEqual(
+                error,
+            );
+
             expect(window.location.href).toBe("");
         });
 
         it("should pass through non-401 errors", async () => {
             const error = { response: { status: 500 } };
-            await expect(interceptors.response.error(error)).rejects.toEqual(error);
+            await expect(interceptors.response.error(error)).rejects.toEqual(
+                error,
+            );
         });
     });
 });

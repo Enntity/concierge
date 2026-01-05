@@ -11,11 +11,11 @@ export default function LLMSelector({
     const { data: llms, isLoading } = useLLMs();
     const { direction } = useContext(LanguageContext);
 
-    // Filter out labeeb-agent type LLMs (they should use agentMode instead)
+    // Filter out enntity-agent type LLMs (they should use agentMode instead)
     const filteredLLMs = llms?.filter(
         (llm) =>
-            llm.identifier !== "labeebagent" &&
-            llm.identifier !== "labeebresearchagent",
+            llm.identifier !== "enntityagent" &&
+            llm.identifier !== "enntityresearchagent",
     );
 
     useEffect(() => {

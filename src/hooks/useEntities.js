@@ -6,7 +6,7 @@ export function useEntities(userAiName) {
         entities: [
             {
                 id: "default",
-                name: userAiName || "Labeeb",
+                name: userAiName || "Enntity",
                 isDefault: true,
             },
         ],
@@ -31,7 +31,7 @@ export function useEntities(userAiName) {
     // Find and update the default entity's name
     const aliasedEntities = entities.map((entity) => {
         if (entity.isDefault) {
-            return { ...entity, name: userAiName || "Labeeb" };
+            return { ...entity, name: userAiName || "Enntity" };
         }
         return entity;
     });

@@ -3,10 +3,10 @@ import Prompt from "../models/prompt";
 import { getLLMWithFallback } from "./llm-file-utils";
 
 // LLM identifiers that need migration to agentMode
-const LEGACY_AGENT_IDENTIFIERS = ["labeebagent", "labeebresearchagent"];
+const LEGACY_AGENT_IDENTIFIERS = ["enntityagent", "enntityresearchagent"];
 
 /**
- * Migrates a prompt if it uses legacy labeeb agent LLMs.
+ * Migrates a prompt if it uses legacy enntity agent LLMs.
  * Updates the prompt in the database and returns the migrated prompt with its LLM.
  *
  * @param {string} promptId - The prompt ID
@@ -30,7 +30,7 @@ export async function getPromptWithMigration(promptId) {
             const migrationUpdate = {
                 llm: defaultLLM._id,
                 agentMode: true,
-                researchMode: llm.identifier === "labeebresearchagent",
+                researchMode: llm.identifier === "enntityresearchagent",
             };
 
             await Prompt.findByIdAndUpdate(promptId, migrationUpdate);

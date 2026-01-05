@@ -440,7 +440,7 @@ export const EphemeralContent = React.memo(
                             >
                                 {convertMessageToMarkdown({
                                     payload: content,
-                                    sender: "labeeb",
+                                    sender: "enntity",
                                 })}
                             </div>
                         )}

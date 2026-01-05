@@ -3,7 +3,6 @@ import { useMemo, useCallback } from "react";
 import {
     FileText,
     Expand,
-    BookOpen,
     Edit,
     Languages,
     CheckCircle,
@@ -18,7 +17,6 @@ import SuggestionInput from "./SuggestionInput";
 import { getTextSuggestionsComponent } from "./TextSuggestions";
 import TranslateModalContent from "./TranslateModalContent";
 import HeadlineModal from "./headline/HeadlineModal";
-import NewStyleGuideModal from "./NewStyleGuideModal";
 import { getGrammarEndpoint } from "../../utils/languageDetection";
 
 const ListRenderer = ({ value }) => {
@@ -84,50 +82,6 @@ const actions = {
         dialogClassName: "modal-wide",
         SuggestionsComponent: HeadlineModal,
         commitLabel: "Use selected headline and subhead",
-    },
-    styleguide: {
-        Icon: BookOpen,
-        title: "Apply style guide",
-        dialogClassName: "modal-wide",
-        type: "always-available",
-        SuggestionsComponent: ({ text, onSelect, onClose, onCommit }) => {
-            const handleCommit = useCallback(
-                (correctedText) => {
-                    // Call onCommit to update the editor with the corrected text
-                    if (onCommit) {
-                        onCommit(correctedText, "full");
-                    } else {
-                        // Fallback to onSelect if onCommit is not available
-                        onSelect(correctedText);
-                    }
-                    // Close the modal after committing
-                    if (onClose) {
-                        onClose();
-                    }
-                },
-                [onSelect, onClose, onCommit],
-            );
-            return (
-                <NewStyleGuideModal
-                    text={text}
-                    onCommit={handleCommit}
-                    onClose={onClose}
-                />
-            );
-        },
-        commitLabel: "Close",
-    },
-    legacy_styleguide: {
-        Icon: BookOpen,
-        title: "Legacy style guide",
-        dialogClassName: "modal-wide",
-        type: "always-available",
-        SuggestionsComponent: getTextSuggestionsComponent({
-            query: "STYLE_GUIDE",
-            outputType: "diff-styleguide",
-            outputTitle: "",
-        }),
-        commitLabel: "Use Corrected Text",
     },
     summarize: {
         Icon: Summarize,

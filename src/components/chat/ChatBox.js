@@ -187,7 +187,11 @@ function ChatBox() {
                         >
                             <img
                                 className="m-0"
-                                src={theme === "dark" ? "/app/assets/logo_dark.png" : config?.global?.getLogo(language)}
+                                src={
+                                    theme === "dark"
+                                        ? "/app/assets/logo_dark.png"
+                                        : config?.global?.getLogo(language)
+                                }
                                 alt={config?.global?.siteTitle}
                             />
                             <br></br>

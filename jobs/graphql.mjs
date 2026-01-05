@@ -279,14 +279,6 @@ const GRAMMAR = gql`
     }
 `;
 
-const STYLE_GUIDE = gql`
-    query StyleGuide($text: String!, $async: Boolean) {
-        styleguide(text: $text, async: $async) {
-            result
-        }
-    }
-`;
-
 const SPELLING = gql`
     query Spelling($text: String!, $async: Boolean) {
         spelling(text: $text, async: $async) {
@@ -956,7 +948,6 @@ const QUERIES = {
     JIRA_STORY,
     getWorkspacePromptQuery,
     getWorkspaceAgentQuery,
-    STYLE_GUIDE,
     ENTITIES,
     STORY_ANGLES,
     SUMMARIZE_TURBO,
@@ -1008,7 +999,6 @@ export {
     TOPICS,
     KEYWORDS,
     STORY_ANGLES,
-    STYLE_GUIDE,
     ENTITIES,
     QUERIES,
     SUBSCRIPTIONS,

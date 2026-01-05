@@ -1,83 +1,83 @@
 services:
-  # Traefik - Reverse proxy with automatic SSL
-  traefik:
-    image: traefik:v3.6.2
-    container_name: traefik
-    restart: unless-stopped
-    command:
-      - "--api.dashboard=true"
-      - "--api.insecure=true"
-      - "--log.level=DEBUG"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=concierge_web"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "traefik-certificates:/letsencrypt"
-    networks:
-      - web
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
-      - "traefik.http.routers.dashboard.entrypoints=websecure"
-      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.middlewares=auth"
-      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
+    # Traefik - Reverse proxy with automatic SSL
+    traefik:
+        image: traefik:v3.6.2
+        container_name: traefik
+        restart: unless-stopped
+        command:
+            - "--api.dashboard=true"
+            - "--api.insecure=true"
+            - "--log.level=DEBUG"
+            - "--providers.docker=true"
+            - "--providers.docker.exposedbydefault=false"
+            - "--providers.docker.network=concierge_web"
+            - "--entrypoints.web.address=:80"
+            - "--entrypoints.websecure.address=:443"
+            - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+            - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+            - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+            - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+            - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - "/var/run/docker.sock:/var/run/docker.sock:ro"
+            - "traefik-certificates:/letsencrypt"
+        networks:
+            - web
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
+            - "traefik.http.routers.dashboard.entrypoints=websecure"
+            - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+            - "traefik.http.routers.dashboard.service=api@internal"
+            - "traefik.http.routers.dashboard.middlewares=auth"
+            - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
 
-  # Concierge Web App
-  app:
-    image: ghcr.io/${GITHUB_REPOSITORY}:${IMAGE_TAG:-latest}
-    container_name: concierge-app
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - NODE_ENV=production
-      - AUTH_TRUST_HOST=true
-      - NEXTAUTH_URL=https://${DOMAIN}
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
-    networks:
-      - web
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.app.entrypoints=websecure"
-      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
-      - "traefik.http.services.app.loadbalancer.server.port=3000"
-      - "traefik.docker.network=concierge_web"
+    # Concierge Web App
+    app:
+        image: ghcr.io/${GITHUB_REPOSITORY}:${IMAGE_TAG:-latest}
+        container_name: concierge-app
+        restart: unless-stopped
+        env_file:
+            - .env
+        environment:
+            - NODE_ENV=production
+            - AUTH_TRUST_HOST=true
+            - NEXTAUTH_URL=https://${DOMAIN}
+        dns:
+            - 8.8.8.8
+            - 8.8.4.4
+        networks:
+            - web
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.app.rule=Host(`${DOMAIN}`)"
+            - "traefik.http.routers.app.entrypoints=websecure"
+            - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+            - "traefik.http.services.app.loadbalancer.server.port=3000"
+            - "traefik.docker.network=concierge_web"
 
-  # Concierge Worker (BullMQ job processor)
-  worker:
-    image: ghcr.io/${GITHUB_REPOSITORY}:${IMAGE_TAG:-latest}
-    container_name: concierge-worker
-    restart: unless-stopped
-    command: ["node", "jobs/worker.js"]
-    env_file:
-      - .env
-    environment:
-      - NODE_ENV=production
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
-    networks:
-      - web
+    # Concierge Worker (BullMQ job processor)
+    worker:
+        image: ghcr.io/${GITHUB_REPOSITORY}:${IMAGE_TAG:-latest}
+        container_name: concierge-worker
+        restart: unless-stopped
+        command: ["node", "jobs/worker.js"]
+        env_file:
+            - .env
+        environment:
+            - NODE_ENV=production
+        dns:
+            - 8.8.8.8
+            - 8.8.4.4
+        networks:
+            - web
 
 networks:
-  web:
-    name: concierge_web
+    web:
+        name: concierge_web
 
 volumes:
-  traefik-certificates:
+    traefik-certificates:

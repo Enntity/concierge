@@ -58,8 +58,10 @@ const App = ({
     useBlueGraphQL,
 }) => {
     const pathname = usePathname();
-    const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname?.startsWith(route));
-    
+    const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+        pathname?.startsWith(route),
+    );
+
     // Only fetch user data for authenticated routes
     const { data: currentUser } = useCurrentUser();
     const { data: serverUserState, refetch: refetchServerUserState } =

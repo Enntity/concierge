@@ -93,10 +93,10 @@ describe("Workspace Publishing with cortexPathwayName", () => {
             },
             llm3: {
                 _id: "llm3",
-                identifier: "labeebagent",
-                name: "Labeeb Agent",
+                identifier: "enntityagent",
+                name: "Enntity Agent",
                 cortexPathwayName: "run_workspace_agent",
-                cortexModelName: "labeeb-agent",
+                cortexModelName: "enntity-agent",
             },
         };
 
@@ -119,7 +119,7 @@ describe("Workspace Publishing with cortexPathwayName", () => {
                 _id: "prompt3",
                 title: "Third Prompt",
                 text: "This is the third prompt text",
-                llm: "llm3", // Uses run_workspace_agent (labeeb agent)
+                llm: "llm3", // Uses run_workspace_agent (enntity agent)
                 files: [],
             },
         ];

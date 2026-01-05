@@ -320,7 +320,7 @@ function ChatContent({
                         }
                     })
                     .map((m) =>
-                        m.sender === "labeeb"
+                        m.sender === "enntity"
                             ? {
                                   role: "assistant",
                                   content: getMessagePayload(m),
@@ -433,7 +433,7 @@ function ChatContent({
                         payload: t(
                             "Something went wrong trying to respond to your request. Please try something else or start over to continue.",
                         ),
-                        sender: "labeeb",
+                        sender: "enntity",
                         sentTime: new Date().toISOString(),
                         direction: "incoming",
                         position: "single",
@@ -495,7 +495,7 @@ function ChatContent({
 
                     // Skip if it's not from the assistant or doesn't have a tool
                     if (
-                        latestMessage.sender !== "labeeb" ||
+                        latestMessage.sender !== "enntity" ||
                         !latestMessage.tool
                     ) {
                         return;

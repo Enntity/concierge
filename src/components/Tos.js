@@ -20,7 +20,8 @@ const Tos = ({ showTos, setShowTos }) => {
     const { language } = i18next;
     const { t } = useTranslation();
     const { theme } = useContext(ThemeContext);
-    const logo = theme === "dark" ? "/app/assets/logo_dark.png" : getLogo(language);
+    const logo =
+        theme === "dark" ? "/app/assets/logo_dark.png" : getLogo(language);
     const tosContent = getTosContent(language);
     const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
 

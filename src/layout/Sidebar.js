@@ -324,13 +324,22 @@ export default React.forwardRef(function Sidebar(
                     isCollapsed ? "-mx-2" : "",
                 )}
             >
-                <Link className="flex items-center justify-center w-full h-full" href="/">
+                <Link
+                    className="flex items-center justify-center w-full h-full"
+                    href="/"
+                >
                     <img
                         className={cn(
                             "object-contain opacity-85 scale-150",
-                            isCollapsed ? "max-h-14 group-hover:h-14" : "h-14 max-w-full",
+                            isCollapsed
+                                ? "max-h-14 group-hover:h-14"
+                                : "h-14 max-w-full",
                         )}
-                        src={theme === "dark" ? "/app/assets/logo_dark.png" : getLogo(language)}
+                        src={
+                            theme === "dark"
+                                ? "/app/assets/logo_dark.png"
+                                : getLogo(language)
+                        }
                         alt="Your Company"
                     />
                     <div

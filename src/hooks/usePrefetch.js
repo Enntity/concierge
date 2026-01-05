@@ -29,18 +29,17 @@ const ROUTE_DATA_MAP = {
         { key: ["chats", { page: 1 }], url: "/api/chats?page=1" },
         { key: ["chatsCount"], url: "/api/chats/count" },
     ],
-    "/workspaces": [
-        { key: ["workspaces"], url: "/api/workspaces" },
-    ],
+    "/workspaces": [{ key: ["workspaces"], url: "/api/workspaces" }],
     "/home": [
-        { key: ["tasks", { showDismissed: false }], url: "/api/tasks?showDismissed=false" },
+        {
+            key: ["tasks", { showDismissed: false }],
+            url: "/api/tasks?showDismissed=false",
+        },
     ],
     "/media": [
         { key: ["mediaItems", { page: 1 }], url: "/api/media-items?page=1" },
     ],
-    "/apps": [
-        { key: ["availableApps"], url: "/api/apps" },
-    ],
+    "/apps": [{ key: ["availableApps"], url: "/api/apps" }],
 };
 
 // Track which routes have been prefetched to avoid duplicate work
@@ -61,7 +60,7 @@ export function usePrefetchAll() {
 
     const prefetchRoutes = useCallback(() => {
         if (!isAuthenticated) return;
-        
+
         // Prefetch all routes (only once per session)
         PREFETCH_ROUTES.forEach((route) => {
             if (!prefetchedRoutes.has(route)) {
@@ -73,14 +72,16 @@ export function usePrefetchAll() {
 
     const prefetchData = useCallback(async () => {
         if (!isAuthenticated) return;
-        
+
         // Prefetch data for all routes
         const allQueries = Object.values(ROUTE_DATA_MAP).flat();
-        
-        const queriesToPrefetch = allQueries.filter(({ url }) => !prefetchedData.has(url));
-        
+
+        const queriesToPrefetch = allQueries.filter(
+            ({ url }) => !prefetchedData.has(url),
+        );
+
         if (queriesToPrefetch.length === 0) return;
-        
+
         await Promise.allSettled(
             queriesToPrefetch.map(({ key, url }) => {
                 prefetchedData.add(url);
@@ -92,20 +93,20 @@ export function usePrefetchAll() {
                     },
                     staleTime: 2 * 60 * 1000, // 2 minutes
                 });
-            })
+            }),
         );
     }, [queryClient, isAuthenticated]);
 
     const prefetchAll = useCallback(async () => {
         if (!isAuthenticated) return;
-        
+
         // Only prefetch once per app mount
         if (hasPrefetched.current) return;
         hasPrefetched.current = true;
-        
+
         // Start route prefetching immediately
         prefetchRoutes();
-        
+
         // Prefetch data in the background (don't await)
         prefetchData();
     }, [prefetchRoutes, prefetchData, isAuthenticated]);
@@ -129,12 +130,12 @@ export function usePrefetchOnHover() {
         (route) => {
             // Don't prefetch if not authenticated
             if (!isAuthenticated) return;
-            
+
             // Clear any pending prefetch
             if (hoverTimeout.current) {
                 clearTimeout(hoverTimeout.current);
             }
-            
+
             // Debounce prefetch by 50ms to avoid prefetching on quick mouse movements
             hoverTimeout.current = setTimeout(async () => {
                 // Prefetch the route (if not already done)
@@ -146,8 +147,10 @@ export function usePrefetchOnHover() {
                 // Prefetch the data for this route
                 const queries = ROUTE_DATA_MAP[route];
                 if (queries) {
-                    const queriesToPrefetch = queries.filter(({ url }) => !prefetchedData.has(url));
-                    
+                    const queriesToPrefetch = queries.filter(
+                        ({ url }) => !prefetchedData.has(url),
+                    );
+
                     if (queriesToPrefetch.length > 0) {
                         await Promise.allSettled(
                             queriesToPrefetch.map(({ key, url }) => {
@@ -160,13 +163,13 @@ export function usePrefetchOnHover() {
                                     },
                                     staleTime: 2 * 60 * 1000,
                                 });
-                            })
+                            }),
                         );
                     }
                 }
             }, 50);
         },
-        [router, queryClient, isAuthenticated]
+        [router, queryClient, isAuthenticated],
     );
 
     return prefetch;
@@ -178,14 +181,16 @@ export function usePrefetchOnHover() {
 export function PrefetchOnMount({ children }) {
     const { prefetchAll, isAuthenticated } = usePrefetchAll();
     const pathname = usePathname();
-    
+
     // Check if we're on a public route
-    const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname?.startsWith(route));
+    const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+        pathname?.startsWith(route),
+    );
 
     useEffect(() => {
         // Don't prefetch on public routes or when not authenticated
         if (isPublicRoute || !isAuthenticated) return;
-        
+
         // Small delay to not block initial render
         const timer = setTimeout(() => {
             prefetchAll();

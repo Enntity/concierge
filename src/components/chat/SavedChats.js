@@ -13,7 +13,14 @@ import {
     Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import Loader from "../../../app/components/loader";
@@ -885,9 +892,14 @@ function SavedChats({ displayState }) {
                                                                 <UserCircle className="w-4 h-4 text-gray-300" />
                                                             ) : (
                                                                 <img
-                                                                    src={theme === "dark" ? "/app/assets/logo_dark.png" : getLogo(
-                                                                        language,
-                                                                    )}
+                                                                    src={
+                                                                        theme ===
+                                                                        "dark"
+                                                                            ? "/app/assets/logo_dark.png"
+                                                                            : getLogo(
+                                                                                  language,
+                                                                              )
+                                                                    }
                                                                     alt="Logo"
                                                                     className="w-4 h-4"
                                                                 />

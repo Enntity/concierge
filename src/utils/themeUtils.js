@@ -291,8 +291,8 @@ export function generateFilteredSandboxHtml(content, theme) {
                 ${headContent}
                 <script>
                     // Make theme available to applets via JavaScript
-                    window.LABEEB_THEME = "${theme}";
-                    window.LABEEB_PREFERS_COLOR_SCHEME = "${theme}";
+                    window.ENNTITY_THEME = "${theme}";
+                    window.ENNTITY_PREFERS_COLOR_SCHEME = "${theme}";
                     
                     // Listen for theme changes from parent
                     window.addEventListener('message', function(event) {
@@ -300,8 +300,8 @@ export function generateFilteredSandboxHtml(content, theme) {
                             const newTheme = event.data.theme;
                             document.documentElement.setAttribute('data-theme', newTheme);
                             document.documentElement.style.setProperty('--prefers-color-scheme', newTheme);
-                            window.LABEEB_THEME = newTheme;
-                            window.LABEEB_PREFERS_COLOR_SCHEME = newTheme;
+                            window.ENNTITY_THEME = newTheme;
+                            window.ENNTITY_PREFERS_COLOR_SCHEME = newTheme;
                         }
                     });
                     

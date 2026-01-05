@@ -60,7 +60,7 @@ async function addProgressMessageToChat(chatId, taskId, user) {
             // Create the progress message
             const progressMessage = {
                 payload: `A ${taskType} task has been enqueued and is in progress.`,
-                sender: "labeeb",
+                sender: "enntity",
                 sentTime: new Date().toISOString(),
                 direction: "incoming",
                 position: "single",

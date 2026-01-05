@@ -34,8 +34,8 @@ To enable Google authentication:
 5. Configure the OAuth consent screen if prompted
 6. Select "Web application" as the application type
 7. Add authorized redirect URIs:
-   - Development: `http://localhost:3000/api/auth/callback/google`
-   - Production: `https://your-domain.com/api/auth/callback/google`
+    - Development: `http://localhost:3000/api/auth/callback/google`
+    - Production: `https://your-domain.com/api/auth/callback/google`
 8. Copy the Client ID and Client Secret
 
 Set the following environment variables:
@@ -46,6 +46,7 @@ Set the following environment variables:
 - `AUTH_ALLOWED_DOMAINS` (optional) - Comma-separated list of allowed email domains (e.g., `company.com,partner.org`)
 
 Example:
+
 ```bash
 AUTH_GOOGLE_ID=your-client-id.apps.googleusercontent.com
 AUTH_GOOGLE_SECRET=your-client-secret

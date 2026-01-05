@@ -3,7 +3,7 @@ import { getSidebarLogo } from "./global/sidebar";
 import { getTosContent } from "./global/tos";
 import { getPrivacyContent } from "./global/privacy";
 
-// The entire Labeeb application can be configured here
+// The entire Enntity application can be configured here
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 // THESE STRINGS CANNOT BE CHANGED.

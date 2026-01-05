@@ -148,7 +148,7 @@ function Chat({ viewingChat = null }) {
     const [showSharedByDialog, setShowSharedByDialog] = useState(false);
     const [copyStatus, setCopyStatus] = useState(false);
 
-    const defaultAiName = user?.aiName || "Labeeb";
+    const defaultAiName = user?.aiName || "Enntity";
     const { entities, defaultEntityId } = useEntities(defaultAiName);
 
     // Sync local state with fetched chat data

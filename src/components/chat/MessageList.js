@@ -120,7 +120,7 @@ const getYoutubeEmbedUrl = (url) => {
  */
 const shouldClusterWithPrevious = (message, prevMessage, nextMessage) => {
     // User messages always start a new group
-    if (message.sender !== "labeeb") {
+    if (message.sender !== "enntity") {
         return false;
     }
 
@@ -130,7 +130,7 @@ const shouldClusterWithPrevious = (message, prevMessage, nextMessage) => {
     }
 
     const isCodingAgentMessage = !!message.taskId;
-    const prevIsUser = prevMessage.sender !== "labeeb";
+    const prevIsUser = prevMessage.sender !== "enntity";
 
     // Assistant messages (non-coding agent) cluster with preceding user messages
     if (!isCodingAgentMessage && prevIsUser) {
@@ -424,7 +424,7 @@ const MessageListContent = React.memo(function MessageListContent({
             : false;
         // Check if this message has a codeRequestId (coding agent message will follow)
         let hasCodeRequest = false;
-        if (newMessage.tool && newMessage.sender === "labeeb") {
+        if (newMessage.tool && newMessage.sender === "enntity") {
             try {
                 const tool = JSON.parse(newMessage.tool);
                 hasCodeRequest = !!tool?.codeRequestId;
@@ -434,7 +434,7 @@ const MessageListContent = React.memo(function MessageListContent({
         }
         // User messages always have reduced bottom margin (assistant/streaming always cluster with them)
         // Assistant messages with codeRequestId should also have reduced margin (coding agent will follow)
-        const isUserMessage = newMessage.sender !== "labeeb";
+        const isUserMessage = newMessage.sender !== "enntity";
         const shouldReduceBottomMargin =
             nextWillCluster || isUserMessage || hasCodeRequest;
 
@@ -989,7 +989,7 @@ const MessageList = React.memo(
             (message) => {
                 const toolData = parseToolData(message.tool);
 
-                if (message.sender === "labeeb") {
+                if (message.sender === "enntity") {
                     return (
                         <BotMessage
                             message={message}
@@ -1130,7 +1130,7 @@ const MessageList = React.memo(
                                         : null;
                                 const prevIsUser =
                                     lastMessage &&
-                                    lastMessage.sender !== "labeeb";
+                                    lastMessage.sender !== "enntity";
                                 const shouldCluster = prevIsUser;
 
                                 // Apply clustering spacing
@@ -1164,7 +1164,7 @@ const MessageList = React.memo(
                             !isStreaming &&
                             renderMessage({
                                 id: "loading",
-                                sender: "labeeb",
+                                sender: "enntity",
                                 entityId: selectedEntityId,
                                 payload: (
                                     <div className="flex gap-4">

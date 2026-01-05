@@ -12,12 +12,14 @@ export const getCurrentUser = async (convertToJsonObj = true) => {
 
     // Get user from NextAuth session
     const session = await auth();
-    
+
     if (!session?.user) {
         return { userId: "anonymous", name: "Anonymous" };
     }
 
-    const id = session.user.id || `oauth_${session.user.email?.replace("@", "_").replace(/\./g, "_")}`;
+    const id =
+        session.user.id ||
+        `oauth_${session.user.email?.replace("@", "_").replace(/\./g, "_")}`;
     const username = session.user.email;
 
     // Find or create user in database
@@ -51,13 +53,15 @@ export const getCurrentUser = async (convertToJsonObj = true) => {
                 contextId,
                 contextKey,
                 aiMemorySelfModify: true,
-                aiName: "Labeeb",
+                aiName: "Enntity",
                 agentModel: "oai-gpt51",
             });
         } catch (error) {
             // Handle race condition: if user was created by another request
             if (error.code === 11000) {
-                user = await User.findOne({ userId: id }) || await User.findOne({ username });
+                user =
+                    (await User.findOne({ userId: id })) ||
+                    (await User.findOne({ username }));
                 if (!user) throw error;
             } else {
                 throw error;
@@ -67,12 +71,12 @@ export const getCurrentUser = async (convertToJsonObj = true) => {
 
     // Ensure user has contextId and contextKey
     let needsSave = false;
-    
+
     if (!user.contextId) {
         user.contextId = uuidv4();
         needsSave = true;
     }
-    
+
     if (!user.contextKey) {
         user.contextKey = crypto.randomBytes(32).toString("hex");
         needsSave = true;
@@ -95,7 +99,7 @@ export const getCurrentUser = async (convertToJsonObj = true) => {
     if (convertToJsonObj) {
         user = JSON.parse(JSON.stringify(user.toJSON()));
     }
-    
+
     return user;
 };
 

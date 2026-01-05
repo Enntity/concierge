@@ -21,7 +21,7 @@ const StreamingContent = React.memo(function StreamingContent({
         return convertMessageToMarkdown(
             {
                 payload: content,
-                sender: "labeeb",
+                sender: "enntity",
             },
             false,
         );

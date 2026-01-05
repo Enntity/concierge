@@ -47,7 +47,7 @@ export default function DigestBlock({ block, contentClassName }) {
                 {
                     payload: blockContent.payload,
                     tool: blockContent.tool,
-                    sender: "labeeb",
+                    sender: "enntity",
                     sentTime: new Date().toISOString(),
                     direction: "incoming",
                     position: "single",
