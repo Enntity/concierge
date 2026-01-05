@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useContext } from "react";
 import config from "../../../config";
+import { ThemeContext } from "../../contexts/ThemeProvider";
 
 // Accept an optional size prop (defaults to 'small' if not provided)
 const EntityIcon = ({ entity, size = "sm" }) => {
+    const { theme } = useContext(ThemeContext);
+    
     // If entity is default, show the app logo
     if (entity?.isDefault) {
-        const logoUrl = config.global.getLogo();
+        const logoUrl = theme === "dark" ? "/app/assets/logo_dark.png" : config.global.getLogo();
         return (
             <img
                 src={logoUrl}

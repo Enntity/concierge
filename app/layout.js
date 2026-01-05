@@ -47,7 +47,7 @@ export default async function RootLayout({ children }) {
                     rel="stylesheet"
                     href="https://fonts.googleapis.com/css?family=Playfair Display"
                 />
-                <link rel="icon" type="image/png" href={getLogo(language)} />
+                <link rel="icon" type="image/png" href={theme === "dark" ? "/app/assets/logo_dark.png" : getLogo(language)} />
             </head>
             <body
                 id="labeeb-root"

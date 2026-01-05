@@ -13,11 +13,12 @@ import {
     Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import Loader from "../../../app/components/loader";
 import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
+import { ThemeContext } from "../../contexts/ThemeProvider";
 import {
     useAddChat,
     useBulkDeleteChats,
@@ -76,6 +77,7 @@ const getCategoryTranslation = (category, t) => {
 
 function SavedChats({ displayState }) {
     const { t } = useTranslation();
+    const { theme } = useContext(ThemeContext);
     const deleteChat = useDeleteChat();
     const bulkImportChats = useBulkImportChats();
     const bulkDeleteChats = useBulkDeleteChats();
@@ -883,7 +885,7 @@ function SavedChats({ displayState }) {
                                                                 <UserCircle className="w-4 h-4 text-gray-300" />
                                                             ) : (
                                                                 <img
-                                                                    src={getLogo(
+                                                                    src={theme === "dark" ? "/app/assets/logo_dark.png" : getLogo(
                                                                         language,
                                                                     )}
                                                                     alt="Logo"
