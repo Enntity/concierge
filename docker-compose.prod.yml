@@ -53,9 +53,14 @@ services:
             - web
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.app.rule=Host(`${DOMAIN}`)"
+            # Accept primary domain + root domain + www (middleware handles redirect)
+            - "traefik.http.routers.app.rule=Host(`${DOMAIN}`) || Host(`enntity.com`) || Host(`www.enntity.com`)"
             - "traefik.http.routers.app.entrypoints=websecure"
             - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+            # Request SSL certs for all domains
+            - "traefik.http.routers.app.tls.domains[0].main=${DOMAIN}"
+            - "traefik.http.routers.app.tls.domains[1].main=enntity.com"
+            - "traefik.http.routers.app.tls.domains[2].main=www.enntity.com"
             - "traefik.http.services.app.loadbalancer.server.port=3000"
             - "traefik.docker.network=concierge_web"
 

@@ -16,6 +16,14 @@ const isPublicPath = (pathname) => {
 
 export default auth((request) => {
     const { pathname } = request.nextUrl;
+    const host = request.headers.get("host");
+
+    // Redirect non-canonical domains to ai.enntity.com
+    if (host && /^(www\.)?enntity\.com$/i.test(host)) {
+        const url = new URL(request.url);
+        url.host = "ai.enntity.com";
+        return Response.redirect(url.toString(), 301);
+    }
 
     // Allow public paths
     if (isPublicPath(pathname)) {
