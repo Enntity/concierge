@@ -1,9 +1,9 @@
 "use client";
 import { Dialog, Transition } from "@headlessui/react";
-import { Menu, X, MessageCircle } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { Flip, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthContext } from "../App";
@@ -14,7 +14,6 @@ import UserOptions from "../components/UserOptions";
 import { LanguageContext } from "../contexts/LanguageProvider";
 import { ProgressProvider } from "../contexts/ProgressContext";
 import { ThemeContext } from "../contexts/ThemeProvider";
-import { setChatBoxPosition } from "../stores/chatSlice";
 import Footer from "./Footer";
 import ProfileDropdown from "./ProfileDropdown";
 import Sidebar from "./Sidebar";
@@ -29,7 +28,6 @@ export default function Layout({ children }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [showTos, setShowTos] = useState(false);
     const statePosition = useSelector((state) => state.chat?.chatBox?.position);
-    const dispatch = useDispatch();
     const { user } = useContext(AuthContext);
     const pathname = usePathname();
     const { theme } = useContext(ThemeContext);
@@ -197,50 +195,12 @@ export default function Layout({ children }) {
 
                         <div className="flex flex-1 items-center gap-x-3 justify-end ">
                             <div className="flex gap-3">
-                                {!pathname?.includes("/chat") && (
-                                    <div className="hidden sm:block flex items-center">
-                                        <button
-                                            disabled={/^\/chat(\/|$)/.test(
-                                                pathname,
-                                            )}
-                                            onClick={() => {
-                                                if (
-                                                    statePosition === "docked"
-                                                ) {
-                                                    dispatch(
-                                                        setChatBoxPosition({
-                                                            position: "closed",
-                                                        }),
-                                                    );
-                                                } else {
-                                                    dispatch(
-                                                        setChatBoxPosition({
-                                                            position: "docked",
-                                                        }),
-                                                    );
-                                                }
-                                            }}
-                                            className="relative mt-1"
-                                        >
-                                            <MessageCircle
-                                                fill={
-                                                    statePosition ===
-                                                        "docked" ||
-                                                    pathname === "/chat"
-                                                        ? "#0284c7"
-                                                        : "none"
-                                                }
-                                                stroke="#0284c7"
-                                                className="h-5 w-5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                                            />
-                                        </button>
-                                    </div>
-                                )}
-                                <div className="flex items-center">
+                                {/* Chat icon hidden for now - sidebar chat mode not yet available */}
+                                <div className="flex items-center h-9">
                                     <NotificationButton />
                                 </div>
                             </div>
-                            <div>
+                            <div className="flex items-center mt-1">
                                 <ProfileDropdown
                                     user={user}
                                     handleShowOptions={handleShowOptions}

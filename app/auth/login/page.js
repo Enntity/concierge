@@ -1,22 +1,33 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import AnimatedLogo from "../../../src/components/common/AnimatedLogo";
 
 // Floating particles for atmospheric depth
 function Particles() {
-    const particles = useMemo(() => {
-        return Array.from({ length: 20 }, (_, i) => ({
-            id: i,
-            left: `${Math.random() * 100}%`,
-            delay: `${Math.random() * 15}s`,
-            duration: `${15 + Math.random() * 10}s`,
-            size: Math.random() * 3 + 1,
-            opacity: Math.random() * 0.5 + 0.2,
-        }));
+    const [particles, setParticles] = useState([]);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        // Generate particles only on client side to avoid hydration mismatch
+        setParticles(
+            Array.from({ length: 20 }, (_, i) => ({
+                id: i,
+                left: `${Math.random() * 100}%`,
+                delay: `${Math.random() * 15}s`,
+                duration: `${15 + Math.random() * 10}s`,
+                size: Math.random() * 3 + 1,
+                opacity: Math.random() * 0.5 + 0.2,
+            })),
+        );
     }, []);
+
+    if (!mounted) {
+        return null;
+    }
 
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -385,18 +396,18 @@ function LoginForm() {
                                 ${isLoading ? "" : "hover:scale-[1.02] active:scale-[0.98]"}
                             `}
                             style={{
-                                background: isLoading 
+                                background: isLoading
                                     ? "rgba(30, 41, 59, 0.8)"
                                     : isHovering
-                                        ? "linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(167, 139, 250, 0.15) 100%)"
-                                        : "linear-gradient(135deg, rgba(148, 163, 184, 0.2) 0%, rgba(100, 116, 139, 0.15) 100%)",
+                                      ? "linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(167, 139, 250, 0.15) 100%)"
+                                      : "linear-gradient(135deg, rgba(148, 163, 184, 0.2) 0%, rgba(100, 116, 139, 0.15) 100%)",
                                 backdropFilter: "blur(8px)",
                                 color: isLoading ? "#64748b" : "#f1f5f9",
                                 boxShadow: isLoading
                                     ? "none"
                                     : isHovering
-                                        ? "0 8px 30px -4px rgba(6, 182, 212, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.15), 0 0 0 1px rgba(34, 211, 238, 0.2)"
-                                        : "0 4px 20px -4px rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 0 0 1px rgba(148, 163, 184, 0.1)",
+                                      ? "0 8px 30px -4px rgba(6, 182, 212, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.15), 0 0 0 1px rgba(34, 211, 238, 0.2)"
+                                      : "0 4px 20px -4px rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 0 0 1px rgba(148, 163, 184, 0.1)",
                             }}
                         >
                             {isLoading ? (

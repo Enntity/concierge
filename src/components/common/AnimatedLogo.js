@@ -62,8 +62,11 @@ export default function AnimatedLogo({
                     className={`relative z-10 ${mounted && animate ? "animate-float" : ""}`}
                     style={{
                         opacity: mounted ? 1 : 0,
-                        transform: mounted ? "translateY(0)" : "translateY(20px)",
-                        transition: "opacity 0.8s ease-out, transform 0.8s ease-out",
+                        transform: mounted
+                            ? "translateY(0)"
+                            : "translateY(20px)",
+                        transition:
+                            "opacity 0.8s ease-out, transform 0.8s ease-out",
                     }}
                 >
                     <img
@@ -103,17 +106,16 @@ export default function AnimatedLogo({
                     animation: color-shift 8s ease-in-out infinite;
                 }
                 @keyframes color-shift {
-                    0%, 100% {
-                        filter: 
-                            drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))
+                    0%,
+                    100% {
+                        filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))
                             drop-shadow(0 0 8px rgba(34, 211, 238, 0.7))
                             drop-shadow(0 0 20px rgba(34, 211, 238, 0.5))
                             drop-shadow(0 0 40px rgba(6, 182, 212, 0.4))
                             drop-shadow(0 0 60px rgba(167, 139, 250, 0.3));
                     }
                     50% {
-                        filter: 
-                            drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))
+                        filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))
                             drop-shadow(0 0 8px rgba(167, 139, 250, 0.7))
                             drop-shadow(0 0 20px rgba(167, 139, 250, 0.5))
                             drop-shadow(0 0 40px rgba(147, 51, 234, 0.4))

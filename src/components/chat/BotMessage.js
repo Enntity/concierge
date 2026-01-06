@@ -406,9 +406,9 @@ export const EphemeralContent = React.memo(
                             toolCalls.map((toolCall, index) => (
                                 <div
                                     key={index}
-                                    className="flex items-center gap-2 mb-1 last:mb-0 rtl:flex-row-reverse"
+                                    className="flex items-start gap-2 mb-1 last:mb-0 rtl:flex-row-reverse"
                                 >
-                                    <div className="flex-shrink-0 rtl:order-2">
+                                    <div className="flex-shrink-0 rtl:order-2 mt-0.5">
                                         {toolCall.status === "thinking" && (
                                             <Loader2 className="h-3 w-3 text-gray-500 dark:text-gray-400 animate-spin" />
                                         )}

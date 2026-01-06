@@ -176,6 +176,16 @@ module.exports = {
                         transform: "translateX(4px)",
                     },
                 },
+                sparkle: {
+                    "0%, 100%": {
+                        opacity: "0",
+                        transform: "scale(0) rotate(0deg)",
+                    },
+                    "50%": {
+                        opacity: "1",
+                        transform: "scale(1) rotate(180deg)",
+                    },
+                },
             },
             animation: {
                 "accordion-down": "accordion-down 0.2s ease-out",
@@ -188,12 +198,14 @@ module.exports = {
                 "pulse-slow": "pulse-slow 4s ease-in-out infinite",
                 "pulse-slower": "pulse-slower 6s ease-in-out infinite",
                 "ping-slow": "ping-slow 3s cubic-bezier(0, 0, 0.2, 1) infinite",
-                "ping-slower": "ping-slower 4s cubic-bezier(0, 0, 0.2, 1) infinite",
+                "ping-slower":
+                    "ping-slower 4s cubic-bezier(0, 0, 0.2, 1) infinite",
                 "fade-up": "fade-up 0.8s ease-out forwards",
                 "fade-in-scale": "fade-in-scale 0.5s ease-out forwards",
                 "grid-pulse": "grid-pulse 8s ease-in-out infinite",
                 "particle-float": "particle-float 15s linear infinite",
                 "shake-gentle": "shake-gentle 0.5s ease-in-out",
+                sparkle: "sparkle 3s ease-in-out infinite",
             },
         },
     },

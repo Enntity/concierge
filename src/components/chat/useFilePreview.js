@@ -54,12 +54,17 @@ function needsProxy(url) {
     if (!url) return false;
     try {
         const urlObj = new URL(url);
+        const hostname = urlObj.hostname;
+        // Match any Azure Blob Storage URL
+        if (hostname.endsWith(".blob.core.windows.net")) {
+            return true;
+        }
+        // Match Google Cloud Storage URLs
         const proxyDomains = [
-            "ajcortexfilestorage.blob.core.windows.net",
             "storage.googleapis.com",
             "storage.cloud.google.com",
         ];
-        return proxyDomains.some((domain) => urlObj.hostname.includes(domain));
+        return proxyDomains.some((domain) => hostname.includes(domain));
     } catch {
         return false;
     }

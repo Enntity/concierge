@@ -11,7 +11,7 @@ import {
 import * as Icons from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
     useAddChat,
@@ -42,6 +42,53 @@ const getIconComponent = (iconName) => {
     // Fallback to default icon
     return AppWindow;
 };
+
+// Subtle sparkles around the logo
+function LogoSparkles({ theme, isCollapsed }) {
+    const sparkles = useMemo(() => {
+        return Array.from({ length: 8 }, (_, i) => ({
+            id: i,
+            // Position sparkles around the logo in a circle
+            angle: (i * 360) / 8,
+            distance: 35 + Math.random() * 10, // Distance from center
+            delay: `${Math.random() * 3}s`,
+            size: Math.random() * 2 + 1.5,
+            opacity: Math.random() * 0.4 + 0.3,
+        }));
+    }, []);
+
+    // Only show sparkles in dark mode
+    if (theme !== "dark") return null;
+
+    if (isCollapsed) return null;
+
+    return (
+        <div className="absolute inset-0 pointer-events-none overflow-visible">
+            {sparkles.map((sparkle) => {
+                const radian = (sparkle.angle * Math.PI) / 180;
+                const x = Math.cos(radian) * sparkle.distance;
+                const y = Math.sin(radian) * sparkle.distance;
+
+                return (
+                    <div
+                        key={sparkle.id}
+                        className="absolute rounded-full animate-sparkle"
+                        style={{
+                            left: `calc(50% + ${x}px)`,
+                            top: `calc(50% + ${y}px)`,
+                            width: `${sparkle.size}px`,
+                            height: `${sparkle.size}px`,
+                            background: `radial-gradient(circle, rgba(34, 211, 238, ${sparkle.opacity}) 0%, rgba(167, 139, 250, ${sparkle.opacity * 0.5}) 50%, transparent 100%)`,
+                            boxShadow: `0 0 ${sparkle.size * 2}px rgba(34, 211, 238, ${sparkle.opacity * 0.6}), 0 0 ${sparkle.size * 4}px rgba(167, 139, 250, ${sparkle.opacity * 0.3})`,
+                            transform: "translate(-50%, -50%)",
+                            animationDelay: sparkle.delay,
+                        }}
+                    />
+                );
+            })}
+        </div>
+    );
+}
 
 // App slug to navigation item mapping
 const appNavigationMap = {
@@ -329,12 +376,13 @@ export default React.forwardRef(function Sidebar(
 
             <div
                 className={cn(
-                    "flex h-16 shrink-0 items-center justify-center",
+                    "relative flex h-16 shrink-0 items-center justify-center mb-4",
                     isCollapsed ? "-mx-2" : "",
                 )}
             >
+                <LogoSparkles theme={theme} isCollapsed={isCollapsed} />
                 <Link
-                    className="flex items-center justify-center w-full h-full"
+                    className="relative z-10 flex items-center justify-center w-full h-full"
                     href="/"
                 >
                     <img

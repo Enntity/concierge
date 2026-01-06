@@ -18,7 +18,7 @@ export default function ProfileDropdown({
     return (
         <Menu as="div" className="relative inline-block text-start">
             <div>
-                <Menu.Button className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-500 overflow-hidden">
+                <Menu.Button className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-500 overflow-hidden border-2 border-gray-300 dark:border-gray-600">
                     {user?.profilePicture || user?.picture ? (
                         <img
                             src={user.profilePicture || user.picture}

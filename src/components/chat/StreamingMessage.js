@@ -220,7 +220,7 @@ const StreamingMessage = React.memo(function StreamingMessage({
                                         transform: `translate(${loaderPosition.x}px, ${loaderPosition.y}px)`,
                                     }}
                                 >
-                                    <Loader size="small" delay={0} />
+                                    <Loader size="tiny" delay={0} />
                                 </div>
                             </div>
                         )}
