@@ -189,7 +189,7 @@ function ChatBox() {
                                 className="m-0"
                                 src={
                                     theme === "dark"
-                                        ? "/app/assets/logo_dark.png"
+                                        ? "/app/assets/enntity_logo_dark.svg"
                                         : config?.global?.getLogo(language)
                                 }
                                 alt={config?.global?.siteTitle}

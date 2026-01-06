@@ -326,7 +326,7 @@ function LoginForm() {
                         ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
                     `}
                 >
-                    <AnimatedLogo size={140} animate={true} showText={true} />
+                    <AnimatedLogo size={140} animate={true} />
                 </div>
 
                 {/* Welcome text */}

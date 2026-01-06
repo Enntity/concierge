@@ -37,7 +37,8 @@ const LLM_IDENTIFIERS = {
 export default {
     global: {
         siteTitle: "Concierge",
-        getLogo: () => "/app/assets/logo.png",
+        getLogo: () => "/app/assets/enntity_logo.svg",
+        getLogoDark: () => "/app/assets/enntity_logo_dark.svg",
         getTosContent,
         getPrivacyContent,
         getSidebarLogo,

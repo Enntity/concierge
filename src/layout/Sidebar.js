@@ -339,14 +339,15 @@ export default React.forwardRef(function Sidebar(
                 >
                     <img
                         className={cn(
-                            "object-contain opacity-85 scale-150",
+                            "object-contain opacity-85 scale-150 transition-all duration-300",
                             isCollapsed
                                 ? "max-h-14 group-hover:h-14"
                                 : "h-14 max-w-full",
+                            theme === "dark" && "sidebar-logo-glow",
                         )}
                         src={
                             theme === "dark"
-                                ? "/app/assets/logo_dark.png"
+                                ? "/app/assets/enntity_logo_dark.svg"
                                 : getLogo(language)
                         }
                         alt="Your Company"

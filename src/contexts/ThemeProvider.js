@@ -7,7 +7,7 @@ import { AuthContext } from "../App";
 export const ThemeContext = createContext({});
 
 // it provides the theme context to app
-export function ThemeProvider({ children, savedTheme = "light" }) {
+export function ThemeProvider({ children, savedTheme = "dark" }) {
     const authContext = useContext(AuthContext);
     const { userState, debouncedUpdateUserState } = authContext || {};
     const [theme, setTheme] = useState(savedTheme);

@@ -10,7 +10,7 @@ const EntityIcon = ({ entity, size = "sm" }) => {
     if (entity?.isDefault) {
         const logoUrl =
             theme === "dark"
-                ? "/app/assets/logo_dark.png"
+                ? "/app/assets/enntity_logo_dark.svg"
                 : config.global.getLogo();
         return (
             <img

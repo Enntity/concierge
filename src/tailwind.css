@@ -109,6 +109,32 @@
         text-rendering: optimizeLegibility;
     }
 
+    /* Default dark mode background - prevents white flash */
+    html.dark,
+    .dark {
+        @apply bg-slate-900;
+    }
+
+    .dark body {
+        @apply bg-slate-900 text-gray-200;
+    }
+
+    /* Subtle glow for sidebar logo */
+    .sidebar-logo-glow {
+        filter: 
+            drop-shadow(0 0 1px rgba(255, 255, 255, 0.5))
+            drop-shadow(0 0 4px rgba(34, 211, 238, 0.25))
+            drop-shadow(0 0 8px rgba(167, 139, 250, 0.15));
+        transition: filter 0.3s ease;
+    }
+
+    .sidebar-logo-glow:hover {
+        filter: 
+            drop-shadow(0 0 1px rgba(255, 255, 255, 0.6))
+            drop-shadow(0 0 6px rgba(34, 211, 238, 0.35))
+            drop-shadow(0 0 12px rgba(167, 139, 250, 0.25));
+    }
+
     body {
         @apply leading-relaxed;
         letter-spacing: -0.011em;

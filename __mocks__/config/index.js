@@ -25,7 +25,7 @@ const config = {
         getLogo: (language) =>
             `/app/assets/enntity-logo-${language === "ar" ? "ar" : "en"}.png`,
         getTosContent: async () => "",
-        getSidebarLogo: () => "/app/assets/sidebar-logo.png",
+        getSidebarLogo: () => "/app/assets/enntity_logo.svg",
         getPublicGraphQLEndpoint: (graphQLEndpoint) => graphQLEndpoint,
     },
     data: {

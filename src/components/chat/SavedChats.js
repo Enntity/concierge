@@ -895,7 +895,7 @@ function SavedChats({ displayState }) {
                                                                     src={
                                                                         theme ===
                                                                         "dark"
-                                                                            ? "/app/assets/logo_dark.png"
+                                                                            ? "/app/assets/enntity_logo_dark.svg"
                                                                             : getLogo(
                                                                                   language,
                                                                               )

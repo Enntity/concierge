@@ -34,7 +34,7 @@ export default async function RootLayout({ children }) {
 
     const cookieStore = cookies();
     const language = cookieStore.get("i18next")?.value || "en";
-    const theme = cookieStore.get("theme")?.value || "light";
+    const theme = cookieStore.get("theme")?.value || "dark";
 
     // QueryClient for hydration - user data is fetched client-side
     // to ensure apps are properly populated via /api/users/me
@@ -43,16 +43,29 @@ export default async function RootLayout({ children }) {
     return (
         <html lang={language} dir={language === "ar" ? "rtl" : "ltr"}>
             <head>
+                {/* Prevent white flash - apply dark background immediately */}
+                <style
+                    dangerouslySetInnerHTML={{
+                        __html: `
+                            html, body {
+                                background-color: ${theme === "dark" ? "#0f172a" : "#ffffff"};
+                            }
+                            .dark body, body.dark {
+                                background-color: #0f172a;
+                            }
+                        `,
+                    }}
+                />
                 <link
                     rel="stylesheet"
                     href="https://fonts.googleapis.com/css?family=Playfair Display"
                 />
                 <link
                     rel="icon"
-                    type="image/png"
+                    type="image/svg+xml"
                     href={
                         theme === "dark"
-                            ? "/app/assets/logo_dark.png"
+                            ? "/app/assets/enntity_logo_dark.svg"
                             : getLogo(language)
                     }
                 />
