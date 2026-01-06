@@ -151,7 +151,7 @@ function Translation({
             <div className="flex flex-col gap-2">
                 <div className="flex flex-col sm:flex-row gap-2 items-center">
                     <div className="flex-1 flex gap-2 items-center justify-between w-full">
-                        <span className="text-sm whitespace-nowrap">
+                        <span className="text-sm whitespace-nowrap text-gray-700 dark:text-gray-300">
                             {t("Translate to")}
                         </span>
                         &nbsp;&nbsp;
@@ -244,7 +244,7 @@ function Translation({
                         )}
                     >
                         <textarea
-                            className="lb-input w-full h-full p-2 border border-gray-300 rounded-md resize-none text-base sm:text-sm"
+                            className="lb-input w-full h-full p-2 border border-gray-300 dark:border-gray-600 rounded-md resize-none text-base sm:text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                             dir="auto"
                             disabled={loading}
                             rows={10}
@@ -309,7 +309,7 @@ function Translation({
                                 return (
                                     <textarea
                                         readOnly
-                                        className="w-full h-full lb-input p-2 border border-gray-300 dark:border-gray-600 rounded-md resize-none bg-gray-100 dark:bg-gray-800"
+                                        className="w-full h-full lb-input p-2 border border-gray-300 dark:border-gray-600 rounded-md resize-none bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                                         dir={languageStyles.direction}
                                         style={{
                                             fontFamily:

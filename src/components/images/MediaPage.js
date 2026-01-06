@@ -87,7 +87,6 @@ import { useFileUpload } from "./hooks/useFileUpload";
 import BulkActionsBar from "../common/BulkActionsBar";
 import FilterInput from "../common/FilterInput";
 import EmptyState from "../common/EmptyState";
-import "./Media.scss";
 
 function MediaPage() {
     const { direction } = useContext(LanguageContext);
@@ -825,7 +824,7 @@ function MediaPage() {
                             <div className="flex items-start gap-2">
                                 <div className="flex-1">
                                     <AutosizeTextarea
-                                        className="bg-transparent border-none outline-none min-h-[2.5rem] resize-y w-full focus:outline-none focus:ring-0 focus:border-0 p-0 ps-1 pt-1 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent"
+                                        className="bg-transparent border-none outline-none min-h-[2.5rem] resize-y w-full focus:outline-none focus:ring-0 focus:border-0 p-0 ps-1 pt-1 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                                         maxHeight={200}
                                         minHeight={40}
                                         placeholder={
@@ -1443,8 +1442,8 @@ function MediaPage() {
 
             {mediaItemsLoading || isMigrationInProgress ? (
                 <div className="flex justify-center items-center py-8">
-                    <Loader2 className="animate-spin h-8 w-8 text-gray-500" />
-                    <span className="ml-2 text-gray-500">
+                    <Loader2 className="animate-spin h-8 w-8 text-gray-500 dark:text-gray-400" />
+                    <span className="ml-2 text-gray-500 dark:text-gray-400">
                         {isMigrationInProgress
                             ? t("Migrating media from localStorage...")
                             : t("Loading media...")}
@@ -1501,12 +1500,12 @@ function MediaPage() {
                     {sortedImages.length > 0 && hasNextPage && (
                         <div ref={ref} className="flex justify-center py-8">
                             {shouldShowLoading ? (
-                                <div className="flex items-center gap-2 text-gray-500">
+                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                                     <Loader2 className="animate-spin h-5 w-5" />
                                     <span>{t("Loading more...")}</span>
                                 </div>
                             ) : (
-                                <div className="text-gray-400 text-sm">
+                                <div className="text-gray-400 dark:text-gray-500 text-sm">
                                     {t("Scroll for more")}
                                 </div>
                             )}
@@ -1597,7 +1596,7 @@ function MediaPage() {
             >
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium mb-2">
+                        <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-gray-100">
                             {t("Tag")}
                         </label>
                         <input
@@ -1625,7 +1624,7 @@ function MediaPage() {
                     </div>
                     <div className="flex justify-end gap-2">
                         <button
-                            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+                            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                             onClick={() => {
                                 setShowBulkTagDialog(false);
                                 setBulkTagInput("");
@@ -1950,7 +1949,7 @@ function SettingsDialog({
             <div className="space-y-6">
                 {/* Model Selection */}
                 <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-gray-100">
                         {t("Select Model")}
                     </label>
                     <select
@@ -1981,7 +1980,7 @@ function SettingsDialog({
                         {/* Aspect Ratio - only show if model supports it */}
                         {getAvailableAspectRatios(selectedModel).length > 0 && (
                             <div>
-                                <label className="block text-sm font-medium mb-1">
+                                <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
                                     {t("Aspect Ratio")}
                                 </label>
                                 <select
@@ -2017,7 +2016,7 @@ function SettingsDialog({
                         {getModelType(selectedModel) === "video" &&
                             getAvailableDurations(selectedModel).length > 0 && (
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">
+                                    <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
                                         {t("Duration (seconds)")}
                                     </label>
                                     <select
@@ -2162,7 +2161,7 @@ function SettingsDialog({
                                         {t("Optimize Prompt")}
                                     </span>
                                 </label>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     {t(
                                         "Use AI to rewrite your prompt for better results",
                                     )}
@@ -2173,7 +2172,7 @@ function SettingsDialog({
                         {/* Image Size (for Gemini 3 Pro) */}
                         {selectedModel === "gemini-3-pro-image-preview" && (
                             <div>
-                                <label className="block text-sm font-medium mb-1">
+                                <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
                                     {t("Image Size")}
                                 </label>
                                 <select
@@ -2193,7 +2192,7 @@ function SettingsDialog({
                                     <option value="2K">2K</option>
                                     <option value="4K">4K</option>
                                 </select>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     {t("Select the output image size")}
                                 </p>
                             </div>
@@ -2308,7 +2307,7 @@ function ImageModal({ show, image, onHide }) {
 
                     {/* Tags Section */}
                     <div className="mb-4 flex-shrink-0">
-                        <div className="font-semibold text-gray-500 sm:text-sm mb-2">
+                        <div className="font-semibold text-gray-500 dark:text-gray-400 sm:text-sm mb-2">
                             {t("Tags")}
                         </div>
                         <div className="flex flex-wrap gap-1 mb-2">
@@ -2357,11 +2356,11 @@ function ImageModal({ show, image, onHide }) {
                     </div>
 
                     <div className="flex-grow">
-                        <div className="font-semibold text-gray-500 sm:text-sm mb-2">
+                        <div className="font-semibold text-gray-500 dark:text-gray-400 sm:text-sm mb-2">
                             {t("Prompt")}
                         </div>
                         <textarea
-                            className="w-full p-2 rounded-md bg-gray-50 dark:bg-gray-700 text-base md:text-sm resize-none focus:outline-none focus:ring-0 focus:border-0"
+                            className="w-full p-2 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-base md:text-sm resize-none focus:outline-none focus:ring-0 focus:border-0"
                             value={image?.prompt}
                             readOnly
                             rows={8}
@@ -2408,11 +2407,11 @@ function ImageInfo({ data, type }) {
         <div>
             <div className="mb-2">
                 <div>
-                    <div className="font-semibold text-gray-500">
+                    <div className="font-semibold text-gray-500 dark:text-gray-400">
                         {t("Created")}
                     </div>
                 </div>
-                <div>
+                <div className="text-gray-700 dark:text-gray-300">
                     {data?.created
                         ? new Date(data?.created * 1000).toLocaleString()
                         : t("(not found)")}
@@ -2421,7 +2420,7 @@ function ImageInfo({ data, type }) {
             {data?.created && (
                 <div className="mb-2">
                     <div>
-                        <div className="font-semibold text-gray-500">
+                        <div className="font-semibold text-gray-500 dark:text-gray-400">
                             {t("Expires")}
                         </div>
                     </div>
@@ -2443,8 +2442,8 @@ function ImageInfo({ data, type }) {
                                 <span
                                     className={
                                         isExpiringSoon
-                                            ? "text-red-500 font-semibold"
-                                            : ""
+                                            ? "text-red-500 dark:text-red-400 font-semibold"
+                                            : "text-gray-700 dark:text-gray-300"
                                     }
                                 >
                                     {expiresDate.toLocaleString()}
@@ -2466,16 +2465,18 @@ function ImageInfo({ data, type }) {
             {data?.model && (
                 <div className="mb-2">
                     <div>
-                        <div className="font-semibold text-gray-500">
+                        <div className="font-semibold text-gray-500 dark:text-gray-400">
                             {t("Model")}
                         </div>
                     </div>
-                    <div>{getModelDisplayName(data.model)}</div>
+                    <div className="text-gray-700 dark:text-gray-300">
+                        {getModelDisplayName(data.model)}
+                    </div>
                 </div>
             )}
             <div className="mb-2">
                 <div>
-                    <div className="font-semibold text-gray-500">
+                    <div className="font-semibold text-gray-500 dark:text-gray-400">
                         {t("Azure URL")}
                     </div>
                 </div>
@@ -2484,13 +2485,13 @@ function ImageInfo({ data, type }) {
                         <a
                             href={data.azureUrl}
                             target="_blank"
-                            className="text-sky-500"
+                            className="text-sky-500 dark:text-sky-400"
                             rel="noreferrer"
                         >
                             {t("Azure Link")}
                         </a>
                     ) : (
-                        <span className="text-gray-400">
+                        <span className="text-gray-400 dark:text-gray-500">
                             {t("Not uploaded")}
                         </span>
                     )}
@@ -2499,7 +2500,7 @@ function ImageInfo({ data, type }) {
             {data?.gcsUrl && (
                 <div className="mb-2">
                     <div>
-                        <div className="font-semibold text-gray-500">
+                        <div className="font-semibold text-gray-500 dark:text-gray-400">
                             {t("GCS URL")}
                         </div>
                     </div>
@@ -2507,7 +2508,7 @@ function ImageInfo({ data, type }) {
                         <a
                             href={data.gcsUrl}
                             target="_blank"
-                            className="text-sky-500"
+                            className="text-sky-500 dark:text-sky-400"
                             rel="noreferrer"
                         >
                             {t("GCS Link")}
@@ -2518,16 +2519,19 @@ function ImageInfo({ data, type }) {
             {!data?.azureUrl && (
                 <div className="mb-2">
                     <div>
-                        <div className="font-semibold text-gray-500">
+                        <div className="font-semibold text-gray-500 dark:text-gray-400">
                             {t("Original URL")}
                         </div>
                     </div>
-                    <div style={{ lineBreak: "anywhere" }}>
+                    <div
+                        style={{ lineBreak: "anywhere" }}
+                        className="text-gray-700 dark:text-gray-300"
+                    >
                         {data?.url ? (
                             <a
                                 href={data.url}
                                 target="_blank"
-                                className="text-sky-500"
+                                className="text-sky-500 dark:text-sky-400"
                                 rel="noreferrer"
                             >
                                 {t("Original Link")}

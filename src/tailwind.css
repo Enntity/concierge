@@ -2,6 +2,99 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Highlight.js theme - light mode */
+@import "highlight.js/styles/github.css" layer(hljs);
+
+/* Highlight.js theme - dark mode override */
+.dark .hljs {
+    color: #c9d1d9;
+    background: transparent;
+}
+.dark .hljs-doctag,
+.dark .hljs-keyword,
+.dark .hljs-meta .hljs-keyword,
+.dark .hljs-template-tag,
+.dark .hljs-template-variable,
+.dark .hljs-type,
+.dark .hljs-variable.language_ {
+    color: #ff7b72;
+}
+.dark .hljs-title,
+.dark .hljs-title.class_,
+.dark .hljs-title.class_.inherited__,
+.dark .hljs-title.function_ {
+    color: #d2a8ff;
+}
+.dark .hljs-attr,
+.dark .hljs-attribute,
+.dark .hljs-literal,
+.dark .hljs-meta,
+.dark .hljs-number,
+.dark .hljs-operator,
+.dark .hljs-selector-attr,
+.dark .hljs-selector-class,
+.dark .hljs-selector-id,
+.dark .hljs-variable {
+    color: #79c0ff;
+}
+.dark .hljs-meta .hljs-string,
+.dark .hljs-regexp,
+.dark .hljs-string {
+    color: #a5d6ff;
+}
+.dark .hljs-built_in,
+.dark .hljs-symbol {
+    color: #ffa657;
+}
+.dark .hljs-code,
+.dark .hljs-comment,
+.dark .hljs-formula {
+    color: #8b949e;
+}
+.dark .hljs-name,
+.dark .hljs-quote,
+.dark .hljs-selector-pseudo,
+.dark .hljs-selector-tag {
+    color: #7ee787;
+}
+.dark .hljs-subst {
+    color: #c9d1d9;
+}
+.dark .hljs-section {
+    color: #1f6feb;
+    font-weight: 700;
+}
+.dark .hljs-bullet {
+    color: #f2cc60;
+}
+.dark .hljs-emphasis {
+    color: #c9d1d9;
+    font-style: italic;
+}
+.dark .hljs-strong {
+    color: #c9d1d9;
+    font-weight: 700;
+}
+.dark .hljs-addition {
+    color: #aff5b4;
+    background-color: #033a16;
+}
+.dark .hljs-deletion {
+    color: #ffdcd7;
+    background-color: #67060c;
+}
+
+/* KaTeX error styling - make incomplete formulas less jarring during streaming */
+.katex-error {
+    color: inherit !important;
+    opacity: 0.6;
+}
+
+.chat-message .katex-error {
+    color: currentColor !important;
+    background: transparent;
+}
+
 @layer base {
     html {
         @apply text-gray-700;
@@ -165,25 +258,316 @@
 
 /* Additional mobile overflow handling */
 @layer components {
+    /* Media grid and tiles */
+    .media-grid {
+        @apply grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pt-4 pr-4 pb-4;
+    }
+
+    .media-tile {
+        @apply relative aspect-square bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow;
+    }
+
+    .media-wrapper {
+        @apply w-full h-full bg-gray-100 dark:bg-gray-900 cursor-pointer overflow-hidden;
+    }
+
+    .media-prompt {
+        @apply px-3 py-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-2 overflow-hidden;
+    }
+
+    .selection-checkbox {
+        @apply absolute top-2 right-2 z-10 w-6 h-6 rounded-full border-2 border-gray-200 dark:border-gray-600 bg-white/90 dark:bg-gray-800/90 shadow-md flex items-center justify-center cursor-pointer transition-all;
+    }
+
+    .selection-checkbox:hover {
+        @apply scale-110 bg-white dark:bg-gray-700;
+    }
+
+    .selection-checkbox.selected {
+        @apply bg-sky-500 border-sky-500;
+    }
+
+    .selection-checkbox.selected:hover {
+        @apply scale-110 bg-sky-500 border-sky-500;
+    }
+
+    .selection-checkbox.selected svg {
+        @apply text-white;
+    }
+
+    /* Chat and workspace grids */
+    .chat-grid,
+    .workspace-grid {
+        @apply grid gap-4 w-full;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+
+    /* Chat tiles - landscape cards for chat list */
+    .chat-tile {
+        @apply relative bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow select-none;
+        aspect-ratio: 2.2/1;
+    }
+
+    @media (min-width: 640px) {
+        .chat-tile {
+            aspect-ratio: 1.8/1;
+        }
+    }
+
+    /* Workspace/Applet tiles */
+    .workspace-tile {
+        @apply relative bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow select-none;
+        aspect-ratio: 2.2/1;
+    }
+
+    @media (min-width: 640px) {
+        .workspace-tile {
+            aspect-ratio: 1.8/1;
+        }
+    }
+
+    /* Hamburger menu for tiles */
+    .hamburger-menu {
+        @apply absolute top-2 right-2 z-10 w-6 h-6 bg-white/90 dark:bg-gray-800/90 border-2 border-gray-200 dark:border-gray-600 rounded-full flex items-center justify-center transition-all cursor-pointer;
+    }
+
+    .hamburger-menu:hover {
+        @apply scale-110 bg-white dark:bg-gray-700;
+    }
+
+    .hamburger-menu svg {
+        @apply w-4 h-4 text-gray-600 dark:text-gray-300;
+    }
+
+    /* RTL support for tiles */
+    html[dir="rtl"] .chat-tile .selection-checkbox,
+    html[dir="rtl"] .chat-tile .hamburger-menu,
+    html[dir="rtl"] .media-tile .selection-checkbox,
+    html[dir="rtl"] .media-tile .hamburger-menu,
+    html[dir="rtl"] .workspace-tile .selection-checkbox,
+    html[dir="rtl"] .workspace-tile .hamburger-menu {
+        right: auto;
+        left: 0.5rem;
+    }
+
+    /* Chat message styles - User messages */
+    .chat-message-user {
+        @apply font-sans text-sm text-gray-900 dark:text-gray-300 whitespace-pre-wrap break-words leading-relaxed;
+    }
+
+    /* Chat message styles - Bot/AI messages */
+    .chat-message-bot {
+        @apply text-sm text-gray-900 dark:text-gray-300 font-sans leading-relaxed;
+    }
+
+    /* Polished markdown rendering for chat - clean editorial style */
     .chat-message {
-        @apply mobile-overflow-safe;
+        @apply text-sm text-gray-700 dark:text-gray-300 leading-relaxed mobile-overflow-safe;
     }
 
     .chat-message * {
         @apply mobile-text-wrap;
     }
 
-    .chat-message pre,
-    .chat-message code {
-        @apply mobile-overflow-safe;
+    /* Paragraphs - comfortable reading rhythm */
+    .chat-message p {
+        @apply mb-4;
     }
 
+    .chat-message p:last-child {
+        @apply mb-0;
+    }
+
+    /* Headings - clean, no borders, proper hierarchy */
+    .chat-message h1,
+    .chat-message h2,
+    .chat-message h3,
+    .chat-message h4,
+    .chat-message h5,
+    .chat-message h6 {
+        @apply font-semibold text-gray-900 dark:text-white leading-snug tracking-tight;
+    }
+
+    .chat-message h1 {
+        @apply text-lg mt-5 mb-2;
+    }
+
+    .chat-message h2 {
+        @apply text-base mt-5 mb-2;
+    }
+
+    .chat-message h3 {
+        @apply text-sm mt-4 mb-1.5 font-semibold;
+    }
+
+    .chat-message h4 {
+        @apply text-sm font-semibold mt-3 mb-1;
+    }
+
+    .chat-message h5 {
+        @apply text-xs font-medium mt-2 mb-1 text-gray-700 dark:text-gray-300;
+    }
+
+    .chat-message h6 {
+        @apply text-xs font-medium mt-2 mb-1 text-gray-600 dark:text-gray-400;
+    }
+
+    /* First element shouldn't have top margin */
+    .chat-message > *:first-child {
+        @apply mt-0;
+    }
+
+    /* Links - subtle underline */
+    .chat-message a {
+        @apply text-gray-900 dark:text-white underline decoration-gray-400 dark:decoration-gray-500 underline-offset-2 hover:decoration-gray-900 dark:hover:decoration-white transition-colors;
+    }
+
+    /* Citations - stand out with accent color */
+    .chat-message a[href^="http"],
+    .chat-message a[href^="https"] {
+        @apply text-sky-600 dark:text-sky-400 no-underline hover:underline decoration-sky-400 dark:decoration-sky-500;
+    }
+
+    /* Anchor links (TOC, etc.) */
+    .chat-message a[href^="#"] {
+        @apply text-sky-600 dark:text-sky-400 no-underline hover:underline;
+    }
+
+    /* Footnote references - superscript style (only when in sup) */
+    .chat-message sup a {
+        @apply text-sky-600 dark:text-sky-400 no-underline hover:underline text-xs font-medium;
+    }
+
+    /* Lists - clean and compact */
+    .chat-message ul,
+    .chat-message ol {
+        @apply my-4 pl-6;
+    }
+
+    .chat-message ul {
+        @apply list-disc;
+    }
+
+    .chat-message ol {
+        @apply list-decimal;
+    }
+
+    .chat-message li {
+        @apply mb-1.5 leading-relaxed;
+    }
+
+    .chat-message li:last-child {
+        @apply mb-0;
+    }
+
+    .chat-message li > ul,
+    .chat-message li > ol {
+        @apply mt-1.5 mb-0;
+    }
+
+    /* Inline code */
+    .chat-message code:not(pre code):not(.hljs) {
+        @apply bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-xs font-mono;
+    }
+
+    /* Fallback for pre without CodeBlock */
+    .chat-message pre:not(.code-block pre) {
+        @apply bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 p-3 rounded-lg text-xs font-mono overflow-x-auto my-3 leading-snug border border-gray-200 dark:border-gray-800;
+    }
+
+    .chat-message pre code {
+        @apply bg-transparent text-inherit p-0 rounded-none;
+    }
+
+    /* CodeBlock component - already styled in component, just ensure spacing */
+    .chat-message .code-block {
+        @apply my-3;
+    }
+
+    /* Blockquotes - minimal and elegant */
+    .chat-message blockquote {
+        @apply border-l-4 border-gray-300 dark:border-gray-600 pl-4 my-4 text-gray-600 dark:text-gray-400;
+    }
+
+    .chat-message blockquote p {
+        @apply mb-0;
+    }
+
+    .chat-message blockquote blockquote {
+        @apply mt-3;
+    }
+
+    /* Horizontal rules */
+    .chat-message hr {
+        @apply my-6 border-t border-gray-200 dark:border-gray-700;
+    }
+
+    /* Tables - clean minimal design */
     .chat-message table {
-        @apply mobile-table;
+        @apply w-full border-collapse my-4 text-sm mobile-table;
     }
 
     .chat-message th,
     .chat-message td {
-        @apply mobile-table-cell;
+        @apply border-b border-gray-200 dark:border-gray-700 px-3 py-2 text-left mobile-table-cell;
+    }
+
+    .chat-message th {
+        @apply font-semibold text-gray-900 dark:text-white;
+    }
+
+    /* Strong and emphasis */
+    .chat-message strong {
+        @apply font-semibold text-gray-900 dark:text-white;
+    }
+
+    .chat-message em {
+        @apply italic;
+    }
+
+    /* Strikethrough */
+    .chat-message del {
+        @apply line-through text-gray-500;
+    }
+
+    /* Task lists */
+    .chat-message input[type="checkbox"] {
+        @apply mr-2 rounded border-gray-300 dark:border-gray-600 text-gray-900 focus:ring-gray-500;
+    }
+
+    /* Images - exclude media-card-image which has its own styling */
+    .chat-message img:not(.media-card-image) {
+        @apply max-w-full h-auto rounded my-4;
+    }
+
+    /* Definition lists */
+    .chat-message dl {
+        @apply my-4;
+    }
+
+    .chat-message dt {
+        @apply font-semibold text-gray-900 dark:text-white mt-3;
+    }
+
+    .chat-message dd {
+        @apply ml-0 mt-1 text-gray-700 dark:text-gray-300;
+    }
+
+    /* Citation blocks / sources */
+    .chat-message cite {
+        @apply block text-sm text-gray-500 dark:text-gray-400 mt-1 not-italic;
+    }
+
+    .chat-message cite::before {
+        content: "— ";
+    }
+
+    /* Internal citations (cd_source) */
+    .text-with-citations {
+        @apply text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors;
+    }
+
+    .text-with-citations sup {
+        @apply text-[0.7rem] font-semibold bg-sky-100 dark:bg-sky-900/50 px-1 py-0.5 rounded ml-0.5 hover:bg-sky-200 dark:hover:bg-sky-800/50;
     }
 }

@@ -250,11 +250,11 @@ export function generateFilteredSandboxHtml(content, theme) {
                         @apply mb-4;
                     }
                     .chat-message h1, .chat-message h2, .chat-message h3, .chat-message h4, .chat-message h5, .chat-message h6 {
-                        @apply font-semibold text-gray-900 dark:text-white my-4;
+                        @apply font-semibold text-gray-900 dark:text-white my-2;
                     }
-                    .chat-message h1 { @apply text-2xl; }
-                    .chat-message h2 { @apply text-xl; }
-                    .chat-message h3 { @apply text-lg; }
+                    .chat-message h1 { @apply text-xs; }
+                    .chat-message h2 { @apply text-[0.7rem]; }
+                    .chat-message h3 { @apply text-[0.65rem]; }
                     .chat-message a {
                         @apply text-sky-500 hover:underline dark:text-sky-400;
                     }

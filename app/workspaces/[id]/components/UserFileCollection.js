@@ -392,7 +392,7 @@ export default function UserFileCollection({
                             />
                             <Label
                                 htmlFor="show-all-files"
-                                className="text-sm font-normal cursor-pointer whitespace-nowrap"
+                                className="text-sm font-normal cursor-pointer whitespace-nowrap text-gray-900 dark:text-gray-100"
                             >
                                 {t("Show all")}
                             </Label>
@@ -411,7 +411,7 @@ export default function UserFileCollection({
                             />
                             <Label
                                 htmlFor="show-all-files-empty"
-                                className="text-sm font-normal cursor-pointer whitespace-nowrap"
+                                className="text-sm font-normal cursor-pointer whitespace-nowrap text-gray-900 dark:text-gray-100"
                             >
                                 {t("Show files from all conversations")}
                             </Label>

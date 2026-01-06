@@ -15,7 +15,6 @@ import {
     useUserState,
 } from "../app/queries/users";
 import classNames from "../app/utils/class-names";
-import "./App.scss";
 import StoreProvider from "./StoreProvider";
 import { LanguageContext, LanguageProvider } from "./contexts/LanguageProvider";
 import { ThemeProvider } from "./contexts/ThemeProvider";

@@ -124,7 +124,7 @@ export default function SidebarItem({
                                     className="animate-spin"
                                 />
                             ) : (
-                                <RotateCcw className="text-gray-500" />
+                                <RotateCcw className="text-gray-500 dark:text-gray-400" />
                             )}
                         </div>
                     )}

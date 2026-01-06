@@ -31,13 +31,15 @@ export default function InitialView({
 
     return (
         <>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {t("Transcription and translation")}
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
                 {t("Transcribe and translate video and audio files.")}
             </p>
-            <h3>{t("How would you like to start?")}</h3>
+            <h3 className="text-gray-900 dark:text-gray-100">
+                {t("How would you like to start?")}
+            </h3>
             <div className="flex gap-4 mt-4">
                 <button
                     onClick={() => setShowVideoInput(true)}

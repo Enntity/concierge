@@ -489,7 +489,7 @@ const BotMessage = ({
                             ? message.payload
                             : message.text
                     }
-                    className="copy-button opacity-0 group-hover:opacity-60 hover:opacity-100 transition-opacity pointer-events-auto"
+                    className="copy-button opacity-0 group-hover:opacity-80 hover:opacity-100 transition-opacity pointer-events-auto"
                 />
             </div>
 

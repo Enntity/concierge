@@ -154,7 +154,6 @@ export default function AIModal({
                                             </button>
                                         )}
                                     </div>
-                                    )}
                                 </Dialog.Panel>
                             </Transition.Child>
                         </div>

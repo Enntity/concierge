@@ -815,7 +815,7 @@ function SavedChats({ displayState }) {
                                         <div className="flex items-center justify-between gap-2 mb-2">
                                             <div className="flex items-center gap-2 flex-1 min-w-0">
                                                 <h3
-                                                    className="font-semibold text-md truncate flex-1 cursor-pointer hover:text-sky-500"
+                                                    className="font-semibold text-md truncate flex-1 cursor-pointer text-gray-900 dark:text-gray-100 hover:text-sky-500 dark:hover:text-sky-400"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         setEditingId(chat._id);
@@ -845,7 +845,7 @@ function SavedChats({ displayState }) {
                                                             chat.title,
                                                         );
                                                     }}
-                                                    className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                                    className="text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 transition-colors"
                                                     title={t("Edit title")}
                                                 >
                                                     <EditIcon className="h-3 w-3" />
@@ -857,7 +857,7 @@ function SavedChats({ displayState }) {
                                                             chat._id,
                                                         );
                                                     }}
-                                                    className="text-gray-400 hover:text-red-500"
+                                                    className="text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 transition-colors"
                                                     title={t("Delete")}
                                                 >
                                                     <Trash2 className="h-3 w-3" />
@@ -1160,7 +1160,7 @@ function SavedChats({ displayState }) {
             <div className="mb-4">
                 {/* Header with title and count */}
                 <div className="mb-4">
-                    <h1 className="text-lg font-semibold">
+                    <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                         {t("Chat history")}
                     </h1>
 
@@ -1374,7 +1374,7 @@ function SavedChats({ displayState }) {
                                 {/* Title matches section */}
                                 {filteredSearchResults.length > 0 && (
                                     <div>
-                                        <h2 className="text-md font-semibold mt-4 mb-2 border-b border-gray-200 dark:border-gray-700 pb-1">
+                                        <h2 className="text-md font-semibold mt-4 mb-2 border-b border-gray-200 dark:border-gray-700 pb-1 text-gray-900 dark:text-gray-100">
                                             📝 {t("Title Matches")} (
                                             {titleMatchesCountDisplay})
                                         </h2>
@@ -1387,7 +1387,7 @@ function SavedChats({ displayState }) {
                                 {/* Content matches section */}
                                 {contentMatchesDisplay.length > 0 && (
                                     <div>
-                                        <h2 className="text-md font-semibold mt-4 mb-2 border-b border-gray-200 dark:border-gray-700 pb-1">
+                                        <h2 className="text-md font-semibold mt-4 mb-2 border-b border-gray-200 dark:border-gray-700 pb-1 text-gray-900 dark:text-gray-100">
                                             💬 {t("Content Matches")} (
                                             {contentMatchesDisplay.length})
                                         </h2>
@@ -1493,7 +1493,7 @@ function SavedChats({ displayState }) {
                             ([category, chats]) =>
                                 chats.length > 0 && (
                                     <div key={category}>
-                                        <h2 className="text-md font-semibold mt-4 mb-2 border-b border-gray-200 dark:border-gray-700 pb-1">
+                                        <h2 className="text-md font-semibold mt-4 mb-2 border-b border-gray-200 dark:border-gray-700 pb-1 text-gray-900 dark:text-gray-100">
                                             {t(
                                                 getCategoryTitle(
                                                     category,

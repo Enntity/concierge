@@ -1037,7 +1037,7 @@ const MessageList = React.memo(
                                     });
                                     setReplayIndex(index);
                                 }}
-                                className="opacity-0 group-hover:opacity-60 hover:opacity-100 transition-opacity"
+                                className="opacity-0 group-hover:opacity-80 hover:opacity-100 transition-opacity"
                             />
                             <CopyButton
                                 item={
@@ -1045,10 +1045,10 @@ const MessageList = React.memo(
                                         ? message.payload
                                         : ""
                                 }
-                                className="opacity-0 group-hover:opacity-60 hover:opacity-100 transition-opacity"
+                                className="opacity-0 group-hover:opacity-80 hover:opacity-100 transition-opacity"
                             />
                         </div>
-                        <div className="absolute top-[10px] start-3 flex items-center justify-center w-6 h-6 rounded-full bg-sky-200 dark:bg-sky-900/30 overflow-hidden">
+                        <div className="absolute top-3 start-3 flex items-center justify-center w-7 h-7 rounded-full bg-sky-200 dark:bg-sky-900/30 overflow-hidden">
                             {user?.picture || user?.profilePicture ? (
                                 <img
                                     src={user.picture || user.profilePicture}
@@ -1056,16 +1056,16 @@ const MessageList = React.memo(
                                     className="w-full h-full object-cover"
                                 />
                             ) : user?.initials ? (
-                                <span className="text-xs font-medium text-sky-600 dark:text-sky-400 leading-none">
+                                <span className="text-sm font-medium text-sky-600 dark:text-sky-400 leading-none">
                                     {user.initials}
                                 </span>
                             ) : (
-                                <User className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                                <User className="w-5 h-5 text-sky-600 dark:text-sky-400" />
                             )}
                         </div>
                         <div
                             className={classNames(
-                                "px-1 pb-3 pt-2 ps-10 [.docked_&]:px-0 [.docked_&]:ps-10 [.docked_&]:py-3 w-full",
+                                "px-1 pb-3 pt-3 ps-12 [.docked_&]:px-0 [.docked_&]:ps-12 [.docked_&]:py-3 w-full",
                             )}
                         >
                             <pre className="chat-message-user">

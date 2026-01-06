@@ -7,7 +7,10 @@ function ReplayButton({ onClick, className = "absolute top-1 end-1" }) {
 
     return (
         <button
-            className={classNames(className, "replay-button text-gray-500")}
+            className={classNames(
+                className,
+                "replay-button text-gray-500 hover:text-sky-500 dark:hover:text-sky-400 transition-colors",
+            )}
             onClick={onClick}
             title={t("Replay from this message")}
         >

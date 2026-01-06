@@ -54,7 +54,7 @@ export function Modal({
                                         <div>
                                             <button
                                                 onClick={onHide}
-                                                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none focus:ring-0"
                                             >
                                                 <X size={16} />
                                             </button>

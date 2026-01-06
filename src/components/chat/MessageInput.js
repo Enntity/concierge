@@ -1,5 +1,4 @@
 import React from "react";
-import "highlight.js/styles/github.css";
 import dynamic from "next/dynamic";
 import { useContext, useEffect, useState, useRef } from "react";
 import { Paperclip, XCircle, StopCircle, Send } from "lucide-react";
@@ -363,7 +362,7 @@ function MessageInput({
                         <TextareaAutosize
                             typeahead="none"
                             className={classNames(
-                                `w-full border-0 outline-none focus:shadow-none text-base md:text-sm [.docked_&]:md:text-sm focus:ring-0 pt-2 resize-none bg-transparent dark:bg-transparent`,
+                                `w-full border-0 outline-none focus:shadow-none text-base leading-relaxed focus:ring-0 pt-2 resize-none bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400`,
                                 enableRag ? "px-1" : "px-3 rounded-s",
                                 viewingReadOnlyChat
                                     ? "text-gray-400 dark:text-gray-400 cursor-not-allowed placeholder:text-gray-400 dark:placeholder:text-gray-400"

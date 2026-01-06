@@ -19,15 +19,17 @@ function ErrorFallback({ error, resetErrorBoundary }) {
         <div className="flex items-center justify-center min-h-[50vh]">
             <div className="text-center">
                 <div className="text-6xl mb-4">😕</div>
-                <h2 className="text-3xl font-semibold mb-6">
+                <h2 className="text-3xl font-semibold mb-6 text-gray-900 dark:text-gray-100">
                     Oops! Something went wrong
                 </h2>
-                <p>Here's what we know about the error:</p>
+                <p className="text-gray-900 dark:text-gray-100">
+                    Here's what we know about the error:
+                </p>
                 <pre className="rounded bg-neutral-100 dark:bg-gray-700 p-2 mb-4">
                     {error.message}
                 </pre>
 
-                <p className="text-gray-600 mb-3 mt-12">
+                <p className="text-gray-600 dark:text-gray-400 mb-3 mt-12">
                     {t("Need help? Our team is here to assist you.")}
                 </p>
                 <button

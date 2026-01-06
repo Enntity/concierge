@@ -81,7 +81,7 @@ export default function CreateStorySection({ token, ticket }) {
 
     if (!token) {
         return (
-            <div className="mb-4 text-sm italic text-gray-500">
+            <div className="mb-4 text-sm italic text-gray-500 dark:text-gray-400">
                 {t(
                     "To create this issue in Jira, please connect Enntity to your Jira account.",
                 )}
@@ -93,7 +93,7 @@ export default function CreateStorySection({ token, ticket }) {
                 <h4 className="font-semibold">{t("Create Issue")}</h4>
                 <div className="flex gap-2">
                     <div className="basis-1/3">
-                        <h5 className="text-gray-500 font-medium text-sm mb-1">
+                        <h5 className="text-gray-500 dark:text-gray-400 font-medium text-sm mb-1">
                             {t("Jira Site")}
                         </h5>
                         <select
@@ -114,7 +114,7 @@ export default function CreateStorySection({ token, ticket }) {
                         </select>
                     </div>
                     <div className="basis-1/3">
-                        <h5 className="text-gray-500 font-medium text-sm mb-1">
+                        <h5 className="text-gray-500 dark:text-gray-400 font-medium text-sm mb-1">
                             {t("Project")}
                         </h5>
                         <select
@@ -141,7 +141,7 @@ export default function CreateStorySection({ token, ticket }) {
                         </select>
                     </div>
                     <div className="basis-1/3">
-                        <h5 className="text-gray-500 font-medium text-sm mb-1">
+                        <h5 className="text-gray-500 dark:text-gray-400 font-medium text-sm mb-1">
                             {t("Issue type")}
                         </h5>
                         <IssueTypes
@@ -401,7 +401,7 @@ function FieldInput({ field, value, onChange }) {
                     </select>
                 </div>
                 {expectsArray && (
-                    <div className="text-xs mt-1 text-gray-500 ml-2">
+                    <div className="text-xs mt-1 text-gray-500 dark:text-gray-400 ml-2">
                         (Hold Ctrl/Cmd to select multiple)
                     </div>
                 )}

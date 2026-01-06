@@ -20,7 +20,7 @@ export default function EmptyState({
 }) {
     return (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="text-gray-400 mb-4">
+            <div className="text-gray-400 dark:text-gray-500 mb-4">
                 {typeof icon === "string" ? (
                     <div className="text-6xl">{icon}</div>
                 ) : (

@@ -37,7 +37,7 @@ function Highlights({ inputText, onAction }) {
                                 <div className="flex-1">{item}</div>
                                 <div>
                                     <button
-                                        className="p-0 text-gray-500 hover:text-gray-700"
+                                        className="p-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                                         onClick={() => {
                                             onAction("remove_content", {
                                                 content: item,
@@ -170,7 +170,9 @@ function Summary({ inputText }) {
             )}
             renderOutput={() => (
                 <div>
-                    <pre className="font-sans text-sm">{summary}</pre>
+                    <pre className="font-sans text-sm text-gray-900 dark:text-gray-100">
+                        {summary}
+                    </pre>
                 </div>
             )}
             query={{
