@@ -522,7 +522,7 @@
     }
 
     .chat-message em {
-        @apply italic;
+        @apply italic mr-0.5;
     }
 
     /* Strikethrough */
