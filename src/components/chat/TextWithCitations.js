@@ -124,7 +124,7 @@ function TextWithCitations({ index, citation }) {
                 </span>
             </PopoverTrigger>
 
-            <PopoverContent className="text-gray-700 bg-white border max-h-96 overflow-auto">
+            <PopoverContent className="text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border dark:border-gray-700 max-h-96 max-w-sm sm:max-w-md overflow-y-auto">
                 <div className="relative">
                     <CopyButton
                         item={formatCitationText({
@@ -141,7 +141,7 @@ function TextWithCitations({ index, citation }) {
                                     href={url}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="text-sky-500 hover:text-sky-500 hover:underline citation-link"
+                                    className="text-sky-500 hover:text-sky-400 hover:underline citation-link"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     {title}
@@ -154,13 +154,13 @@ function TextWithCitations({ index, citation }) {
                         )}
                     </div>
                     {strippedContent && (
-                        <pre className="text-sm font-sans text-gray-800 dark:text-gray-200">
+                        <div className="text-sm font-sans text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
                             {strippedContent}
-                        </pre>
+                        </div>
                     )}
                     {wireRef && (
-                        <div className="text-sm italic">
-                            <hr className="my-1" />
+                        <div className="text-sm italic text-gray-600 dark:text-gray-400">
+                            <hr className="my-2 border-gray-200 dark:border-gray-600" />
                             {wireRef}
                         </div>
                     )}

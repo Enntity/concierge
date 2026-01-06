@@ -47,7 +47,7 @@ export default function DigestBlock({ block, contentClassName }) {
                 {
                     payload: blockContent.payload,
                     tool: blockContent.tool,
-                    sender: "labeeb",
+                    sender: "enntity",
                     sentTime: new Date().toISOString(),
                     direction: "incoming",
                     position: "single",
@@ -85,10 +85,10 @@ export default function DigestBlock({ block, contentClassName }) {
                     <div>
                         <div
                             className={classNames(
-                                "text-xs flex items-center gap-2 rounded-full px-3 py-2 border bg-gray-50 dark:bg-gray-600 whitespace-nowrap",
+                                "text-xs flex items-center gap-2 rounded-full px-3 py-2 border bg-gray-50 dark:bg-gray-600 text-gray-900 dark:text-gray-100 whitespace-nowrap",
                                 task?.status !== "pending" &&
                                     task?.status !== "in_progress" &&
-                                    "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-500",
+                                    "cursor-pointer hover:bg-sky-50 dark:hover:bg-sky-900/30 hover:border-sky-300 dark:hover:border-sky-600",
                             )}
                             onClick={() => {
                                 if (

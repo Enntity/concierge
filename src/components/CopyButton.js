@@ -38,7 +38,10 @@ function CopyButton({ item, className = "absolute top-1 end-1 " }) {
 
     return (
         <button
-            className={classNames(className, "text-gray-500")}
+            className={classNames(
+                className,
+                "text-gray-500 hover:text-sky-500 dark:hover:text-sky-400 transition-colors",
+            )}
             onClick={() => copyFormattedText(item)}
         >
             {copied ? (

@@ -15,12 +15,14 @@ if (typeof window !== "undefined") {
             if (error.response?.status === 401) {
                 // Don't redirect if already on login page
                 if (window.location.pathname !== "/auth/login") {
-                    const callbackUrl = encodeURIComponent(window.location.pathname);
+                    const callbackUrl = encodeURIComponent(
+                        window.location.pathname,
+                    );
                     window.location.href = `/auth/login?callbackUrl=${callbackUrl}`;
                 }
             }
             return Promise.reject(error);
-        }
+        },
     );
 }
 

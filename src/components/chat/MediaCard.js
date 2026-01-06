@@ -112,11 +112,12 @@ const MediaCard = React.memo(function MediaCard({
     // Determine if file has a previewable preview (use explicit whitelist)
     const hasFilePreview = type === "file" && fileType.isPreviewable;
 
-    // Standard card width - consistent size for all cards
-    const cardWidth = "w-[240px] [.docked_&]:w-[200px]";
+    // Standard card size - square for images, fixed dimensions for other types
+    const cardWidth = "w-[200px] [.docked_&]:w-[160px]";
 
-    // Preview height - full card height since filename is hidden by default
-    const previewHeight = "h-[180px] [.docked_&]:h-[150px]";
+    // For images: use square aspect ratio; for other types: use fixed height
+    const isSquareCard = type === "image";
+    const previewHeight = isSquareCard ? "" : "h-[150px] [.docked_&]:h-[120px]";
 
     const handleClick = (e) => {
         if (type !== "file" || hasFilePreview) {
@@ -145,7 +146,7 @@ const MediaCard = React.memo(function MediaCard({
             : "";
         return (
             <div
-                className={`w-full ${previewHeight} ${bgColor} rounded-t-lg flex flex-col items-center justify-center gap-2`}
+                className={`w-full ${previewHeight} ${bgColor} rounded-lg flex flex-col items-center justify-center gap-2`}
             >
                 <Icon className={`w-16 h-16 ${iconColor}`} />
                 {fileExtension && (
@@ -167,30 +168,25 @@ const MediaCard = React.memo(function MediaCard({
     const renderPreview = () => {
         if (type === "image") {
             return (
-                <div
-                    className={`w-full ${previewHeight} rounded-t-lg overflow-hidden`}
-                >
-                    <img
-                        src={src}
-                        alt={filename || translationFn("Image")}
-                        className="w-full h-full object-cover media-card-image"
-                        style={{ maxWidth: "100%", maxHeight: "100%" }}
-                        onLoad={onLoad}
-                    />
-                </div>
+                <img
+                    src={src}
+                    alt={filename || translationFn("Image")}
+                    className="w-full h-full object-cover media-card-image"
+                    onLoad={onLoad}
+                />
             );
         } else if (type === "video") {
             return (
                 <div
-                    className={`w-full ${previewHeight} bg-gray-900 rounded-t-lg relative flex items-center justify-center`}
+                    className={`w-full ${previewHeight} bg-gray-900 rounded-lg relative flex items-center justify-center`}
                 >
                     <video
                         src={src}
-                        className="w-full h-full object-cover rounded-t-lg"
+                        className="w-full h-full object-cover rounded-lg"
                         onLoadedData={onLoad}
                         preload="metadata"
                     />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-t-lg">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
                         <Play
                             className="w-12 h-12 text-white opacity-80"
                             fill="white"
@@ -209,7 +205,7 @@ const MediaCard = React.memo(function MediaCard({
 
             return (
                 <div
-                    className={`w-full ${previewHeight} bg-gray-900 rounded-t-lg relative flex items-center justify-center overflow-hidden`}
+                    className={`w-full ${previewHeight} bg-gray-900 rounded-lg relative flex items-center justify-center overflow-hidden`}
                 >
                     {thumbnailUrl ? (
                         <img
@@ -230,7 +226,7 @@ const MediaCard = React.memo(function MediaCard({
                     ) : (
                         <div className="w-full h-full bg-gray-800" />
                     )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-t-lg">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
                         <Play
                             className="w-12 h-12 text-white opacity-90"
                             fill="white"
@@ -243,10 +239,10 @@ const MediaCard = React.memo(function MediaCard({
             if (fileType.isPreviewable) {
                 const previewClassName =
                     fileType.isPdf || fileType.isDoc
-                        ? `w-full h-full rounded-t-lg border-none`
+                        ? `w-full h-full rounded-lg border-none`
                         : fileType.isImage
                           ? `w-full h-full object-cover media-card-image`
-                          : `w-full h-full object-cover rounded-t-lg`;
+                          : `w-full h-full object-cover rounded-lg`;
 
                 const preview = renderFilePreview({
                     src,
@@ -262,11 +258,11 @@ const MediaCard = React.memo(function MediaCard({
                     // File has a preview (image, video, PDF, whitelisted text files)
                     return (
                         <div
-                            className={`w-full ${previewHeight} bg-gray-100 dark:bg-gray-800 rounded-t-lg relative overflow-hidden`}
+                            className={`w-full ${previewHeight} bg-gray-100 dark:bg-gray-800 rounded-lg relative overflow-hidden`}
                         >
                             {preview}
                             {fileType.isVideo && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-t-lg pointer-events-none">
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg pointer-events-none">
                                     <Play
                                         className="w-12 h-12 text-white opacity-80"
                                         fill="white"
@@ -343,9 +339,12 @@ const MediaCard = React.memo(function MediaCard({
     // If deleted, render as simplified ghost card with red tint
     if (isDeleted) {
         const Icon = type === "file" ? getFileIcon(filename) : null;
+        const deletedCardClass = isSquareCard
+            ? `${cardWidth} aspect-square`
+            : `${cardWidth} ${previewHeight}`;
         return (
             <div
-                className={`${cardWidth} ${previewHeight} rounded-lg border border-red-200 dark:border-red-800/50 shadow-md overflow-hidden pointer-events-none bg-red-50/50 dark:bg-red-900/10 relative group`}
+                className={`${deletedCardClass} rounded-lg border border-red-200 dark:border-red-800/50 shadow-md overflow-hidden pointer-events-none bg-red-50/50 dark:bg-red-900/10 relative group`}
             >
                 {Icon ? (
                     <div className="w-full h-full rounded-lg bg-red-50/50 dark:bg-red-900/10 relative">
@@ -397,7 +396,7 @@ const MediaCard = React.memo(function MediaCard({
     return (
         <>
             <div
-                className={`${cardWidth} ${className} bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden relative group ${
+                className={`${cardWidth} ${isSquareCard ? "aspect-square" : ""} ${className} bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden relative group ${
                     type !== "file" || hasFilePreview
                         ? "cursor-pointer hover:shadow-lg transition-shadow"
                         : ""
@@ -538,12 +537,12 @@ const MediaCard = React.memo(function MediaCard({
                                             "View file in full screen",
                                         )}
                         </DialogDescription>
-                        <div className="w-full flex items-center justify-center relative">
+                        <div className="w-full flex flex-col items-center justify-center gap-4">
                             {renderZoomContent()}
                             {src && type !== "youtube" && (
                                 <button
                                     onClick={handleDownload}
-                                    className="absolute top-4 right-4 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 p-2 rounded-lg shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors z-10"
+                                    className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
                                     title={
                                         typeof t === "function"
                                             ? t("Download")
@@ -556,6 +555,11 @@ const MediaCard = React.memo(function MediaCard({
                                     }
                                 >
                                     <Download className="w-5 h-5" />
+                                    <span className="text-sm font-medium">
+                                        {typeof t === "function"
+                                            ? t("Download")
+                                            : "Download"}
+                                    </span>
                                 </button>
                             )}
                         </div>

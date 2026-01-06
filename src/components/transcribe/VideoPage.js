@@ -264,7 +264,7 @@ function EditableTranscriptSelect({
 
     return (
         <div className="">
-            <div className="flex gap-2 items-center text-sky-600 font-semibold mb-2">
+            <div className="flex gap-2 items-center text-sky-600 dark:text-sky-400 font-semibold mb-2">
                 <TextIcon className="h-4 w-4" />
                 <div className="text-sm">{t("Subtitles and transcripts")}</div>
             </div>
@@ -656,7 +656,7 @@ function EditableTranscriptSelect({
                 </>
             )}
             {transcripts[activeTranscript]?.timestamp && (
-                <div className="flex items-center text-gray-400 text-xs py-1 px-3">
+                <div className="flex items-center text-gray-400 dark:text-gray-500 text-xs py-1 px-3">
                     {t("Created")}{" "}
                     {dayjs(transcripts[activeTranscript]?.timestamp).format(
                         "MMM DD, YYYY HH:mm:ss",
@@ -664,7 +664,7 @@ function EditableTranscriptSelect({
                     <span className="ml-2">
                         <button
                             title={t("Edit")}
-                            className="ms-0.5 text-gray-400 hover:text-gray-600"
+                            className="ms-0.5 text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 transition-colors"
                             onClick={() => setEditing(true)}
                         >
                             <Edit className="h-4 w-4" />
@@ -782,11 +782,11 @@ function VideoPlayer({
             >
                 {videoError ? (
                     <div className="w-full p-6 bg-gray-50 dark:bg-gray-800">
-                        <div className="text-gray-600 font-medium mb-2 flex items-center gap-2">
+                        <div className="text-gray-600 dark:text-gray-400 font-medium mb-2 flex items-center gap-2">
                             <AlertTriangle className="h-4 w-4" />
                             {t("Video Unavailable")}
                         </div>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                             {t(
                                 "The video URL cannot be accessed. It may have expired or been deleted.",
                             )}
@@ -1607,7 +1607,7 @@ function VideoPage() {
 
                                                     return (
                                                         <div className="border rounded-lg border-gray-200/50 dark:border-gray-600/50 p-3 space-y-3">
-                                                            <div className="text-sm text-sky-600 font-semibold flex items-center gap-2">
+                                                            <div className="text-sm text-sky-600 dark:text-sky-400 font-semibold flex items-center gap-2">
                                                                 <Volume2Icon className="h-4 w-4" />
                                                                 {t(
                                                                     "Audio tracks",

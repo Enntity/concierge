@@ -62,7 +62,7 @@ export default function Footer() {
 
             <div className="flex gap-2 sm:gap-8 items-center flex-shrink-0">
                 <DropdownMenu>
-                    <DropdownMenuTrigger className="text-sky-700 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 text-xs">
+                    <DropdownMenuTrigger className="text-sky-700 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 text-xs focus:outline-none focus:ring-0">
                         <span className="hidden sm:inline">
                             {t("Settings")}
                         </span>

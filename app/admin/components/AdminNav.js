@@ -18,7 +18,6 @@ export default function AdminNav() {
     const navigation = [
         { name: "Queues", href: "/admin/queues" },
         { name: "Users", href: "/admin/users" },
-        { name: "Style Guides", href: "/admin/style-guides" },
     ];
 
     return (

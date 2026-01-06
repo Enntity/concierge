@@ -21,7 +21,7 @@ import Sidebar from "./Sidebar";
 import { cn } from "@/lib/utils";
 import { shouldForceCollapse } from "./Sidebar";
 
-const ROUTES_WITHOUT_SIDEBAR = ["/wp-editor"];
+const ROUTES_WITHOUT_SIDEBAR = [];
 
 export default function Layout({ children }) {
     const [showOptions, setShowOptions] = useState(false);

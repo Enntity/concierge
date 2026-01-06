@@ -41,7 +41,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             // Restrict to specific email domains if configured
             const allowedDomains = process.env.AUTH_ALLOWED_DOMAINS;
             if (allowedDomains && user.email) {
-                const domains = allowedDomains.split(",").map((d) => d.trim().toLowerCase());
+                const domains = allowedDomains
+                    .split(",")
+                    .map((d) => d.trim().toLowerCase());
                 const userDomain = user.email.split("@")[1]?.toLowerCase();
                 if (!domains.includes(userDomain)) {
                     return false;

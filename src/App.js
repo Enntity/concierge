@@ -15,7 +15,6 @@ import {
     useUserState,
 } from "../app/queries/users";
 import classNames from "../app/utils/class-names";
-import "./App.scss";
 import StoreProvider from "./StoreProvider";
 import { LanguageContext, LanguageProvider } from "./contexts/LanguageProvider";
 import { ThemeProvider } from "./contexts/ThemeProvider";
@@ -58,8 +57,10 @@ const App = ({
     useBlueGraphQL,
 }) => {
     const pathname = usePathname();
-    const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname?.startsWith(route));
-    
+    const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+        pathname?.startsWith(route),
+    );
+
     // Only fetch user data for authenticated routes
     const { data: currentUser } = useCurrentUser();
     const { data: serverUserState, refetch: refetchServerUserState } =

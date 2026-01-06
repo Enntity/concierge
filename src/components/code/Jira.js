@@ -56,7 +56,7 @@ export default function Jira({ clientSecret }) {
         <div className="">
             <ol className="list-decimal text-lg font-medium ps-8 flex flex-col gap-4 mb-6">
                 <li>
-                    <h4 className="mb-2 ">{t("Connect Jira to Labeeb")}</h4>
+                    <h4 className="mb-2 ">{t("Connect Jira to Enntity")}</h4>
                     <div className="ps4">
                         <ConnectJiraButton
                             clientSecret={clientSecret}

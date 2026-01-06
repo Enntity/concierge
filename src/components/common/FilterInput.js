@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import { Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18next from "i18next";
@@ -23,15 +23,7 @@ export default function FilterInput({
 }) {
     const { t } = useTranslation();
     const filterInputRef = useRef(null);
-    const wasInputFocusedRef = useRef(false);
     const isRtl = i18next.language === "ar";
-
-    // Restore focus to filter input after re-renders
-    useEffect(() => {
-        if (filterInputRef.current && wasInputFocusedRef.current) {
-            filterInputRef.current.focus();
-        }
-    }, [value]);
 
     return (
         <div className={`relative ${className}`}>
@@ -44,13 +36,8 @@ export default function FilterInput({
                 placeholder={placeholder || t("Filter...")}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                onFocus={() => {
-                    wasInputFocusedRef.current = true;
-                }}
-                onBlur={() => {
-                    wasInputFocusedRef.current = false;
-                }}
                 ref={filterInputRef}
+                autoComplete="off"
             />
             {value && (
                 <button
@@ -58,7 +45,7 @@ export default function FilterInput({
                     onClick={onClear}
                     type="button"
                 >
-                    <X className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+                    <X className="h-4 w-4 text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 transition-colors" />
                 </button>
             )}
         </div>

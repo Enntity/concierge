@@ -63,7 +63,7 @@ const ChatNavigationItem = ({
                             <>
                                 <div className="basis-3">
                                     <XIcon
-                                        className="h-3 w-3 text-gray-400 hover:text-gray-600 cursor-pointer invisible group-hover:visible"
+                                        className="h-3 w-3 text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 cursor-pointer invisible group-hover:visible transition-colors"
                                         style={{
                                             left:
                                                 document.documentElement.dir ===
@@ -108,7 +108,7 @@ const ChatNavigationItem = ({
                                 <div className="basis-3 hidden sm:block">
                                     <EditIcon
                                         className={classNames(
-                                            "h-3 w-3 text-gray-400 hover:text-gray-600 cursor-pointer",
+                                            "h-3 w-3 text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 cursor-pointer transition-colors",
                                             !isCollapsed
                                                 ? "invisible group-hover:visible"
                                                 : "invisible",
@@ -120,7 +120,7 @@ const ChatNavigationItem = ({
                                         }}
                                     />
                                 </div>
-                                <div className="truncate">
+                                <div className="truncate text-gray-900 dark:text-gray-100">
                                     {t(subItem.name || "")}
                                 </div>
                             </>
@@ -130,7 +130,7 @@ const ChatNavigationItem = ({
                         <div className="basis-3 text-end hidden sm:block">
                             <Trash2
                                 className={classNames(
-                                    "h-3 w-3 text-gray-400 cursor-pointer hover:text-red-600",
+                                    "h-3 w-3 text-gray-400 cursor-pointer hover:text-sky-500 dark:hover:text-sky-400 transition-colors",
                                     !isCollapsed
                                         ? "invisible group-hover:visible"
                                         : "invisible",

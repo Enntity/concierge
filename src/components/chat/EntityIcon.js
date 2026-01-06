@@ -5,14 +5,17 @@ import { ThemeContext } from "../../contexts/ThemeProvider";
 // Accept an optional size prop (defaults to 'small' if not provided)
 const EntityIcon = ({ entity, size = "sm" }) => {
     const { theme } = useContext(ThemeContext);
-    
+
     // If entity is default, show the app logo
     if (entity?.isDefault) {
-        const logoUrl = theme === "dark" ? "/app/assets/logo_dark.png" : config.global.getLogo();
+        const logoUrl =
+            theme === "dark"
+                ? "/app/assets/enntity_logo_dark.svg"
+                : config.global.getLogo();
         return (
             <img
                 src={logoUrl}
-                alt="Labeeb Logo"
+                alt="Enntity Logo"
                 className={`${size === "lg" ? "w-8 h-8" : size === "xs" ? "w-4 h-4" : "w-5 h-5"}`}
             />
         );

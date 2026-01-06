@@ -21,11 +21,11 @@ const LLM_IDENTIFIERS = {
 
 const config = {
     global: {
-        siteTitle: "Labeeb",
+        siteTitle: "Enntity",
         getLogo: (language) =>
-            `/app/assets/labeeb-logo-${language === "ar" ? "ar" : "en"}.png`,
+            `/app/assets/enntity-logo-${language === "ar" ? "ar" : "en"}.png`,
         getTosContent: async () => "",
-        getSidebarLogo: () => "/app/assets/sidebar-logo.png",
+        getSidebarLogo: () => "/app/assets/enntity_logo.svg",
         getPublicGraphQLEndpoint: (graphQLEndpoint) => graphQLEndpoint,
     },
     data: {

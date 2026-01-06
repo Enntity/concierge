@@ -19,7 +19,6 @@ const mockLanguageContext = {
 };
 
 // Mock style imports - removing virtual: true option
-jest.mock("../App.scss", () => ({}));
 jest.mock("../tailwind.css", () => ({}));
 
 // Mock React's useContext to return our mockLanguageContext when LanguageContext is requested

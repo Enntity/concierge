@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import Diff from "./Diff";
-import StyleGuideDiff from "./StyleGuideDiff";
 
 const DiffComponent = ({
     inputText,
@@ -19,15 +18,6 @@ const DiffComponent = ({
     inputText = inputText.replace(/"|"|'|'/g, (match) =>
         match === "'" || match === "'" ? "'" : '"',
     );
-
-    if (type === "style-guide") {
-        return (
-            <StyleGuideDiff
-                styleGuideResult={outputText}
-                setSelectedText={setSelectedTextCallback}
-            />
-        );
-    }
 
     return (
         <Diff

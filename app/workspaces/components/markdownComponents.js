@@ -5,14 +5,23 @@
  */
 export const workspaceMarkdownComponents = {
     p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-    h1: ({ node, ...props }) => (
-        <h1 className="text-sm font-bold mb-2 mt-2 first:mt-0" {...props} />
+    h1: ({ node, children, ...props }) => (
+        <h1 className="text-xs font-bold mb-2 mt-2 first:mt-0" {...props}>
+            {children}
+        </h1>
     ),
-    h2: ({ node, ...props }) => (
-        <h2 className="text-xs font-bold mb-1 mt-2 first:mt-0" {...props} />
+    h2: ({ node, children, ...props }) => (
+        <h2 className="text-[0.7rem] font-bold mb-1 mt-2 first:mt-0" {...props}>
+            {children}
+        </h2>
     ),
-    h3: ({ node, ...props }) => (
-        <h3 className="text-xs font-semibold mb-1 mt-1 first:mt-0" {...props} />
+    h3: ({ node, children, ...props }) => (
+        <h3
+            className="text-[0.65rem] font-semibold mb-1 mt-1 first:mt-0"
+            {...props}
+        >
+            {children}
+        </h3>
     ),
     ul: ({ node, ...props }) => (
         <ul className="list-disc list-inside mb-2 space-y-0.5" {...props} />

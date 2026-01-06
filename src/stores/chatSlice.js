@@ -99,7 +99,7 @@ export const chatSlice = createSlice({
                         sentTime: new Date().toISOString(),
                         direction: "incoming",
                         position: "single",
-                        sender: "labeeb",
+                        sender: "enntity",
                     },
                 });
                 messageAlreadyShown[id] = true;

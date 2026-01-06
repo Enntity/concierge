@@ -78,7 +78,9 @@ function TranslationOptions({
         <div>
             <div className="flex flex-col sm:flex-row items-center gap-2">
                 <div className="mb-3 basis-2/3">
-                    <h3 className="text-sm mb-1">{t("From")}</h3>
+                    <h3 className="text-sm mb-1 text-gray-900 dark:text-gray-100">
+                        {t("From")}
+                    </h3>
                     <Select
                         value={selectedTranscript?.name || ""}
                         onValueChange={(value) => {
@@ -135,7 +137,9 @@ function TranslationOptions({
                     </Select>
                 </div>
                 <div className="mb-3 basis-1/3">
-                    <h3 className="text-sm mb-1">{t("To")}</h3>
+                    <h3 className="text-sm mb-1 text-gray-900 dark:text-gray-100">
+                        {t("To")}
+                    </h3>
                     <select
                         className="lb-select"
                         disabled={loading}

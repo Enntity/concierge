@@ -84,7 +84,7 @@ function Toolbar({
                                         <TooltipTrigger asChild>
                                             <button
                                                 ref={targetRef}
-                                                className={`mb-2.5 text-sm text-start text-sky-600 rounded-md ${!buttonEnabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                                                className={`mb-2.5 text-sm text-start text-sky-600 dark:text-sky-400 rounded-md ${!buttonEnabled ? "opacity-50 cursor-not-allowed" : ""}`}
                                                 disabled={!buttonEnabled}
                                                 onClick={() =>
                                                     handleAction(key)

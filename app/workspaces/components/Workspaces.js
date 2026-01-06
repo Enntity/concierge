@@ -67,7 +67,7 @@ export default function Workspaces() {
             <div className="mb-4">
                 {/* Header */}
                 <div className="mb-4">
-                    <h1 className="text-lg font-semibold">
+                    <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                         {t("Applet Workspaces")}
                     </h1>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -198,10 +198,7 @@ function WorkspaceTile({ workspace, onClick }) {
         : AppWindow;
 
     return (
-        <div
-            className="workspace-tile cursor-pointer group hover:shadow-lg transition-all duration-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-            onClick={onClick}
-        >
+        <div className="workspace-tile cursor-pointer group" onClick={onClick}>
             {/* Workspace content */}
             <div className="p-4 flex flex-col h-full">
                 {/* Title Section with Icon */}

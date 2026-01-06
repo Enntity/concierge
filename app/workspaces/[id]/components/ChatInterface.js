@@ -158,7 +158,7 @@ export default function ChatInterface({
                             </div>
                             <div className="chat-message-content">
                                 <ReactMarkdown
-                                    className="prose dark:prose-invert text-sm break-words leading-relaxed"
+                                    className="text-sm break-words leading-relaxed"
                                     components={{
                                         p: ({ children }) => (
                                             <p className="m-0 mb-3 last:mb-0 mobile-text-wrap">
@@ -174,17 +174,17 @@ export default function ChatInterface({
                                             </p>
                                         ),
                                         h1: ({ children }) => (
-                                            <h1 className="text-xl font-bold mb-3 mt-4 first:mt-0 mobile-text-wrap">
+                                            <h1 className="text-xs font-bold mb-2 mt-2 first:mt-0 mobile-text-wrap">
                                                 {children}
                                             </h1>
                                         ),
                                         h2: ({ children }) => (
-                                            <h2 className="text-lg font-semibold mb-2 mt-3 first:mt-0 mobile-text-wrap">
+                                            <h2 className="text-[0.7rem] font-bold mb-1 mt-2 first:mt-0 mobile-text-wrap">
                                                 {children}
                                             </h2>
                                         ),
                                         h3: ({ children }) => (
-                                            <h3 className="text-base font-semibold mb-2 mt-3 first:mt-0 mobile-text-wrap">
+                                            <h3 className="text-[0.65rem] font-semibold mb-1 mt-1 first:mt-0 mobile-text-wrap">
                                                 {children}
                                             </h3>
                                         ),

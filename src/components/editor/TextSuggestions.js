@@ -72,7 +72,6 @@ export function getTextSuggestionsComponent({
         useEffect(() => {
             if (data) {
                 const specialQueryKeys = {
-                    STYLE_GUIDE: "styleguide",
                     GRAMMAR_AR: "grammar_ar",
                 };
                 const key =
@@ -240,17 +239,12 @@ function renderOutput(
                 />
             );
         case "diff":
-        case "diff-styleguide":
             return (
                 <DiffComponent
                     inputText={inputText}
                     outputText={finalData}
                     setSelectedText={onSelectCallback}
-                    type={
-                        outputType === "diff-styleguide"
-                            ? "style-guide"
-                            : "default"
-                    }
+                    type="default"
                     direction={direction}
                 />
             );
@@ -297,7 +291,7 @@ function renderContent(
     t,
     direction,
 ) {
-    if (outputType === "diff" || outputType === "diff-styleguide") {
+    if (outputType === "diff") {
         return <div className="h-full">{output}</div>;
     }
 

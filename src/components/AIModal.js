@@ -54,8 +54,8 @@ export default function AIModal({
                     text={text}
                     args={args}
                     onSelect={onSelectCallback}
-                    onClose={action === "styleguide" ? close : undefined}
-                    onCommit={action === "styleguide" ? onCommit : undefined}
+                    onClose={undefined}
+                    onCommit={undefined}
                 />
             ) : null,
         [
@@ -65,9 +65,6 @@ export default function AIModal({
             text,
             args,
             onSelectCallback,
-            action,
-            close,
-            onCommit,
         ],
     );
 
@@ -121,49 +118,42 @@ export default function AIModal({
                                     <div className="grow h-[calc(100vh-200px)] overflow-auto">
                                         {modalBody}
                                     </div>
-                                    {action !== "styleguide" && (
-                                        <div className="justify-end flex gap-2 mt-4">
+                                    <div className="justify-end flex gap-2 mt-4">
+                                        <button
+                                            className="lb-secondary"
+                                            onClick={close}
+                                        >
+                                            {commitLabel
+                                                ? t("Cancel")
+                                                : t("Close")}
+                                        </button>
+                                        {commitLabel && (
                                             <button
-                                                className="lb-secondary"
-                                                onClick={close}
-                                            >
-                                                {commitLabel
-                                                    ? t("Cancel")
-                                                    : t("Close")}
-                                            </button>
-                                            {commitLabel && (
-                                                <button
-                                                    className="lb-primary"
-                                                    disabled={!result}
-                                                    onClick={() => {
-                                                        const value =
-                                                            diffEditorRef.current
-                                                                ? diffEditorRef.current
-                                                                      .getModifiedEditor()
-                                                                      .getValue()
-                                                                : result;
+                                                className="lb-primary"
+                                                disabled={!result}
+                                                onClick={() => {
+                                                    const value =
+                                                        diffEditorRef.current
+                                                            ? diffEditorRef.current
+                                                                  .getModifiedEditor()
+                                                                  .getValue()
+                                                            : result;
 
-                                                        if (
-                                                            inputType === "full"
-                                                        ) {
-                                                            onCommit(
-                                                                value,
-                                                                "full",
-                                                            );
-                                                        } else {
-                                                            onCommit(
-                                                                value,
-                                                                "selection",
-                                                            );
-                                                        }
-                                                        close();
-                                                    }}
-                                                >
-                                                    {t(commitLabel)}
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
+                                                    if (inputType === "full") {
+                                                        onCommit(value, "full");
+                                                    } else {
+                                                        onCommit(
+                                                            value,
+                                                            "selection",
+                                                        );
+                                                    }
+                                                    close();
+                                                }}
+                                            >
+                                                {t(commitLabel)}
+                                            </button>
+                                        )}
+                                    </div>
                                 </Dialog.Panel>
                             </Transition.Child>
                         </div>

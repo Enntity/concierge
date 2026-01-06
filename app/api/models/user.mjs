@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema(
         aiName: {
             type: String,
             required: false,
-            default: "Labeeb",
+            default: "Enntity",
         },
         agentModel: {
             type: String,

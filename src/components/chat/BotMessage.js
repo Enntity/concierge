@@ -406,9 +406,9 @@ export const EphemeralContent = React.memo(
                             toolCalls.map((toolCall, index) => (
                                 <div
                                     key={index}
-                                    className="flex items-start gap-2 mb-1 last:mb-0 rtl:flex-row-reverse"
+                                    className="flex items-center gap-2 mb-1 last:mb-0 rtl:flex-row-reverse"
                                 >
-                                    <div className="flex-shrink-0 mt-0.5 rtl:order-2">
+                                    <div className="flex-shrink-0 rtl:order-2">
                                         {toolCall.status === "thinking" && (
                                             <Loader2 className="h-3 w-3 text-gray-500 dark:text-gray-400 animate-spin" />
                                         )}
@@ -440,7 +440,7 @@ export const EphemeralContent = React.memo(
                             >
                                 {convertMessageToMarkdown({
                                     payload: content,
-                                    sender: "labeeb",
+                                    sender: "enntity",
                                 })}
                             </div>
                         )}
@@ -489,7 +489,7 @@ const BotMessage = ({
                             ? message.payload
                             : message.text
                     }
-                    className="copy-button opacity-0 group-hover:opacity-60 hover:opacity-100 transition-opacity pointer-events-auto"
+                    className="copy-button opacity-0 group-hover:opacity-80 hover:opacity-100 transition-opacity pointer-events-auto"
                 />
             </div>
 

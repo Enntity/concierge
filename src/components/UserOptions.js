@@ -23,7 +23,7 @@ const UserOptions = ({ show, handleClose }) => {
     const [profilePicture, setProfilePicture] = useState(
         user?.profilePicture || null,
     );
-    const [aiName, setAiName] = useState(user.aiName || "Labeeb");
+    const [aiName, setAiName] = useState(user.aiName || "Enntity");
     const [agentModel, setAgentModel] = useState(
         user.agentModel || DEFAULT_AGENT_MODEL,
     );
@@ -44,7 +44,7 @@ const UserOptions = ({ show, handleClose }) => {
     useEffect(() => {
         if (user) {
             setProfilePicture(user.profilePicture || null);
-            setAiName(user.aiName || "Labeeb");
+            setAiName(user.aiName || "Enntity");
             setAgentModel(user.agentModel || DEFAULT_AGENT_MODEL);
             setUseCustomEntities(user.useCustomEntities || false);
             setAiMemorySelfModify(user.aiMemorySelfModify || false);

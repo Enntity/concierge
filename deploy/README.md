@@ -35,11 +35,12 @@ This guide walks you through deploying Concierge to a Hetzner Cloud VPS with aut
 2. Click **"Create Server"**
 
 3. Configure your server:
-   - **Location**: Choose based on your users (Ashburn for US East, Hillsboro for US West)
-   - **Image**: Ubuntu 22.04
-   - **Type**: CX32 (4 vCPU, 8GB RAM) - ~€8.75/month
-   - **SSH Key**: Add your public SSH key (required!)
-   - **Name**: `concierge-prod`
+
+    - **Location**: Choose based on your users (Ashburn for US East, Hillsboro for US West)
+    - **Image**: Ubuntu 22.04
+    - **Type**: CX32 (4 vCPU, 8GB RAM) - ~€8.75/month
+    - **SSH Key**: Add your public SSH key (required!)
+    - **Name**: `concierge-prod`
 
 4. Click **"Create & Buy Now"**
 
@@ -49,12 +50,13 @@ This guide walks you through deploying Concierge to a Hetzner Cloud VPS with aut
 
 Point your domain to the server IP:
 
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| A | concierge | YOUR_SERVER_IP | 300 |
-| A | traefik.concierge | YOUR_SERVER_IP | 300 |
+| Type | Name              | Value          | TTL |
+| ---- | ----------------- | -------------- | --- |
+| A    | concierge         | YOUR_SERVER_IP | 300 |
+| A    | traefik.concierge | YOUR_SERVER_IP | 300 |
 
 Example: If your domain is `example.com`, create:
+
 - `concierge.example.com` → Server IP
 - `traefik.concierge.example.com` → Server IP (optional, for monitoring)
 
@@ -84,6 +86,7 @@ sudo ./deploy/setup-server.sh
 ```
 
 The script will prompt you for:
+
 - Domain name
 - Email for SSL certificates
 - MongoDB connection string
@@ -96,13 +99,13 @@ Go to your GitHub repository → **Settings** → **Secrets and variables** → 
 
 Add these secrets:
 
-| Secret Name | Description | Example |
-|-------------|-------------|---------|
-| `DEPLOY_HOST` | Server IP address | `123.45.67.89` |
-| `DEPLOY_USER` | SSH username | `root` |
-| `DEPLOY_SSH_KEY` | Private SSH key | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
-| `CORTEX_GRAPHQL_API_URL` | Cortex GraphQL endpoint | `https://api.example.com/graphql` |
-| `CORTEX_MEDIA_API_URL` | Cortex Media endpoint | `https://api.example.com/media` |
+| Secret Name              | Description             | Example                                  |
+| ------------------------ | ----------------------- | ---------------------------------------- |
+| `DEPLOY_HOST`            | Server IP address       | `123.45.67.89`                           |
+| `DEPLOY_USER`            | SSH username            | `root`                                   |
+| `DEPLOY_SSH_KEY`         | Private SSH key         | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
+| `CORTEX_GRAPHQL_API_URL` | Cortex GraphQL endpoint | `https://api.example.com/graphql`        |
+| `CORTEX_MEDIA_API_URL`   | Cortex Media endpoint   | `https://api.example.com/media`          |
 
 ### Getting your SSH private key:
 
@@ -126,6 +129,7 @@ git push origin main
 ```
 
 GitHub Actions will:
+
 1. Build the Docker image
 2. Push to GitHub Container Registry
 3. SSH to your server
@@ -196,13 +200,14 @@ Edit `docker-compose.prod.yml` and add replicas:
 
 ```yaml
 worker:
-  deploy:
-    replicas: 3
+    deploy:
+        replicas: 3
 ```
 
 ### Upgrade server
 
 In Hetzner Console, you can resize your server with minimal downtime:
+
 - CX32 → CX42 for more CPU/RAM
 - Or add a dedicated Redis/MongoDB server
 
@@ -256,16 +261,15 @@ ufw allow 443/tcp
 
 ## Cost Summary
 
-| Component | Monthly Cost |
-|-----------|-------------|
-| Hetzner CX32 (4 vCPU, 8GB) | ~€8.75 (~$10) |
-| MongoDB Atlas (M0 Free) | $0 |
-| Domain (annual / 12) | ~$1 |
-| **Total** | **~$11/month** |
+| Component                  | Monthly Cost   |
+| -------------------------- | -------------- |
+| Hetzner CX32 (4 vCPU, 8GB) | ~€8.75 (~$10)  |
+| MongoDB Atlas (M0 Free)    | $0             |
+| Domain (annual / 12)       | ~$1            |
+| **Total**                  | **~$11/month** |
 
 Compare to:
+
 - AWS (equivalent): ~$100+/month
 - Azure: ~$80+/month
 - Vercel Pro + Redis + Workers: ~$40+/month
-
-

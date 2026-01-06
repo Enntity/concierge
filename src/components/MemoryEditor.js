@@ -629,7 +629,7 @@ export const MemoryEditorContent = ({ user, aiName, onClose }) => {
         const now = new Date();
         const date = now.toISOString().split("T")[0];
         const time = now.toTimeString().split(" ")[0].replace(/:/g, "-");
-        a.download = `${(aiName || "labeeb").toLowerCase()}-memory-${date}-${time}.json`;
+        a.download = `${(aiName || "enntity").toLowerCase()}-memory-${date}-${time}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

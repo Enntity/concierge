@@ -71,7 +71,7 @@ export default function JiraProjectSelect({ token, value, onChange }) {
         return (
             <div className="mb-4 text-sm italic text-gray-500">
                 {t(
-                    "To create this issue in Jira, please connect Labeeb to your Jira account.",
+                    "To create this issue in Jira, please connect Enntity to your Jira account.",
                 )}
             </div>
         );
@@ -80,7 +80,7 @@ export default function JiraProjectSelect({ token, value, onChange }) {
             <div className="flex flex-col gap-3 mt-3 mb-4">
                 <div className="flex gap-2">
                     <div className="basis-1/3">
-                        <h5 className="text-gray-500 font-medium text-sm mb-1">
+                        <h5 className="text-gray-500 dark:text-gray-400 font-medium text-sm mb-1">
                             {t("Jira Site")}
                         </h5>
                         <select
@@ -107,7 +107,7 @@ export default function JiraProjectSelect({ token, value, onChange }) {
                         </select>
                     </div>
                     <div className="basis-1/3">
-                        <h5 className="text-gray-500 font-medium text-sm mb-1">
+                        <h5 className="text-gray-500 dark:text-gray-400 font-medium text-sm mb-1">
                             {t("Project")}
                         </h5>
                         <select
@@ -134,7 +134,7 @@ export default function JiraProjectSelect({ token, value, onChange }) {
                     </div>
                 </div>
                 <div className="">
-                    <h5 className="text-gray-500 font-medium text-sm mb-1">
+                    <h5 className="text-gray-500 dark:text-gray-400 font-medium text-sm mb-1">
                         {t("Issue types to pick from")}
                     </h5>
                     <IssueTypes
@@ -218,7 +218,7 @@ function IssueTypes({ value, onChange, projectKey, token, siteId }) {
         <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                 {loading && (
-                    <div className="text-sm font-normal text-gray-500">
+                    <div className="text-sm font-normal text-gray-500 dark:text-gray-400">
                         Loading issue types...
                     </div>
                 )}

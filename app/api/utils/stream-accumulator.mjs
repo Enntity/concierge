@@ -200,7 +200,7 @@ export class StreamAccumulator {
             sentTime: new Date().toISOString(),
             direction: "incoming",
             position: "single",
-            sender: "labeeb",
+            sender: "enntity",
             entityId: currentEntityId,
             isStreaming: false,
             ephemeralContent: hasEphemeralContent

@@ -117,7 +117,7 @@ const AppletEditButton = ({ workspaceId, router, isCollapsed }) => {
     return (
         <EditIcon
             className={cn(
-                "h-4 w-4 ml-auto text-gray-400 hover:text-gray-600 cursor-pointer",
+                "h-4 w-4 ml-auto text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 cursor-pointer transition-colors",
                 isCollapsed
                     ? "hidden group-hover:inline"
                     : "invisible group-hover:visible",
@@ -211,6 +211,15 @@ export default React.forwardRef(function Sidebar(
 
                 // Skip home and chat as they're always included
                 if (app.slug === "home" || app.slug === "chat") {
+                    return null;
+                }
+
+                // Hide Jira, Write, and Transcribe from sidebar
+                if (
+                    app.slug === "jira" ||
+                    app.slug === "write" ||
+                    app.slug === "video"
+                ) {
                     return null;
                 }
 
@@ -324,13 +333,23 @@ export default React.forwardRef(function Sidebar(
                     isCollapsed ? "-mx-2" : "",
                 )}
             >
-                <Link className="flex items-center justify-center w-full h-full" href="/">
+                <Link
+                    className="flex items-center justify-center w-full h-full"
+                    href="/"
+                >
                     <img
                         className={cn(
-                            "object-contain opacity-85 scale-150",
-                            isCollapsed ? "max-h-14 group-hover:h-14" : "h-14 max-w-full",
+                            "object-contain opacity-85 scale-150 transition-all duration-300",
+                            isCollapsed
+                                ? "max-h-14 group-hover:h-14"
+                                : "h-14 max-w-full",
+                            theme === "dark" && "sidebar-logo-glow",
                         )}
-                        src={theme === "dark" ? "/app/assets/logo_dark.png" : getLogo(language)}
+                        src={
+                            theme === "dark"
+                                ? "/app/assets/enntity_logo_dark.svg"
+                                : getLogo(language)
+                        }
                         alt="Your Company"
                     />
                     <div
