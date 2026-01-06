@@ -45,7 +45,7 @@ export default function PromptList({
                     <h4 className=" font-medium">{t("Prompts")}</h4>
                 </div>
                 <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-gray-400 dark:text-gray-500" />
+                    <Loader size="small" delay={0} />
                 </div>
             </div>
         );

@@ -83,7 +83,7 @@ const Tos = ({ showTos, setShowTos }) => {
                         <div className="flex-shrink-0">
                             <AnimatedLogo size={100} animate={true} />
                         </div>
-                        
+
                         {/* Scroll instruction - right under logo */}
                         <div
                             className={`w-full rounded-md p-3 ${
@@ -131,7 +131,9 @@ const Tos = ({ showTos, setShowTos }) => {
                                 <span className="text-sm font-medium">
                                     {hasScrolledToBottom
                                         ? t("Terms of Service read completely")
-                                        : t("Please scroll to the bottom to read the complete Terms of Service")}
+                                        : t(
+                                              "Please scroll to the bottom to read the complete Terms of Service",
+                                          )}
                                 </span>
                             </div>
                         </div>
@@ -150,16 +152,23 @@ const Tos = ({ showTos, setShowTos }) => {
                                     {t("Terms of Service")}
                                 </h1>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                    Last updated:{" "}
+                                    {new Date().toLocaleDateString("en-US", {
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric",
+                                    })}
                                 </p>
                             </div>
-                            
+
                             {tosContent}
-                            
+
                             {/* Privacy policy link at bottom of scrollable content */}
                             <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
                                 <p className="chat-message text-sm">
-                                    {t("For more information, please review our")}{" "}
+                                    {t(
+                                        "For more information, please review our",
+                                    )}{" "}
                                     <a
                                         href="/privacy"
                                         onClick={handlePrivacyLinkClick}

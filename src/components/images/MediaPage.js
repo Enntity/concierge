@@ -20,6 +20,7 @@ import {
     Tag,
     Sparkles,
 } from "lucide-react";
+import Loader from "../../../app/components/loader";
 import { LanguageContext } from "../../contexts/LanguageProvider";
 import { AuthContext } from "../../App";
 import { Modal } from "../../../@/components/ui/modal";
@@ -1441,9 +1442,9 @@ function MediaPage() {
             </div>
 
             {mediaItemsLoading || isMigrationInProgress ? (
-                <div className="flex justify-center items-center py-8">
-                    <Loader2 className="animate-spin h-8 w-8 text-gray-500 dark:text-gray-400" />
-                    <span className="ml-2 text-gray-500 dark:text-gray-400">
+                <div className="flex flex-col items-center justify-center py-8 gap-3">
+                    <Loader size="default" delay={0} />
+                    <span className="text-gray-500 dark:text-gray-400">
                         {isMigrationInProgress
                             ? t("Migrating media from localStorage...")
                             : t("Loading media...")}
@@ -1500,8 +1501,8 @@ function MediaPage() {
                     {sortedImages.length > 0 && hasNextPage && (
                         <div ref={ref} className="flex justify-center py-8">
                             {shouldShowLoading ? (
-                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                                    <Loader2 className="animate-spin h-5 w-5" />
+                                <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
+                                    <Loader size="small" delay={0} />
                                     <span>{t("Loading more...")}</span>
                                 </div>
                             ) : (

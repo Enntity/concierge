@@ -7,10 +7,10 @@ export default function Loader({ size = "default", delay = 500 }) {
     const [sparkles, setSparkles] = useState([]);
 
     // Calculate size-dependent values first
-    let sizeClass = "w-12 h-12";
+    let sizeClass = "w-10 h-10";
     let sparkleCount = 12;
-    let sparkleDistance = 30;
-    
+    let sparkleDistance = 24;
+
     if (size === "small") {
         sizeClass = "w-6 h-6";
         sparkleCount = 8;
@@ -43,7 +43,10 @@ export default function Loader({ size = "default", delay = 500 }) {
             distance: sparkleDistance + Math.random() * (sparkleDistance * 0.5),
             delay: Math.random() * 2,
             duration: 1.5 + Math.random() * 1,
-            size: size === "tiny" ? 1 + Math.random() * 1.5 : 2 + Math.random() * 3,
+            size:
+                size === "tiny"
+                    ? 1 + Math.random() * 1.5
+                    : 2 + Math.random() * 3,
             opacity: 0.6 + Math.random() * 0.4,
         }));
         setSparkles(newSparkles);
@@ -125,13 +128,15 @@ export default function Loader({ size = "default", delay = 500 }) {
                 @keyframes pulse-glow {
                     0%,
                     100% {
-                        box-shadow: 0 0 20px rgba(34, 211, 238, 0.6),
+                        box-shadow:
+                            0 0 20px rgba(34, 211, 238, 0.6),
                             0 0 40px rgba(167, 139, 250, 0.4),
                             inset 0 0 20px rgba(255, 255, 255, 0.2);
                         transform: scale(1);
                     }
                     50% {
-                        box-shadow: 0 0 30px rgba(34, 211, 238, 0.8),
+                        box-shadow:
+                            0 0 30px rgba(34, 211, 238, 0.8),
                             0 0 60px rgba(167, 139, 250, 0.6),
                             inset 0 0 30px rgba(255, 255, 255, 0.3);
                         transform: scale(1.05);
@@ -146,7 +151,8 @@ export default function Loader({ size = "default", delay = 500 }) {
                     }
                     50% {
                         opacity: 1;
-                        transform: translate(-50%, -50%) scale(1.5) rotate(180deg);
+                        transform: translate(-50%, -50%) scale(1.5)
+                            rotate(180deg);
                     }
                 }
             `}</style>

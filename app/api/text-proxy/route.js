@@ -27,16 +27,18 @@ export async function GET(req) {
         }
 
         // Validate URL is from allowed domains
-        const allowedDomains = [
-            "ajcortexfilestorage.blob.core.windows.net",
-            "storage.googleapis.com",
-            "storage.cloud.google.com",
-        ];
-
         const urlObj = new URL(url);
-        if (
-            !allowedDomains.some((domain) => urlObj.hostname.includes(domain))
-        ) {
+        const hostname = urlObj.hostname;
+
+        // Match any Azure Blob Storage URL
+        const isAzureBlobStorage = hostname.endsWith(".blob.core.windows.net");
+
+        // Match Google Cloud Storage URLs
+        const isGoogleStorage =
+            hostname.includes("storage.googleapis.com") ||
+            hostname.includes("storage.cloud.google.com");
+
+        if (!isAzureBlobStorage && !isGoogleStorage) {
             return Response.json(
                 { error: "URL is not from an allowed domain" },
                 { status: 403 },
