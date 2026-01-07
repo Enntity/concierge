@@ -47,29 +47,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     .map((d) => d.trim().toLowerCase());
                 const userDomain = user.email.split("@")[1]?.toLowerCase();
                 if (!domains.includes(userDomain)) {
-                    // Log the signup request for admin review (upsert to prevent spam)
+                    // Log the signup request for admin review via API route
+                    // (can't use mongoose directly in Edge Runtime)
                     try {
-                        const { default: UserSignupRequest } = await import(
-                            "./app/api/models/user-signup-request.mjs"
-                        );
-                        const { connectToDatabase } = await import(
-                            "./src/db.mjs"
-                        );
-                        await connectToDatabase();
-
-                        // Use upsert to update existing request or create new one
-                        // This prevents duplicate entries and rate-limits database writes
-                        await UserSignupRequest.findOneAndUpdate(
-                            { email: user.email },
-                            {
-                                $set: {
-                                    name: user.name || null,
-                                    domain: userDomain,
-                                    requestedAt: new Date(),
-                                },
+                        const baseUrl =
+                            process.env.NEXTAUTH_URL ||
+                            process.env.AUTH_URL ||
+                            "http://localhost:3000";
+                        await fetch(`${baseUrl}/api/auth/log-signup-request`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "x-auth-secret": process.env.AUTH_SECRET,
                             },
-                            { upsert: true, new: true },
-                        );
+                            body: JSON.stringify({
+                                email: user.email,
+                                name: user.name,
+                                domain: userDomain,
+                            }),
+                        });
                     } catch (error) {
                         // Don't fail auth if logging fails
                         console.error("Failed to log signup request:", error);
