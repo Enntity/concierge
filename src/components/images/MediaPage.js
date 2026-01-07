@@ -1502,7 +1502,7 @@ function MediaPage() {
                         <div ref={ref} className="flex justify-center py-8">
                             {shouldShowLoading ? (
                                 <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
-                                    <Loader size="small" delay={0} />
+                                    <Loader delay={0} />
                                     <span>{t("Loading more...")}</span>
                                 </div>
                             ) : (

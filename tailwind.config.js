@@ -134,11 +134,11 @@ module.exports = {
                 "fade-in-scale": {
                     "0%": {
                         opacity: "0",
-                        transform: "scale(0.95)",
+                        transform: "translateY(4px)",
                     },
                     "100%": {
                         opacity: "1",
-                        transform: "scale(1)",
+                        transform: "translateY(0)",
                     },
                 },
                 "grid-pulse": {
@@ -201,7 +201,7 @@ module.exports = {
                 "ping-slower":
                     "ping-slower 4s cubic-bezier(0, 0, 0.2, 1) infinite",
                 "fade-up": "fade-up 0.8s ease-out forwards",
-                "fade-in-scale": "fade-in-scale 0.5s ease-out forwards",
+                "fade-in-scale": "fade-in-scale 0.2s ease-out forwards",
                 "grid-pulse": "grid-pulse 8s ease-in-out infinite",
                 "particle-float": "particle-float 15s linear infinite",
                 "shake-gentle": "shake-gentle 0.5s ease-in-out",

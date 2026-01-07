@@ -13,11 +13,10 @@ if (typeof window !== "undefined") {
         (response) => response,
         (error) => {
             if (error.response?.status === 401) {
-                // Don't redirect if already on login page
-                if (window.location.pathname !== "/auth/login") {
-                    const callbackUrl = encodeURIComponent(
-                        window.location.pathname,
-                    );
+                // Don't redirect if already on login or error page
+                const pathname = window.location.pathname;
+                if (pathname !== "/auth/login" && pathname !== "/auth/error") {
+                    const callbackUrl = encodeURIComponent(pathname);
                     window.location.href = `/auth/login?callbackUrl=${callbackUrl}`;
                 }
             }

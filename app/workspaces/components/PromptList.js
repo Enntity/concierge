@@ -1,7 +1,7 @@
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import { useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Edit, Play, Paperclip, Loader2 } from "lucide-react";
+import { Edit, Play, Paperclip } from "lucide-react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import LoadingButton from "../../../src/components/editor/LoadingButton";
@@ -45,7 +45,7 @@ export default function PromptList({
                     <h4 className=" font-medium">{t("Prompts")}</h4>
                 </div>
                 <div className="flex items-center justify-center py-8">
-                    <Loader size="small" delay={0} />
+                    <Loader delay={0} />
                 </div>
             </div>
         );

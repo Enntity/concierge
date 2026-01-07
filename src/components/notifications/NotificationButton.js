@@ -55,7 +55,7 @@ export const StatusIndicator = ({ status }) => {
     } else if (status === "completed") {
         return <Check className="h-4 w-4 text-green-500" />;
     } else if (status === "in_progress") {
-        return <Loader size="small" delay={0} />;
+        return <Loader delay={0} />;
     } else if (status === "cancelled") {
         return <BanIcon className="h-4 w-4 text-red-500" />;
     } else if (status === "pending") {

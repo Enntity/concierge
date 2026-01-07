@@ -322,9 +322,7 @@ export default function QueuesPage() {
     }, [status, search]);
 
     return (
-        <div>
-            <h1 className="text-2xl font-bold mb-6">Queue Monitoring</h1>
-
+        <div className="space-y-6">
             <Tabs defaultValue={selectedQueue} onValueChange={setSelectedQueue}>
                 <TabsList>
                     {QUEUE_NAMES.map((name) => (

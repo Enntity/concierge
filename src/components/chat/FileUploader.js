@@ -1037,7 +1037,7 @@ export default function FileUploader({
                                 onChange={(e) => setInputUrl(e.target.value)}
                                 placeholder={t("Enter file URL...")}
                                 className={cn(
-                                    "flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-500 h-9",
+                                    "flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent h-9",
                                     "min-w-0",
                                 )}
                                 dir="ltr"

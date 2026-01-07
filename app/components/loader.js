@@ -7,22 +7,14 @@ export default function Loader({ size = "default", delay = 500 }) {
     const [sparkles, setSparkles] = useState([]);
 
     // Calculate size-dependent values first
-    let sizeClass = "w-10 h-10";
-    let sparkleCount = 12;
-    let sparkleDistance = 24;
+    let sizeClass = "w-5 h-5";
+    let sparkleCount = 8;
+    let sparkleDistance = 12;
 
     if (size === "small") {
-        sizeClass = "w-6 h-6";
-        sparkleCount = 8;
-        sparkleDistance = 18;
-    } else if (size === "tiny") {
         sizeClass = "w-3 h-3";
         sparkleCount = 6;
         sparkleDistance = 12;
-    } else if (size === "large") {
-        sizeClass = "w-16 h-16";
-        sparkleCount = 16;
-        sparkleDistance = 40;
     }
 
     useEffect(() => {
@@ -44,7 +36,7 @@ export default function Loader({ size = "default", delay = 500 }) {
             delay: Math.random() * 2,
             duration: 1.5 + Math.random() * 1,
             size:
-                size === "tiny"
+                size === "small"
                     ? 1 + Math.random() * 1.5
                     : 2 + Math.random() * 3,
             opacity: 0.6 + Math.random() * 0.4,

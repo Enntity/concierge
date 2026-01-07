@@ -46,15 +46,26 @@ const getIconComponent = (iconName) => {
 // Subtle sparkles around the logo
 function LogoSparkles({ theme, isCollapsed }) {
     const sparkles = useMemo(() => {
-        return Array.from({ length: 8 }, (_, i) => ({
-            id: i,
-            // Position sparkles around the logo in a circle
-            angle: (i * 360) / 8,
-            distance: 35 + Math.random() * 10, // Distance from center
-            delay: `${Math.random() * 3}s`,
-            size: Math.random() * 2 + 1.5,
-            opacity: Math.random() * 0.4 + 0.3,
-        }));
+        return Array.from({ length: 10 }, (_, i) => {
+            const driftRadius = 6 + Math.random() * 8;
+            return {
+                id: i,
+                // Position sparkles around the logo in a circle
+                angle: (i * 360) / 10,
+                distance: 32 + Math.random() * 12,
+                driftDuration: 8 + Math.random() * 6,
+                delay: Math.random() * 3,
+                size: Math.random() * 2.4 + 1.8,
+                opacity: Math.random() * 0.5 + 0.35,
+                // Pre-calculate drift positions
+                driftX1: (Math.random() - 0.5) * driftRadius * 2,
+                driftY1: (Math.random() - 0.5) * driftRadius * 2,
+                driftX2: (Math.random() - 0.5) * driftRadius * 2,
+                driftY2: (Math.random() - 0.5) * driftRadius * 2,
+                driftX3: (Math.random() - 0.5) * driftRadius * 2,
+                driftY3: (Math.random() - 0.5) * driftRadius * 2,
+            };
+        });
     }, []);
 
     // Only show sparkles in dark mode
@@ -64,6 +75,42 @@ function LogoSparkles({ theme, isCollapsed }) {
 
     return (
         <div className="absolute inset-0 pointer-events-none overflow-visible">
+            <style jsx>{`
+                @keyframes sparkle-drift {
+                    0%,
+                    100% {
+                        transform: translate(-50%, -50%) translate(0, 0);
+                        opacity: 0;
+                    }
+                    10% {
+                        opacity: 1;
+                    }
+                    25% {
+                        transform: translate(-50%, -50%)
+                            translate(var(--drift-x1), var(--drift-y1));
+                        opacity: 0.8;
+                    }
+                    40% {
+                        opacity: 0;
+                    }
+                    50% {
+                        transform: translate(-50%, -50%)
+                            translate(var(--drift-x2), var(--drift-y2));
+                        opacity: 0;
+                    }
+                    60% {
+                        opacity: 1;
+                    }
+                    75% {
+                        transform: translate(-50%, -50%)
+                            translate(var(--drift-x3), var(--drift-y3));
+                        opacity: 0.6;
+                    }
+                    90% {
+                        opacity: 0;
+                    }
+                }
+            `}</style>
             {sparkles.map((sparkle) => {
                 const radian = (sparkle.angle * Math.PI) / 180;
                 const x = Math.cos(radian) * sparkle.distance;
@@ -72,16 +119,22 @@ function LogoSparkles({ theme, isCollapsed }) {
                 return (
                     <div
                         key={sparkle.id}
-                        className="absolute rounded-full animate-sparkle"
+                        className="absolute rounded-full"
                         style={{
                             left: `calc(50% + ${x}px)`,
                             top: `calc(50% + ${y}px)`,
                             width: `${sparkle.size}px`,
                             height: `${sparkle.size}px`,
-                            background: `radial-gradient(circle, rgba(34, 211, 238, ${sparkle.opacity}) 0%, rgba(167, 139, 250, ${sparkle.opacity * 0.5}) 50%, transparent 100%)`,
-                            boxShadow: `0 0 ${sparkle.size * 2}px rgba(34, 211, 238, ${sparkle.opacity * 0.6}), 0 0 ${sparkle.size * 4}px rgba(167, 139, 250, ${sparkle.opacity * 0.3})`,
-                            transform: "translate(-50%, -50%)",
-                            animationDelay: sparkle.delay,
+                            background: `radial-gradient(circle, rgba(34, 211, 238, ${sparkle.opacity}) 0%, rgba(167, 139, 250, ${sparkle.opacity * 0.6}) 50%, transparent 100%)`,
+                            boxShadow: `0 0 ${sparkle.size * 2.5}px rgba(34, 211, 238, ${sparkle.opacity * 0.75}), 0 0 ${sparkle.size * 5}px rgba(167, 139, 250, ${sparkle.opacity * 0.4})`,
+                            "--drift-x1": `${sparkle.driftX1}px`,
+                            "--drift-y1": `${sparkle.driftY1}px`,
+                            "--drift-x2": `${sparkle.driftX2}px`,
+                            "--drift-y2": `${sparkle.driftY2}px`,
+                            "--drift-x3": `${sparkle.driftX3}px`,
+                            "--drift-y3": `${sparkle.driftY3}px`,
+                            animation: `sparkle-drift ${sparkle.driftDuration}s ease-in-out infinite`,
+                            animationDelay: `${sparkle.delay}s`,
                         }}
                     />
                 );

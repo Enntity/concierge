@@ -12,6 +12,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     ],
     pages: {
         signIn: "/auth/login",
+        error: "/auth/error",
     },
     callbacks: {
         // Prevent open redirect attacks
@@ -46,6 +47,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     .map((d) => d.trim().toLowerCase());
                 const userDomain = user.email.split("@")[1]?.toLowerCase();
                 if (!domains.includes(userDomain)) {
+                    // Log the signup request for admin review (upsert to prevent spam)
+                    try {
+                        const { default: UserSignupRequest } = await import(
+                            "./app/api/models/user-signup-request.mjs"
+                        );
+                        const { connectToDatabase } = await import(
+                            "./src/db.mjs"
+                        );
+                        await connectToDatabase();
+
+                        // Use upsert to update existing request or create new one
+                        // This prevents duplicate entries and rate-limits database writes
+                        await UserSignupRequest.findOneAndUpdate(
+                            { email: user.email },
+                            {
+                                $set: {
+                                    name: user.name || null,
+                                    domain: userDomain,
+                                    requestedAt: new Date(),
+                                },
+                            },
+                            { upsert: true, new: true },
+                        );
+                    } catch (error) {
+                        // Don't fail auth if logging fails
+                        console.error("Failed to log signup request:", error);
+                    }
                     return false;
                 }
             }

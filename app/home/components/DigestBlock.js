@@ -66,88 +66,85 @@ export default function DigestBlock({ block, contentClassName }) {
     return (
         <div
             key={block._id}
-            className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md border"
+            className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow duration-200"
         >
-            <div className="flex justify-between gap-2 items-center mb-4">
+            <div className="flex justify-between gap-3 items-center mb-4">
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                     {block.title}
                 </h3>
                 <div className="flex items-center gap-2">
                     {block.content && (
                         <button
-                            className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
+                            className="shrink-0 p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                             onClick={handleOpenInChat}
                             title={t("Open in chat")}
                         >
-                            <MessageSquare size={14} />
+                            <MessageSquare size={16} />
                         </button>
                     )}
-                    <div>
-                        <div
-                            className={classNames(
-                                "text-xs flex items-center gap-2 rounded-full px-3 py-2 border bg-gray-50 dark:bg-gray-600 text-gray-900 dark:text-gray-100 whitespace-nowrap",
+                    <button
+                        className={classNames(
+                            "text-xs flex items-center gap-2 rounded-full px-3 py-1.5 border transition-all duration-200",
+                            "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300",
+                            task?.status !== "pending" &&
+                                task?.status !== "in_progress" &&
+                                "cursor-pointer hover:bg-sky-50 dark:hover:bg-sky-900/30 hover:border-sky-300 dark:hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400",
+                        )}
+                        onClick={() => {
+                            if (
                                 task?.status !== "pending" &&
-                                    task?.status !== "in_progress" &&
-                                    "cursor-pointer hover:bg-sky-50 dark:hover:bg-sky-900/30 hover:border-sky-300 dark:hover:border-sky-600",
+                                task?.status !== "in_progress"
+                            ) {
+                                regenerateDigestBlock.mutate({
+                                    blockId: block._id,
+                                });
+                            }
+                        }}
+                        disabled={isRebuilding}
+                    >
+                        {block.updatedAt &&
+                            (!isRebuilding || !task?.progress) && (
+                                <RefreshCw
+                                    className={classNames(
+                                        "shrink-0",
+                                        isRebuilding ? "animate-spin" : "",
+                                    )}
+                                    size={14}
+                                />
                             )}
-                            onClick={() => {
-                                if (
-                                    task?.status !== "pending" &&
-                                    task?.status !== "in_progress"
-                                ) {
-                                    regenerateDigestBlock.mutate({
-                                        blockId: block._id,
-                                    });
-                                }
-                            }}
-                        >
-                            {block.updatedAt &&
-                                (!isRebuilding || !task?.progress) && (
-                                    <RefreshCw
-                                        className={classNames(
-                                            "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 shrink-0",
-                                            isRebuilding ? "animate-spin" : "",
-                                            "inline-block",
-                                        )}
-                                        size={14}
+                        <span className="whitespace-nowrap">
+                            {isRebuilding ? (
+                                task?.progress ? (
+                                    <Progress
+                                        value={
+                                            Math.min(
+                                                Math.max(task.progress, 0),
+                                                1,
+                                            ) * 100
+                                        }
+                                        className="w-20"
                                     />
-                                )}
-                            <div className="flex items-center justify-center gap-1 min-w-0">
-                                {isRebuilding ? (
-                                    task?.progress ? (
-                                        <Progress
-                                            value={
-                                                Math.min(
-                                                    Math.max(task.progress, 0),
-                                                    1,
-                                                ) * 100
-                                            }
-                                            className="w-24"
-                                        />
-                                    ) : (
-                                        t("Rebuilding...")
-                                    )
-                                ) : block.updatedAt ? (
-                                    <>
-                                        <span className="hidden lg:inline">
-                                            {t("Updated")}
-                                        </span>{" "}
-                                        <ReactTimeAgo
-                                            date={block.updatedAt}
-                                            locale={language}
-                                        />
-                                    </>
                                 ) : (
+                                    t("Rebuilding...")
+                                )
+                            ) : block.updatedAt ? (
+                                <span className="flex items-center gap-1">
                                     <span className="hidden lg:inline">
-                                        {t("Build now")}
+                                        {t("Updated")}
                                     </span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                                    <ReactTimeAgo
+                                        date={block.updatedAt}
+                                        locale={language}
+                                    />
+                                </span>
+                            ) : (
+                                t("Build now")
+                            )}
+                        </span>
+                    </button>
                 </div>
             </div>
-            <div className="text-sm">
+            <div className="text-sm text-gray-700 dark:text-gray-300">
                 <div className={contentClassName}>
                     <BlockContent block={block} />
                 </div>
@@ -165,16 +162,18 @@ function BlockContent({ block }) {
         !block.content
     ) {
         return (
-            <div className="text-gray-500 dark:text-gray-400 flex items-center gap-4 m-2 ">
+            <div className="text-gray-500 dark:text-gray-400 flex items-center gap-4 py-4">
                 <Loader />
-                {t("Building")}. {t("This may take a minute or two.")}
+                <span>
+                    {t("Building")}. {t("This may take a minute or two.")}
+                </span>
             </div>
         );
     }
 
     if (task?.status === "failed") {
         return (
-            <div className="text-red-500">
+            <div className="text-red-600 dark:text-red-400 py-2">
                 {t("Error building digest block:")}{" "}
                 {task.statusText || task.error}
             </div>
@@ -182,7 +181,11 @@ function BlockContent({ block }) {
     }
 
     if (!block.content) {
-        return "(No content)";
+        return (
+            <div className="text-gray-400 dark:text-gray-500 italic py-2">
+                {t("No content yet")}
+            </div>
+        );
     }
 
     return convertMessageToMarkdown(JSON.parse(block.content));

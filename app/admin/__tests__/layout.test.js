@@ -13,6 +13,13 @@ jest.mock("../../api/utils/auth", () => ({
     getCurrentUser: jest.fn(),
 }));
 
+// Mock AdminTabs to avoid ESM dependency chain (react-markdown, etc.)
+jest.mock("../components/AdminTabs", () => {
+    return function MockAdminTabs({ children }) {
+        return <div data-testid="admin-tabs">{children}</div>;
+    };
+});
+
 describe("AdminLayout", () => {
     beforeEach(() => {
         // Clear all mocks before each test

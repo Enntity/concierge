@@ -189,7 +189,7 @@ const StreamingMessage = React.memo(function StreamingMessage({
     }, []);
 
     return (
-        <div className="flex bg-white dark:bg-gray-800 ps-1 pt-1 relative group rounded-b-lg rounded-tl-lg rtl:rounded-tl-none rtl:rounded-tr-lg border border-gray-300 dark:border-gray-600">
+        <div className="flex bg-white dark:bg-gray-800 ps-1 pt-1 relative group rounded-b-lg rounded-tl-lg rtl:rounded-tl-none rtl:rounded-tr-lg border border-cyan-400/50 dark:border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.15)] dark:shadow-[0_0_15px_rgba(34,211,238,0.25)]">
             <div
                 className={classNames(
                     "px-2 pb-3 pt-2 [.docked_&]:px-0 [.docked_&]:py-3 w-full",
@@ -220,7 +220,7 @@ const StreamingMessage = React.memo(function StreamingMessage({
                                         transform: `translate(${loaderPosition.x}px, ${loaderPosition.y}px)`,
                                     }}
                                 >
-                                    <Loader size="tiny" delay={0} />
+                                    <Loader size="small" delay={0} />
                                 </div>
                             </div>
                         )}

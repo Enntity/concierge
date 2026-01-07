@@ -9,15 +9,19 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    Pagination,
-    PaginationContent,
-    PaginationItem,
-    PaginationLink,
-    PaginationNext,
-    PaginationPrevious,
-} from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+    AdminTableContainer,
+    AdminTable,
+    AdminTableHead,
+    AdminTableBody,
+    AdminTableHeaderCell,
+    AdminTableRow,
+    AdminTableCell,
+    AdminTableEmpty,
+    AdminPagination,
+} from "../components/AdminTable";
 
 export default function UserManagementClient({
     initialUsers,
@@ -28,11 +32,9 @@ export default function UserManagementClient({
 }) {
     const [users, setUsers] = useState(initialUsers);
     const [search, setSearch] = useState(initialSearch || "");
-    const [isSearching, setIsSearching] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // Update users when initialUsers changes (from server-side)
     useEffect(() => {
         setUsers(initialUsers);
     }, [initialUsers]);
@@ -41,20 +43,16 @@ export default function UserManagementClient({
         try {
             const response = await fetch(`/api/users/${userId}/role`, {
                 method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ role: newRole }),
             });
 
             if (response.ok) {
                 setUsers(
-                    users.map((user) =>
-                        user._id === userId ? { ...user, role: newRole } : user,
+                    users.map((u) =>
+                        u._id === userId ? { ...u, role: newRole } : u,
                     ),
                 );
-            } else {
-                console.error("Failed to update user role");
             }
         } catch (error) {
             console.error("Error updating user role:", error);
@@ -63,111 +61,69 @@ export default function UserManagementClient({
 
     const handleSearch = (e) => {
         e.preventDefault();
-        setIsSearching(true);
-
-        // Create new URLSearchParams object
-        const params = new URLSearchParams(searchParams);
-
-        // Update search parameter
-        if (search) {
-            params.set("search", search);
-        } else {
-            params.delete("search");
-        }
-
-        // Reset to page 1 when searching
+        const params = new URLSearchParams(searchParams.toString());
+        search ? params.set("search", search) : params.delete("search");
         params.set("page", "1");
-
-        // Navigate to the new URL
-        router.push(`/admin/users?${params.toString()}`);
-
-        // Reset searching state
-        setIsSearching(false);
-    };
-
-    const handlePageChange = (newPage) => {
-        if (newPage < 1 || newPage > totalPages) return;
-
-        // Create new URLSearchParams object
-        const params = new URLSearchParams(searchParams);
-
-        // Update page parameter
-        params.set("page", newPage.toString());
-
-        // Navigate to the new URL
         router.push(`/admin/users?${params.toString()}`);
     };
 
     return (
-        <div className="p-4">
-            <h1 className="text-2xl font-bold mb-6">User Management</h1>
+        <div className="space-y-6">
+            <form onSubmit={handleSearch} className="flex gap-2">
+                <Input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search by name or username..."
+                    className="flex-grow"
+                />
+                <Button type="submit">Search</Button>
+            </form>
 
-            {/* Search Form */}
-            <div className="mb-6">
-                <form onSubmit={handleSearch} className="flex gap-2">
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search by name or username..."
-                        className="flex-grow h-10 rounded-md border bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-1 focus:ring-gray-950"
-                    />
-                    <Button type="submit" disabled={isSearching}>
-                        {isSearching ? "Searching..." : "Search"}
-                    </Button>
-                </form>
-            </div>
-
-            {/* Users Table */}
-            <div className="overflow-x-auto mb-6">
-                <table className="min-w-full bg-white border border-gray-300">
-                    <thead>
-                        <tr className="bg-gray-100 dark:bg-gray-800">
-                            <th className="px-6 py-3 border-b text-left">
-                                Name
-                            </th>
-                            <th className="px-6 py-3 border-b text-left">
+            <AdminTableContainer>
+                <AdminTable>
+                    <AdminTableHead>
+                        <tr>
+                            <AdminTableHeaderCell>Name</AdminTableHeaderCell>
+                            <AdminTableHeaderCell>
                                 Username
-                            </th>
-                            <th className="px-6 py-3 border-b text-left">
-                                Role
-                            </th>
-                            <th className="px-6 py-3 border-b text-left">
-                                Actions
-                            </th>
+                            </AdminTableHeaderCell>
+                            <AdminTableHeaderCell>Role</AdminTableHeaderCell>
+                            <AdminTableHeaderCell>Actions</AdminTableHeaderCell>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {users.length > 0 ? (
+                    </AdminTableHead>
+                    <AdminTableBody>
+                        {users.length === 0 ? (
+                            <AdminTableEmpty
+                                colSpan={4}
+                                message="No users found"
+                            />
+                        ) : (
                             users.map((user) => (
-                                <tr
-                                    key={user._id}
-                                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
-                                >
-                                    <td className="px-6 py-4 border-b">
+                                <AdminTableRow key={user._id}>
+                                    <AdminTableCell className="font-medium text-gray-900 dark:text-gray-100">
                                         {user.name}
-                                    </td>
-                                    <td className="px-6 py-4 border-b">
+                                    </AdminTableCell>
+                                    <AdminTableCell className="text-gray-500 dark:text-gray-400">
                                         {user.username}
-                                    </td>
-                                    <td className="px-6 py-4 border-b">
-                                        {user.role}
-                                    </td>
-                                    <td className="px-6 py-4 border-b">
+                                    </AdminTableCell>
+                                    <AdminTableCell>
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200">
+                                            {user.role || "user"}
+                                        </span>
+                                    </AdminTableCell>
+                                    <AdminTableCell>
                                         <Select
-                                            value={user.role}
-                                            onValueChange={(value) =>
-                                                handleRoleChange(
-                                                    user._id,
-                                                    value,
-                                                )
+                                            value={user.role || "user"}
+                                            onValueChange={(v) =>
+                                                handleRoleChange(user._id, v)
                                             }
                                             disabled={
-                                                user._id === currentUser._id
+                                                user._id === currentUser?._id
                                             }
                                         >
                                             <SelectTrigger className="w-[120px]">
-                                                <SelectValue placeholder="Select role" />
+                                                <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="user">
@@ -178,64 +134,19 @@ export default function UserManagementClient({
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
-                                    </td>
-                                </tr>
+                                    </AdminTableCell>
+                                </AdminTableRow>
                             ))
-                        ) : (
-                            <tr>
-                                <td
-                                    colSpan="4"
-                                    className="px-6 py-4 text-center"
-                                >
-                                    No users found
-                                </td>
-                            </tr>
                         )}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-                <Pagination>
-                    <PaginationContent>
-                        <PaginationItem>
-                            <PaginationPrevious
-                                onClick={() =>
-                                    handlePageChange(currentPage - 1)
-                                }
-                                disabled={currentPage === 1}
-                                className="cursor-pointer"
-                            />
-                        </PaginationItem>
-
-                        {Array.from(
-                            { length: totalPages },
-                            (_, i) => i + 1,
-                        ).map((page) => (
-                            <PaginationItem key={page}>
-                                <PaginationLink
-                                    onClick={() => handlePageChange(page)}
-                                    isActive={currentPage === page}
-                                    className="cursor-pointer"
-                                >
-                                    {page}
-                                </PaginationLink>
-                            </PaginationItem>
-                        ))}
-
-                        <PaginationItem>
-                            <PaginationNext
-                                onClick={() =>
-                                    handlePageChange(currentPage + 1)
-                                }
-                                disabled={currentPage === totalPages}
-                                className="cursor-pointer"
-                            />
-                        </PaginationItem>
-                    </PaginationContent>
-                </Pagination>
-            )}
+                    </AdminTableBody>
+                </AdminTable>
+                <AdminPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    basePath="/admin/users"
+                    search={search}
+                />
+            </AdminTableContainer>
         </div>
     );
 }

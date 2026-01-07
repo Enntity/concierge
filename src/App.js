@@ -23,7 +23,7 @@ import Layout from "./layout/Layout";
 import "./tailwind.css";
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ["/auth/login", "/privacy", "/published"];
+const PUBLIC_ROUTES = ["/auth/login", "/auth/error", "/privacy", "/published"];
 
 const NEXT_PUBLIC_AMPLITUDE_API_KEY = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY;
 

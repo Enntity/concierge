@@ -11,12 +11,15 @@ export const SignOutButton = ({ className = "" }) => {
     const handleSignOut = async () => {
         setIsLoading(true);
         try {
-            await signOut({ callbackUrl: "/auth/login" });
+            // Sign out and redirect - NextAuth handles cookie clearing server-side
+            await signOut({
+                callbackUrl: "/auth/login",
+                redirect: true,
+            });
         } catch (error) {
             console.error("Sign out error:", error);
+            // Force redirect on error - server session is likely already invalid
             window.location.href = "/auth/login";
-        } finally {
-            setIsLoading(false);
         }
     };
 

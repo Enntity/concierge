@@ -1,7 +1,6 @@
-import React from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "../api/utils/auth";
-import AdminNav from "./components/AdminNav";
+import AdminTabs from "./components/AdminTabs";
 
 export default async function AdminLayout({ children }) {
     const user = await getCurrentUser();
@@ -11,20 +10,13 @@ export default async function AdminLayout({ children }) {
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-            <nav className="bg-white dark:bg-gray-800 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
-                        <div className="flex">
-                            <AdminNav />
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 overflow-auto bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                {children}
-            </main>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    Admin
+                </h1>
+            </div>
+            <AdminTabs>{children}</AdminTabs>
         </div>
     );
 }

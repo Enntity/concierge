@@ -6,7 +6,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PlusIcon, SettingsIcon, X } from "lucide-react";
+import { PlusIcon, Settings2, X, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Loader from "../../components/loader";
@@ -46,15 +46,15 @@ export default function DigestBlockList() {
 
     return (
         <>
-            <div className="flex justify-between items-start mb-2 gap-8">
+            <div className="flex justify-between items-start mb-4 gap-8">
                 {digest?.greeting && (
-                    <div>
+                    <div className="text-gray-700 dark:text-gray-300">
                         {convertMessageToMarkdown({ payload: digest.greeting })}
                     </div>
                 )}
                 <DropdownMenu>
-                    <DropdownMenuTrigger>
-                        <SettingsIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <DropdownMenuTrigger className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <Settings2 className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent sideOffset={8}>
                         <DropdownMenuItem onClick={() => setEditing(true)}>
@@ -108,52 +108,59 @@ function DigestEditor({ value, onChange, onCancel }) {
     });
 
     return (
-        <div>
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                {t("Edit dashboard")}
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Configure the blocks that appear in your dashboard here. You can
-                add or delete blocks and edit the prompts for each block.
-            </p>
-            <div className="grid sm:grid-cols-2 gap-4 mb-2">
-                {blocks?.map((p) => {
-                    return (
-                        <div
-                            key={p.id}
-                            className=" bg-gray-50 dark:bg-gray-700 p-4 rounded-md border"
+        <div className="space-y-6">
+            <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500/20 to-purple-500/20 dark:from-cyan-500/30 dark:to-purple-500/30">
+                    <Sparkles className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                </div>
+                <div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {t("Edit dashboard")}
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {t(
+                            "Configure the blocks that appear on your home page",
+                        )}
+                    </p>
+                </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+                {blocks?.map((p) => (
+                    <div
+                        key={p.id}
+                        className="group relative bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200"
+                    >
+                        <button
+                            onClick={() => {
+                                setDigestBlocks(
+                                    blocks.filter((d) => d.id !== p.id),
+                                );
+                            }}
+                            className="absolute top-3 right-3 p-1.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            title={t("Remove block")}
                         >
-                            <div className="justify-end flex mb-2 text-gray-400 dark:text-gray-500">
-                                <button
-                                    onClick={() => {
-                                        setDigestBlocks(
-                                            blocks.filter((d) => d.id !== p.id),
-                                        );
-                                    }}
-                                >
-                                    <X />
-                                </button>
-                            </div>
+                            <X className="h-4 w-4" />
+                        </button>
 
-                            <EditDigestBlock
-                                value={p}
-                                onChange={(v) => {
-                                    setDigestBlocks(
-                                        blocks.map((d) => {
-                                            if (d.id === p.id) {
-                                                return v;
-                                            }
+                        <EditDigestBlock
+                            value={p}
+                            onChange={(v) => {
+                                setDigestBlocks(
+                                    blocks.map((d) => {
+                                        if (d.id === p.id) {
+                                            return v;
+                                        }
+                                        return d;
+                                    }),
+                                );
+                            }}
+                        />
+                    </div>
+                ))}
 
-                                            return d;
-                                        }),
-                                    );
-                                }}
-                            />
-                        </div>
-                    );
-                })}
                 <button
-                    className=" flex justify-center items-center h-24 border default white-button rounded-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600"
+                    className="flex flex-col justify-center items-center min-h-[160px] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50 hover:border-cyan-400 dark:hover:border-cyan-500 hover:bg-cyan-50/50 dark:hover:bg-cyan-900/20 transition-all duration-200 group"
                     onClick={() => {
                         setDigestBlocks([
                             ...blocks,
@@ -165,19 +172,28 @@ function DigestEditor({ value, onChange, onCancel }) {
                         ]);
                     }}
                 >
-                    <PlusIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+                    <div className="p-3 rounded-full bg-gray-100 dark:bg-gray-700 group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/40 transition-colors mb-2">
+                        <PlusIcon className="h-6 w-6 text-gray-400 dark:text-gray-500 group-hover:text-cyan-600 dark:group-hover:text-cyan-400" />
+                    </div>
+                    <span className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400">
+                        {t("Add block")}
+                    </span>
                 </button>
             </div>
-            <div className="flex gap-2 ">
-                <button onClick={handleSave} className="lb-primary">
-                    {t("Save")}
+
+            <div className="flex gap-3 pt-2">
+                <button
+                    onClick={handleSave}
+                    className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium transition-colors"
+                >
+                    {t("Save changes")}
                 </button>
                 <button
                     onClick={() => {
                         setDigestBlocks(value);
                         onCancel();
                     }}
-                    className="lb-outline-secondary"
+                    className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium transition-colors"
                 >
                     {t("Cancel")}
                 </button>
@@ -190,30 +206,40 @@ function EditDigestBlock({ value, onChange }) {
     const { t } = useTranslation();
 
     return (
-        <div>
-            <input
-                placeholder={t("Title")}
-                className="lb-input font-semibold mb-4"
-                value={value.title}
-                onChange={(e) => {
-                    onChange({
-                        ...value,
-                        title: e.target.value,
-                    });
-                }}
-            />
-            <textarea
-                placeholder={t("Prompt")}
-                className="lb-input"
-                rows={6}
-                value={value.prompt}
-                onChange={(e) => {
-                    onChange({
-                        ...value,
-                        prompt: e.target.value,
-                    });
-                }}
-            />
+        <div className="space-y-4 pt-4">
+            <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                    {t("Title")}
+                </label>
+                <input
+                    placeholder={t("Block title...")}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-shadow"
+                    value={value.title}
+                    onChange={(e) => {
+                        onChange({
+                            ...value,
+                            title: e.target.value,
+                        });
+                    }}
+                />
+            </div>
+            <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                    {t("Prompt")}
+                </label>
+                <textarea
+                    placeholder={t("What would you like this block to show?")}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-shadow resize-none"
+                    rows={4}
+                    value={value.prompt}
+                    onChange={(e) => {
+                        onChange({
+                            ...value,
+                            prompt: e.target.value,
+                        });
+                    }}
+                />
+            </div>
         </div>
     );
 }

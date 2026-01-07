@@ -408,7 +408,7 @@ export const EphemeralContent = React.memo(
                                     key={index}
                                     className="flex items-start gap-2 mb-1 last:mb-0 rtl:flex-row-reverse"
                                 >
-                                    <div className="flex-shrink-0 rtl:order-2 mt-0.5">
+                                    <div className="flex-shrink-0 rtl:order-2 mt-1">
                                         {toolCall.status === "thinking" && (
                                             <Loader2 className="h-3 w-3 text-gray-500 dark:text-gray-400 animate-spin" />
                                         )}
@@ -478,9 +478,7 @@ const BotMessage = ({
     return (
         <div
             key={message.id}
-            className={classNames(
-                "flex bg-white dark:bg-gray-800 ps-1 pt-1 relative group rounded-b-lg rounded-tl-lg rtl:rounded-tl-none rtl:rounded-tr-lg border border-gray-300 dark:border-gray-600",
-            )}
+            className="flex bg-white dark:bg-gray-800 ps-1 pt-1 relative group rounded-b-lg rounded-tl-lg rtl:rounded-tl-none rtl:rounded-tr-lg border border-gray-300 dark:border-gray-600"
         >
             <div className="flex items-center gap-2 absolute top-3 end-3 z-10">
                 <CopyButton

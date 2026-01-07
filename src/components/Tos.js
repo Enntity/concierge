@@ -1,16 +1,14 @@
 "use client";
 
 import i18next from "i18next";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import config from "../../config";
-import { ThemeContext } from "../contexts/ThemeProvider";
 import AnimatedLogo from "./common/AnimatedLogo";
 import {
     AlertDialog,
     AlertDialogContent,
     AlertDialogHeader,
-    AlertDialogTitle,
     AlertDialogDescription,
     AlertDialogFooter,
     AlertDialogAction,

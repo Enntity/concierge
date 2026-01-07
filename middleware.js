@@ -8,7 +8,13 @@ export const config = {
 };
 
 // Paths that don't require authentication
-const PUBLIC_PATHS = ["/auth/login", "/api/auth", "/privacy", "/published"];
+const PUBLIC_PATHS = [
+    "/auth/login",
+    "/auth/error",
+    "/api/auth",
+    "/privacy",
+    "/published",
+];
 
 const isPublicPath = (pathname) => {
     return PUBLIC_PATHS.some((path) => pathname.startsWith(path));

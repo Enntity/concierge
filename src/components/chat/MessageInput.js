@@ -276,11 +276,14 @@ function MessageInput({
         <div>
             <div
                 className={classNames(
-                    "rounded-md border-2 mt-1",
+                    "rounded-md border-2 mt-1 transition-all duration-300",
                     isDragging
-                        ? "border-sky-500 border-dashed bg-sky-50 dark:bg-sky-900/20"
+                        ? "border-sky-500 border-dashed bg-sky-50 dark:bg-sky-900/20 shadow-lg shadow-sky-500/20 scale-[1.01]"
                         : "border-gray-300 dark:border-gray-500",
                     "bg-white dark:bg-gray-800",
+                    "hover:border-gray-400 dark:hover:border-gray-400",
+                    "focus-within:border-cyan-500/50 dark:focus-within:border-cyan-500/50",
+                    "focus-within:shadow-lg focus-within:shadow-cyan-500/10 dark:focus-within:shadow-cyan-500/20",
                     showFileUpload && "overflow-hidden",
                 )}
                 onDragOver={handleDragOver}
@@ -322,11 +325,12 @@ function MessageInput({
                                             setShowFileUpload(true);
                                         }
                                     }}
-                                    className={`rounded-full flex items-center justify-center ${
+                                    className={classNames(
+                                        "rounded-full flex items-center justify-center transition-all duration-300",
                                         activeChatId && !viewingReadOnlyChat
-                                            ? "hover:bg-gray-100 dark:hover:bg-gray-700"
-                                            : "cursor-not-allowed opacity-50"
-                                    }`}
+                                            ? "hover:bg-gray-100 dark:hover:bg-gray-700 hover:scale-110 active:scale-95"
+                                            : "cursor-not-allowed opacity-50",
+                                    )}
                                     title={
                                         viewingReadOnlyChat
                                             ? t("Read-only mode")
@@ -351,7 +355,7 @@ function MessageInput({
                                     onClick={() => {
                                         setShowFileUpload(false);
                                     }}
-                                    className="hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full flex items-center justify-center"
+                                    className="hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
                                 >
                                     <XCircle className="w-5 h-5 text-gray-500" />
                                 </button>
@@ -701,20 +705,27 @@ function MessageInput({
                                     viewingReadOnlyChat)
                             }
                             className={classNames(
-                                "ml-2 px-3 pb-2.5 text-base text-emerald-600 hover:text-emerald-600 disabled:text-gray-400 dark:disabled:text-gray-400 active:text-gray-800 flex items-end disabled:cursor-not-allowed",
+                                "ml-2 px-3 pb-2.5 text-base flex items-end",
+                                "transition-all duration-300",
+                                "disabled:cursor-not-allowed",
+                                inputValue === "" ||
+                                    isUploadingMedia ||
+                                    viewingReadOnlyChat
+                                    ? "text-gray-400 dark:text-gray-500"
+                                    : "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:scale-110 active:scale-95",
                             )}
                         >
                             {isStreaming || loading ? (
-                                <StopCircle className="w-5 h-5 text-red-500" />
+                                <StopCircle className="w-5 h-5 text-red-500 dark:text-red-400 transition-transform duration-300 hover:scale-110 active:scale-95" />
                             ) : (
                                 <span className="rtl:scale-x-[-1]">
                                     <Send
-                                        className={`w-5 h-5 ${
+                                        className={`w-5 h-5 transition-all duration-300 ${
                                             inputValue === "" ||
                                             isUploadingMedia ||
                                             viewingReadOnlyChat
-                                                ? "text-gray-400"
-                                                : "text-emerald-600"
+                                                ? "text-gray-400 dark:text-gray-500"
+                                                : "text-emerald-600 dark:text-emerald-400"
                                         }`}
                                     />
                                 </span>

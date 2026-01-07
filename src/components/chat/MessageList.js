@@ -1103,8 +1103,15 @@ const MessageList = React.memo(
                     {messages.length === 0 &&
                         !isStreaming &&
                         !isChatLoading && (
-                            <div className="no-message-message text-gray-400 dark:text-gray-500">
-                                {t("Send a message to start a conversation")}
+                            <div className="no-message-message text-gray-400 dark:text-gray-500 text-center py-12 animate-fade-in">
+                                <div className="text-lg font-medium mb-2">
+                                    {t(
+                                        "Send a message to start a conversation",
+                                    )}
+                                </div>
+                                <div className="text-sm opacity-75">
+                                    {t("Your AI assistant is ready to help")}
+                                </div>
                             </div>
                         )}
                     <div className="flex-1 overflow-hidden">
@@ -1168,8 +1175,8 @@ const MessageList = React.memo(
                                 entityId: selectedEntityId,
                                 payload: (
                                     <div className="flex gap-4">
-                                        <div className="mt-1 ms-1 mb-1 h-4">
-                                            <Loader />
+                                        <div className="ms-1">
+                                            <Loader size="small" delay={0} />
                                         </div>
                                     </div>
                                 ),

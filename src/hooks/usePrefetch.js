@@ -20,7 +20,7 @@ const PREFETCH_ROUTES = [
 ];
 
 // Public routes that don't require auth
-const PUBLIC_ROUTES = ["/auth/login", "/privacy", "/published"];
+const PUBLIC_ROUTES = ["/auth/login", "/auth/error", "/privacy", "/published"];
 
 // Data queries to prefetch for each route
 const ROUTE_DATA_MAP = {

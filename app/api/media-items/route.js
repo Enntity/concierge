@@ -1,6 +1,7 @@
 import { getCurrentUser } from "../utils/auth.js";
 import MediaItem from "../models/media-item.mjs";
 import { parseSearchQuery } from "../utils/search-parser.js";
+import { escapeRegex } from "../utils/regex-utils.js";
 
 export async function GET(req) {
     const user = await getCurrentUser();
@@ -40,12 +41,14 @@ export async function GET(req) {
             const searchTerms = parseSearchQuery(search);
 
             if (searchTerms.length === 1) {
-                // Single term - use regex search
+                // Single term - use regex search with escaped pattern to prevent ReDoS
                 const term = searchTerms[0];
                 const isQuoted =
                     (term.startsWith('"') && term.endsWith('"')) ||
                     (term.startsWith("'") && term.endsWith("'"));
-                const searchPattern = isQuoted ? term.slice(1, -1) : term;
+                const searchPattern = escapeRegex(
+                    isQuoted ? term.slice(1, -1) : term,
+                );
 
                 query.$or = [
                     { tags: { $regex: searchPattern, $options: "i" } },
@@ -59,7 +62,9 @@ export async function GET(req) {
                     const isQuoted =
                         (term.startsWith('"') && term.endsWith('"')) ||
                         (term.startsWith("'") && term.endsWith("'"));
-                    const searchPattern = isQuoted ? term.slice(1, -1) : term;
+                    const searchPattern = escapeRegex(
+                        isQuoted ? term.slice(1, -1) : term,
+                    );
 
                     query.$and.push({
                         $or: [
