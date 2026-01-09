@@ -90,8 +90,9 @@ export async function connectToDatabase() {
         await conn.close();
     }
 
-    // Extract database name from MONGO_URI
-    const dbName = new URL(MONGO_URI).pathname.split("/")[1];
+    // Extract database name from MONGO_URI or use env variable or default
+    const uriPath = new URL(MONGO_URI).pathname.split("/").filter(Boolean);
+    const dbName = uriPath[0] || process.env.MONGO_DB_NAME || "concierge";
 
     const schemaMap = {
         [`${dbName}.users`]: {

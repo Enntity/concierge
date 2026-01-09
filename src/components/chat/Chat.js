@@ -163,8 +163,20 @@ function Chat({ viewingChat = null }) {
         if (newEntityId !== selectedEntityId) {
             setSelectedEntityId(newEntityId);
         }
+
+        // If the stored entityId is invalid, update it in the database
+        if (
+            entityIdFromChat &&
+            !entities.some((e) => e.id === entityIdFromChat) &&
+            activeChatId
+        ) {
+            updateActiveChat.mutate({
+                chatId: activeChatId,
+                selectedEntityId: defaultEntityId,
+            });
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chat?.selectedEntityId, entities, defaultEntityId]);
+    }, [chat?.selectedEntityId, entities, defaultEntityId, activeChatId]);
 
     const handleShare = () => {
         setShowPublicConfirm(true);
@@ -189,8 +201,10 @@ function Chat({ viewingChat = null }) {
         }
     };
 
-    const handleEntityChange = (value) => {
-        const newEntityId = value === defaultAiName ? "" : value;
+    const handleEntityChange = (entityId) => {
+        // If selecting the default entity, store empty string (convention)
+        const selectedEntity = entities.find((e) => e.id === entityId);
+        const newEntityId = selectedEntity?.isDefault ? "" : entityId;
         setSelectedEntityId(newEntityId);
         if (activeChatId) {
             updateActiveChat.mutate({
