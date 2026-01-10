@@ -510,7 +510,10 @@ const MediaCard = React.memo(function MediaCard({
 
             {(type !== "file" || hasFilePreview) && (
                 <Dialog open={isZoomOpen} onOpenChange={setIsZoomOpen}>
-                    <DialogContent className="max-w-[95vw] max-h-[95vh] p-4 sm:p-6 flex items-center justify-center">
+                    <DialogContent
+                        className="max-w-[95vw] max-h-[95vh] p-4 sm:p-6 flex items-center justify-center"
+                        aria-describedby="media-card-preview-description"
+                    >
                         <DialogTitle className="sr-only">
                             {type === "image"
                                 ? translationFn("Image viewer")
@@ -520,7 +523,10 @@ const MediaCard = React.memo(function MediaCard({
                                     ? translationFn("YouTube video player")
                                     : translationFn("File preview")}
                         </DialogTitle>
-                        <DialogDescription className="sr-only">
+                        <DialogDescription
+                            id="media-card-preview-description"
+                            className="sr-only"
+                        >
                             {filename
                                 ? translationFn(
                                       `Viewing ${filename} in full screen`,

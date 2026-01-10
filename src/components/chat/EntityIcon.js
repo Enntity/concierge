@@ -1,11 +1,7 @@
-import React, { useContext } from "react";
-import config from "../../../config";
-import { ThemeContext } from "../../contexts/ThemeProvider";
+import React from "react";
 
 // Accept an optional size prop (defaults to 'small' if not provided)
 const EntityIcon = ({ entity, size = "sm" }) => {
-    const { theme } = useContext(ThemeContext);
-
     // Size classes mapping
     const sizeClasses =
         {
@@ -21,15 +17,6 @@ const EntityIcon = ({ entity, size = "sm" }) => {
             sm: "text-lg",
             xs: "text-sm",
         }[size] || "text-lg";
-
-    // If entity is default, show the app logo
-    if (entity?.isDefault) {
-        const logoUrl =
-            theme === "dark"
-                ? "/app/assets/enntity_logo_dark.svg"
-                : config.global.getLogo();
-        return <img src={logoUrl} alt="Enntity Logo" className={sizeClasses} />;
-    }
 
     // Check for avatar image first
     if (entity?.avatar?.image?.url) {

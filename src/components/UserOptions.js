@@ -1,11 +1,13 @@
 import { Modal } from "@/components/ui/modal";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { User, X, Settings } from "lucide-react";
+import { User, X, Settings, Sparkles } from "lucide-react";
 import { useUpdateAiOptions } from "../../app/queries/options";
 import { useUpdateCurrentUser } from "../../app/queries/users";
 import { AuthContext } from "../App";
 import { LanguageContext } from "../contexts/LanguageProvider";
+import { useOnboarding } from "../contexts/OnboardingContext";
+import { useEntities } from "../hooks/useEntities";
 import axios from "../../app/utils/axios-client";
 import { MemoryEditorContent } from "./MemoryEditor";
 import {
@@ -17,18 +19,23 @@ const UserOptions = ({ show, handleClose }) => {
     const { t } = useTranslation();
     const { user } = useContext(AuthContext);
     const { direction } = useContext(LanguageContext);
+    const { openOnboarding } = useOnboarding();
     const isRTL = direction === "rtl";
     const profilePictureInputRef = useRef();
+
+    const { entities } = useEntities(user?.contextId);
+
+    // Filter to only show user-created entities (non-system, non-default)
+    const userEntities = entities.filter((e) => !e.isSystem);
 
     const [profilePicture, setProfilePicture] = useState(
         user?.profilePicture || null,
     );
-    const [aiName, setAiName] = useState(user.aiName || "Enntity");
+    const [selectedDefaultEntityId, setSelectedDefaultEntityId] = useState(
+        user?.defaultEntityId || "",
+    );
     const [agentModel, setAgentModel] = useState(
         user.agentModel || DEFAULT_AGENT_MODEL,
-    );
-    const [useCustomEntities, setUseCustomEntities] = useState(
-        user.useCustomEntities || false,
     );
     const [aiMemorySelfModify, setAiMemorySelfModify] = useState(
         user.aiMemorySelfModify || false,
@@ -41,15 +48,23 @@ const UserOptions = ({ show, handleClose }) => {
     const updateAiOptionsMutation = useUpdateAiOptions();
     const updateCurrentUserMutation = useUpdateCurrentUser();
 
+    // Get the name of the currently selected default entity
+    const selectedEntity = userEntities.find(
+        (e) => e.id === selectedDefaultEntityId,
+    );
+    const aiName = selectedEntity?.name || user?.aiName || "Enntity";
+
+    // Only sync state when the modal opens, not on every user change
+    // This prevents the selection from being overwritten during save
     useEffect(() => {
-        if (user) {
+        if (show && user) {
             setProfilePicture(user.profilePicture || null);
-            setAiName(user.aiName || "Enntity");
+            setSelectedDefaultEntityId(user.defaultEntityId || "");
             setAgentModel(user.agentModel || DEFAULT_AGENT_MODEL);
-            setUseCustomEntities(user.useCustomEntities || false);
             setAiMemorySelfModify(user.aiMemorySelfModify || false);
         }
-    }, [user]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [show]);
 
     const handleProfilePictureSelect = async (event) => {
         const file = event.target.files[0];
@@ -149,8 +164,8 @@ const UserOptions = ({ show, handleClose }) => {
                     updates.aiMemorySelfModify ?? aiMemorySelfModify,
                 aiName: updates.aiName ?? aiName,
                 agentModel: updates.agentModel ?? agentModel,
-                useCustomEntities:
-                    updates.useCustomEntities ?? useCustomEntities,
+                defaultEntityId:
+                    updates.defaultEntityId ?? selectedDefaultEntityId,
             });
             setError("");
         } catch (error) {
@@ -161,6 +176,16 @@ const UserOptions = ({ show, handleClose }) => {
                     t("Failed to save options"),
             );
         }
+    };
+
+    const handleDefaultEntityChange = (entityId) => {
+        setSelectedDefaultEntityId(entityId);
+        const entity = userEntities.find((e) => e.id === entityId);
+        // Save both the entity ID and derive the name from the entity
+        saveOptions({
+            defaultEntityId: entityId,
+            aiName: entity?.name || "Enntity",
+        });
     };
 
     return (
@@ -315,22 +340,40 @@ const UserOptions = ({ show, handleClose }) => {
                             <div>
                                 <label
                                     className={`block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 ${isRTL ? "text-right" : "text-left"}`}
-                                    htmlFor="aiName"
+                                    htmlFor="defaultEntity"
                                 >
-                                    {t("AI Name")}
+                                    {t("Default AI")}
                                 </label>
-                                <input
-                                    id="aiName"
-                                    type="text"
-                                    value={aiName}
-                                    onChange={(e) => {
-                                        setAiName(e.target.value);
-                                        saveOptions({ aiName: e.target.value });
-                                    }}
+                                <select
+                                    id="defaultEntity"
+                                    value={selectedDefaultEntityId}
+                                    onChange={(e) =>
+                                        handleDefaultEntityChange(
+                                            e.target.value,
+                                        )
+                                    }
                                     className="lb-input w-full text-sm"
-                                    placeholder={t("Enter AI Name")}
                                     dir={direction}
-                                />
+                                >
+                                    <option value="">
+                                        {t("Select default AI...")}
+                                    </option>
+                                    {userEntities.map((entity) => (
+                                        <option
+                                            key={entity.id}
+                                            value={entity.id}
+                                        >
+                                            {entity.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {userEntities.length === 0 && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {t(
+                                            "Meet an AI to set them as your default",
+                                        )}
+                                    </p>
+                                )}
                             </div>
 
                             <div>
@@ -364,29 +407,18 @@ const UserOptions = ({ show, handleClose }) => {
                             </div>
                         </div>
 
-                        <div
-                            className={`flex gap-2 items-center ${isRTL ? "flex-row-reverse justify-end" : ""}`}
+                        {/* Meet a New AI Button */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                handleClose();
+                                openOnboarding();
+                            }}
+                            className="lb-outline-secondary text-sm w-full sm:w-auto flex items-center justify-center gap-2 mt-2"
                         >
-                            <input
-                                type="checkbox"
-                                id="useCustomEntities"
-                                className={`accent-sky-500 ${isRTL ? "order-2" : ""}`}
-                                checked={useCustomEntities}
-                                onChange={(e) => {
-                                    setUseCustomEntities(e.target.checked);
-                                    saveOptions({
-                                        useCustomEntities: e.target.checked,
-                                    });
-                                }}
-                            />
-                            <label
-                                htmlFor="useCustomEntities"
-                                className={`text-sm text-gray-900 dark:text-gray-100 cursor-pointer ${isRTL ? "order-1" : ""}`}
-                                dir={direction}
-                            >
-                                {t("Use other custom entities")}
-                            </label>
-                        </div>
+                            <Sparkles className="w-4 h-4" />
+                            {t("Meet a New AI")}
+                        </button>
                     </section>
 
                     {/* Separator */}

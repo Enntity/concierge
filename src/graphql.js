@@ -1013,8 +1013,24 @@ const AZURE_VIDEO_TRANSLATE = gql`
 `;
 
 const SYS_GET_ENTITIES = gql`
-    query Sys_get_entities {
-        sys_get_entities {
+    query Sys_get_entities($contextId: String!, $includeSystem: Boolean) {
+        sys_get_entities(contextId: $contextId, includeSystem: $includeSystem) {
+            result
+        }
+    }
+`;
+
+const SYS_GET_ONBOARDING_ENTITY = gql`
+    query Sys_get_onboarding_entity {
+        sys_get_onboarding_entity {
+            result
+        }
+    }
+`;
+
+const SYS_DISASSOCIATE_ENTITY = gql`
+    mutation Sys_disassociate_entity($entityId: String!, $contextId: String!) {
+        sys_disassociate_entity(entityId: $entityId, contextId: $contextId) {
             result
         }
     }
@@ -1073,6 +1089,7 @@ const QUERIES = {
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,
     SYS_GET_ENTITIES,
+    SYS_GET_ONBOARDING_ENTITY,
     SYS_TOOL_MERMAID,
     EXPAND_STORY,
     FORMAT_PARAGRAPH_TURBO,
@@ -1152,6 +1169,7 @@ const MUTATIONS = {
     CANCEL_REQUEST,
     PUT_PATHWAY,
     DELETE_PATHWAY,
+    SYS_DISASSOCIATE_ENTITY,
 };
 
 export {
@@ -1167,6 +1185,7 @@ export {
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,
     SYS_GET_ENTITIES,
+    SYS_GET_ONBOARDING_ENTITY,
     SYS_TOOL_MERMAID,
     SELECT_SERVICES,
     SUMMARY,

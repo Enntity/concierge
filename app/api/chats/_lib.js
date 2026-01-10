@@ -169,7 +169,8 @@ export async function getChatsOfCurrentUser(page = 1, limit = 20) {
 }
 
 export async function createNewChat(data) {
-    const { messages, title } = data;
+    const { messages, title, selectedEntityId, selectedEntityName, forceNew } =
+        data;
     const currentUser = await getCurrentUser(false);
     const userId = currentUser._id;
 
@@ -183,8 +184,13 @@ export async function createNewChat(data) {
     const messagesWithoutArtifacts =
         removeArtifactsFromMessages(normalizedMessages);
 
+    // Determine final entity info - use user's default entity if not provided
+    const finalEntityId = selectedEntityId || currentUser.defaultEntityId || "";
+    const finalEntityName = selectedEntityName || currentUser.aiName || "AI";
+
     // Only look for existing unused chat if we're creating a new empty chat
-    if (messagesWithoutArtifacts.length === 0) {
+    // Skip if forceNew is true (e.g., for onboarding where we need a specific entity)
+    if (messagesWithoutArtifacts.length === 0 && !forceNew) {
         // Find the latest unused chat (one-way gate: once used, never unused again)
         const unusedChat = await Chat.findOne({
             userId: currentUser._id,
@@ -192,6 +198,10 @@ export async function createNewChat(data) {
         }).sort({ createdAt: -1 });
 
         if (unusedChat) {
+            // Update the unused chat with the provided entity info
+            unusedChat.selectedEntityId = finalEntityId;
+            unusedChat.selectedEntityName = finalEntityName;
+            await unusedChat.save();
             await setActiveChatId(unusedChat._id);
             return unusedChat;
         }
@@ -202,6 +212,8 @@ export async function createNewChat(data) {
         messages: messagesWithoutArtifacts,
         isUnused: messagesWithoutArtifacts.length === 0,
         title: title || getSimpleTitle(messagesWithoutArtifacts[0] || ""),
+        selectedEntityId: finalEntityId,
+        selectedEntityName: finalEntityName,
     });
 
     await chat.save();
@@ -254,6 +266,7 @@ export async function getChatById(chatId) {
         codeRequestId,
         titleSetByUser,
         selectedEntityId,
+        selectedEntityName,
         researchMode,
     } = chat;
 
@@ -271,6 +284,7 @@ export async function getChatById(chatId) {
         codeRequestId,
         titleSetByUser,
         selectedEntityId,
+        selectedEntityName,
         researchMode,
     };
 

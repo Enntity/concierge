@@ -57,6 +57,7 @@ function ChatContent({
     selectedEntityId: selectedEntityIdFromProp,
     entities,
     entityIconSize,
+    isEntityUnavailable = false,
 }) {
     const { t } = useTranslation();
     const client = useApolloClient();
@@ -405,7 +406,7 @@ function ChatContent({
                         title: chat?.title,
                         entityId: currentSelectedEntityId,
                         researchMode: chat?.researchMode ? true : false,
-                        model: agentModel || "oai-gpt51",
+                        model: agentModel || "gemini-flash-3-vision",
                         userInfo,
                     }),
                 });
@@ -554,6 +555,7 @@ function ChatContent({
             entityIconSize={entityIconSize}
             contextId={user?.contextId}
             contextKey={user?.contextKey}
+            isEntityUnavailable={isEntityUnavailable}
         />
     );
 }

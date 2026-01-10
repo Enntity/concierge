@@ -144,10 +144,19 @@ export function useAddChat() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ messages, title }) => {
+        mutationFn: async ({
+            messages,
+            title,
+            selectedEntityId,
+            selectedEntityName,
+            forceNew,
+        }) => {
             const response = await axios.post(`/api/chats`, {
                 messages,
                 title,
+                selectedEntityId,
+                selectedEntityName,
+                forceNew,
             });
             return response.data;
         },

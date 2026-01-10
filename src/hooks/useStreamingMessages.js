@@ -6,6 +6,8 @@ export function useStreamingMessages({
     chat,
     updateChatHook,
     currentEntityId,
+    onToolMessage,
+    onStreamComplete,
 }) {
     const queryClient = useQueryClient();
     const streamingMessageRef = useRef("");
@@ -213,7 +215,19 @@ export function useStreamingMessages({
 
                     // Handle structured tool messages
                     if (parsedInfo.toolMessage) {
+                        console.log(
+                            "[useStreamingMessages] Tool message detected:",
+                            parsedInfo.toolMessage,
+                        );
                         updateToolCalls(parsedInfo.toolMessage);
+                        if (latestOnToolMessageRef.current) {
+                            console.log(
+                                "[useStreamingMessages] Calling onToolMessage callback",
+                            );
+                            latestOnToolMessageRef.current(
+                                parsedInfo.toolMessage,
+                            );
+                        }
 
                         // If we receive a tool start message, we should be thinking
                         if (
@@ -233,6 +247,28 @@ export function useStreamingMessages({
 
                         // Tool messages should trigger processing even without result content
                         // The tool call update above will cause a re-render
+                    }
+
+                    // Also check for tool results (has name and result fields)
+                    if (parsedInfo.tool && latestOnToolMessageRef.current) {
+                        console.log(
+                            "[useStreamingMessages] Tool result detected:",
+                            parsedInfo.tool,
+                        );
+                        try {
+                            const tool =
+                                typeof parsedInfo.tool === "string"
+                                    ? JSON.parse(parsedInfo.tool)
+                                    : parsedInfo.tool;
+                            // Pass as a toolMessage-like structure for consistency
+                            latestOnToolMessageRef.current({
+                                type: "finish",
+                                name: tool.name,
+                                result: tool.result,
+                            });
+                        } catch (e) {
+                            console.error("Failed to parse tool result:", e);
+                        }
                     }
 
                     // Store accumulated info
@@ -322,6 +358,8 @@ export function useStreamingMessages({
     const latestProcessMessageQueueRef = useRef(processMessageQueue);
     const latestQueryClientRef = useRef(queryClient);
     const latestCurrentEntityIdRef = useRef(currentEntityId);
+    const latestOnStreamCompleteRef = useRef(onStreamComplete);
+    const latestOnToolMessageRef = useRef(onToolMessage);
 
     useEffect(() => {
         latestChatRef.current = chat;
@@ -330,6 +368,8 @@ export function useStreamingMessages({
         latestProcessMessageQueueRef.current = processMessageQueue;
         latestQueryClientRef.current = queryClient;
         latestCurrentEntityIdRef.current = currentEntityId;
+        latestOnStreamCompleteRef.current = onStreamComplete;
+        latestOnToolMessageRef.current = onToolMessage;
     });
 
     // Handle SSE stream - subscriptionId must be a Response object (from fetch)
@@ -404,6 +444,18 @@ export function useStreamingMessages({
                                 }
 
                                 if (event === "complete") {
+                                    // Call onStreamComplete callback with the streamed content
+                                    // and full tool calls (for consumers who need to take action)
+                                    const content = streamingMessageRef.current;
+                                    const fullToolCalls =
+                                        eventData?.fullToolCalls;
+                                    if (latestOnStreamCompleteRef.current) {
+                                        latestOnStreamCompleteRef.current(
+                                            content,
+                                            fullToolCalls,
+                                        );
+                                    }
+
                                     // Server has persisted the message before sending "complete"
                                     // Refetch to get the persisted message, then clear streaming
                                     if (latestChatRef.current?._id) {
@@ -432,10 +484,8 @@ export function useStreamingMessages({
                                             event === "data"
                                                 ? eventData?.result
                                                 : null,
-                                        info:
-                                            event === "info"
-                                                ? eventData?.info
-                                                : null,
+                                        // Info can come with data events or standalone info events
+                                        info: eventData?.info || null,
                                     });
                                     if (!processingRef.current) {
                                         requestAnimationFrame(() =>

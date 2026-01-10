@@ -50,7 +50,7 @@ export function getModelIdFromDisplayName(displayName) {
     const option = AGENT_MODEL_OPTIONS.find(
         (opt) => opt.displayName === displayName,
     );
-    return option?.modelId || "oai-gpt51"; // default
+    return option?.modelId || DEFAULT_AGENT_MODEL;
 }
 
 /**
@@ -58,10 +58,10 @@ export function getModelIdFromDisplayName(displayName) {
  */
 export function getDisplayNameFromModelId(modelId) {
     const option = AGENT_MODEL_OPTIONS.find((opt) => opt.modelId === modelId);
-    return option?.displayName || "GPT 5.1"; // default
+    return option?.displayName || "Gemini 3 Flash";
 }
 
 /**
  * Default agent model
  */
-export const DEFAULT_AGENT_MODEL = "oai-gpt51";
+export const DEFAULT_AGENT_MODEL = "gemini-flash-3-vision";

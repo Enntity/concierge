@@ -54,13 +54,11 @@ function ChatBox() {
     const pathname = usePathname(); // Get the current pathname
     const activeChat = useGetActiveChat()?.data;
 
-    const { entities, defaultEntityId } = useEntities(aiName);
-    const entityIdFromChat = activeChat?.selectedEntityId || "";
-    // If no entityId or entity doesn't exist, use default entity
-    const selectedEntityId =
-        entityIdFromChat && entities.some((e) => e.id === entityIdFromChat)
-            ? entityIdFromChat
-            : defaultEntityId;
+    const { entities } = useEntities(user?.contextId);
+    const selectedEntityId = activeChat?.selectedEntityId || "";
+    // Check if the selected entity is available
+    const isEntityUnavailable =
+        selectedEntityId && !entities.some((e) => e.id === selectedEntityId);
     const updateChatHook = useUpdateChat();
     const [isResearchMode, setIsResearchMode] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -70,21 +68,6 @@ function ChatBox() {
             setIsResearchMode(activeChat.researchMode);
         }
     }, [activeChat?.researchMode]);
-
-    // If the stored entityId is invalid, update it in the database
-    useEffect(() => {
-        if (
-            entityIdFromChat &&
-            !entities.some((e) => e.id === entityIdFromChat) &&
-            activeChat?._id
-        ) {
-            updateChatHook.mutate({
-                chatId: activeChat._id,
-                selectedEntityId: defaultEntityId,
-            });
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [entityIdFromChat, entities, defaultEntityId, activeChat?._id]);
 
     const toggleResearchMode = () => {
         const newMode = !isResearchMode;
@@ -302,6 +285,7 @@ function ChatBox() {
                     entities={entities}
                     selectedEntityId={selectedEntityId}
                     entityIconSize="lg"
+                    isEntityUnavailable={isEntityUnavailable}
                 />
             </div>
         );
@@ -380,6 +364,7 @@ function ChatBox() {
                                 entities={entities}
                                 selectedEntityId={selectedEntityId}
                                 entityIconSize="sm"
+                                isEntityUnavailable={isEntityUnavailable}
                             />
                         </div>
                     )}

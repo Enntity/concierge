@@ -19,6 +19,7 @@ import StoreProvider from "./StoreProvider";
 import { LanguageContext, LanguageProvider } from "./contexts/LanguageProvider";
 import { ThemeProvider } from "./contexts/ThemeProvider";
 import { AutoTranscribeProvider } from "./contexts/AutoTranscribeContext";
+import { OnboardingProvider } from "./contexts/OnboardingContext";
 import Layout from "./layout/Layout";
 import "./tailwind.css";
 
@@ -146,9 +147,11 @@ const App = ({
                             >
                                 <ThemeProvider savedTheme={theme}>
                                     <LanguageProvider savedLanguage={language}>
-                                        <Layout>
-                                            <Body>{children}</Body>
-                                        </Layout>
+                                        <OnboardingProvider>
+                                            <Layout>
+                                                <Body>{children}</Body>
+                                            </Layout>
+                                        </OnboardingProvider>
                                     </LanguageProvider>
                                 </ThemeProvider>
                             </AuthContext.Provider>

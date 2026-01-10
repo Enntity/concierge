@@ -33,7 +33,7 @@ const generateDigestBlockContent = async (
         chatHistory: [systemMessage, { role: "user", content: [prompt] }],
         agentContext,
         aiName: user?.aiName,
-        model: user?.agentModel || "oai-gpt51",
+        model: user?.agentModel || "gemini-flash-3-vision",
         useMemory: true,
     };
 

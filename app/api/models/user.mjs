@@ -50,12 +50,12 @@ const userSchema = new mongoose.Schema(
         agentModel: {
             type: String,
             required: false,
-            default: "oai-gpt51",
+            default: "gemini-flash-3-vision",
         },
-        useCustomEntities: {
-            type: Boolean,
+        defaultEntityId: {
+            type: String,
             required: false,
-            default: false,
+            trim: true,
         },
         uploadedDocs: {
             type: [uploadedDocsSchema],
