@@ -10,7 +10,6 @@ export class StreamAccumulator {
         this.hasReceivedPersistent = false;
         this.accumulatedInfo = {};
         this.toolCallsMap = new Map(); // UI status tracking (icon, userMessage, status)
-        this.fullToolCallsMap = new Map(); // Full tool calls with accumulated arguments
         this.thinkingStartTime = null;
         this.accumulatedThinkingTime = 0;
         this.isThinking = false;
@@ -70,10 +69,10 @@ export class StreamAccumulator {
         try {
             const parsed = JSON.parse(result);
 
-            // Check for tool_calls in OpenAI format and accumulate them
-            const toolCalls = parsed?.choices?.[0]?.delta?.tool_calls;
-            if (toolCalls) {
-                this.accumulateToolCalls(toolCalls);
+            // Skip tool call chunks - they come via info block toolMessage instead
+            const hasToolCalls = parsed?.choices?.[0]?.delta?.tool_calls;
+            if (hasToolCalls) {
+                return true; // Processed (but skipped) - don't treat as content
             }
 
             let content;
@@ -120,8 +119,7 @@ export class StreamAccumulator {
                 return true;
             }
 
-            // Even if no content, we may have processed tool calls
-            return toolCalls ? true : false;
+            return false;
         } catch {
             // If parsing fails, treat as raw string content
             const isEphemeral = !!this.accumulatedInfo.ephemeral;
@@ -132,36 +130,6 @@ export class StreamAccumulator {
                 this.hasReceivedPersistent = true;
             }
             return true;
-        }
-    }
-
-    /**
-     * Accumulate tool calls from OpenAI streaming format
-     * Tool calls stream in with: id and name in first chunk, arguments in subsequent chunks
-     */
-    accumulateToolCalls(toolCalls) {
-        for (const toolCall of toolCalls) {
-            const index = toolCall.index ?? 0;
-            const existing = this.fullToolCallsMap.get(index) || {
-                id: null,
-                name: null,
-                arguments: "",
-            };
-
-            // First chunk has id and function name
-            if (toolCall.id) {
-                existing.id = toolCall.id;
-            }
-            if (toolCall.function?.name) {
-                existing.name = toolCall.function.name;
-            }
-
-            // Arguments stream in chunks
-            if (toolCall.function?.arguments) {
-                existing.arguments += toolCall.function.arguments;
-            }
-
-            this.fullToolCallsMap.set(index, existing);
         }
     }
 
@@ -213,8 +181,7 @@ export class StreamAccumulator {
         const hasContent =
             this.streamingMessage ||
             this.ephemeralContent ||
-            this.toolCallsMap.size > 0 ||
-            this.fullToolCallsMap.size > 0;
+            this.toolCallsMap.size > 0;
 
         if (!hasContent) return null;
 
@@ -234,9 +201,6 @@ export class StreamAccumulator {
         const hasToolCalls = finalToolCalls.length > 0;
         const hasEphemeralContent = finalEphemeralContent || hasToolCalls;
 
-        // Build full tool calls with parsed arguments
-        const fullToolCalls = this.getFullToolCalls();
-
         return {
             payload: finalContent,
             tool: toolString,
@@ -251,36 +215,7 @@ export class StreamAccumulator {
                 : undefined,
             thinkingDuration: this.getThinkingDuration(),
             toolCalls: hasToolCalls ? finalToolCalls : null,
-            // Full tool calls with parsed arguments (for taking action on specific tools)
-            fullToolCalls: fullToolCalls.length > 0 ? fullToolCalls : undefined,
         };
-    }
-
-    /**
-     * Get full tool calls with parsed arguments
-     */
-    getFullToolCalls() {
-        const result = [];
-        for (const [, toolCall] of this.fullToolCallsMap) {
-            if (toolCall.name && toolCall.arguments) {
-                try {
-                    const parsedArgs = JSON.parse(toolCall.arguments);
-                    result.push({
-                        id: toolCall.id,
-                        name: toolCall.name,
-                        arguments: parsedArgs,
-                    });
-                } catch {
-                    // If args don't parse as JSON, include raw
-                    result.push({
-                        id: toolCall.id,
-                        name: toolCall.name,
-                        arguments: toolCall.arguments,
-                    });
-                }
-            }
-        }
-        return result;
     }
 
     /**
@@ -299,7 +234,6 @@ export class StreamAccumulator {
         this.hasReceivedPersistent = false;
         this.accumulatedInfo = {};
         this.toolCallsMap.clear();
-        this.fullToolCallsMap.clear();
         this.thinkingStartTime = null;
         this.accumulatedThinkingTime = 0;
         this.isThinking = false;

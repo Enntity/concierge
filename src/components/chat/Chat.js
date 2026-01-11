@@ -315,6 +315,7 @@ function Chat({ viewingChat = null }) {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-xs"
                             aria-label={t("Select entity")}
                         >
+                            <Users className="w-3.5 h-3.5" />
                             <div className="flex items-center gap-2">
                                 {selectedEntityId ? (
                                     <>
@@ -362,7 +363,6 @@ function Chat({ viewingChat = null }) {
                                     <span>{t("Select entity")}</span>
                                 )}
                             </div>
-                            <Users className="w-3.5 h-3.5" />
                         </button>
                     )}
                     <ChatTopMenuDynamic

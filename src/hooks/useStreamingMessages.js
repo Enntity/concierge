@@ -8,6 +8,7 @@ export function useStreamingMessages({
     currentEntityId,
     onToolMessage,
     onStreamComplete,
+    onAvatarMessage,
 }) {
     const queryClient = useQueryClient();
     const streamingMessageRef = useRef("");
@@ -215,15 +216,8 @@ export function useStreamingMessages({
 
                     // Handle structured tool messages
                     if (parsedInfo.toolMessage) {
-                        console.log(
-                            "[useStreamingMessages] Tool message detected:",
-                            parsedInfo.toolMessage,
-                        );
                         updateToolCalls(parsedInfo.toolMessage);
                         if (latestOnToolMessageRef.current) {
-                            console.log(
-                                "[useStreamingMessages] Calling onToolMessage callback",
-                            );
                             latestOnToolMessageRef.current(
                                 parsedInfo.toolMessage,
                             );
@@ -249,12 +243,8 @@ export function useStreamingMessages({
                         // The tool call update above will cause a re-render
                     }
 
-                    // Also check for tool results (has name and result fields)
+                    // Also check for tool results (has name and result fields) - legacy format
                     if (parsedInfo.tool && latestOnToolMessageRef.current) {
-                        console.log(
-                            "[useStreamingMessages] Tool result detected:",
-                            parsedInfo.tool,
-                        );
                         try {
                             const tool =
                                 typeof parsedInfo.tool === "string"
@@ -264,11 +254,22 @@ export function useStreamingMessages({
                             latestOnToolMessageRef.current({
                                 type: "finish",
                                 name: tool.name,
+                                toolName: tool.name, // Include toolName for new-style handlers
                                 result: tool.result,
                             });
                         } catch (e) {
                             console.error("Failed to parse tool result:", e);
                         }
+                    }
+
+                    // Handle avatar messages (for dynamic avatar display)
+                    if (
+                        parsedInfo.avatarMessage &&
+                        latestOnAvatarMessageRef.current
+                    ) {
+                        latestOnAvatarMessageRef.current(
+                            parsedInfo.avatarMessage,
+                        );
                     }
 
                     // Store accumulated info
@@ -360,6 +361,7 @@ export function useStreamingMessages({
     const latestCurrentEntityIdRef = useRef(currentEntityId);
     const latestOnStreamCompleteRef = useRef(onStreamComplete);
     const latestOnToolMessageRef = useRef(onToolMessage);
+    const latestOnAvatarMessageRef = useRef(onAvatarMessage);
 
     useEffect(() => {
         latestChatRef.current = chat;
@@ -370,6 +372,7 @@ export function useStreamingMessages({
         latestCurrentEntityIdRef.current = currentEntityId;
         latestOnStreamCompleteRef.current = onStreamComplete;
         latestOnToolMessageRef.current = onToolMessage;
+        latestOnAvatarMessageRef.current = onAvatarMessage;
     });
 
     // Handle SSE stream - subscriptionId must be a Response object (from fetch)
@@ -445,14 +448,10 @@ export function useStreamingMessages({
 
                                 if (event === "complete") {
                                     // Call onStreamComplete callback with the streamed content
-                                    // and full tool calls (for consumers who need to take action)
                                     const content = streamingMessageRef.current;
-                                    const fullToolCalls =
-                                        eventData?.fullToolCalls;
                                     if (latestOnStreamCompleteRef.current) {
                                         latestOnStreamCompleteRef.current(
                                             content,
-                                            fullToolCalls,
                                         );
                                     }
 

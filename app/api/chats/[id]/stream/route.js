@@ -302,16 +302,7 @@ export async function POST(req, { params }) {
                                             err,
                                         );
                                     }
-                                    // Include full tool calls in complete event for client-side handling
-                                    const fullToolCalls =
-                                        accumulator.getFullToolCalls();
-                                    sendEvent("complete", {
-                                        progress: 1,
-                                        fullToolCalls:
-                                            fullToolCalls.length > 0
-                                                ? fullToolCalls
-                                                : undefined,
-                                    });
+                                    sendEvent("complete", { progress: 1 });
                                     closeStream();
                                 }
                             },

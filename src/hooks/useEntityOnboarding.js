@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef, useEffect } from "react";
-import { useQuery } from "@apollo/client";
-import { SYS_GET_ONBOARDING_ENTITY } from "../graphql";
+import { useQuery } from "@tanstack/react-query";
+import axios from "../../app/utils/axios-client";
 
 /**
  * Hook to manage the entity onboarding flow.
@@ -23,49 +23,49 @@ export function useEntityOnboarding() {
 
     // Fetch onboarding entity
     const {
-        data: onboardingData,
-        loading: onboardingLoading,
+        data: onboardingResult,
+        isLoading: onboardingLoading,
         refetch: refetchOnboarding,
-    } = useQuery(SYS_GET_ONBOARDING_ENTITY, {
-        skip: !isOnboardingActive,
-        fetchPolicy: "network-only",
+    } = useQuery({
+        queryKey: ["onboarding-entity"],
+        queryFn: async () => {
+            const response = await axios.get("/api/entities/onboarding");
+            return response.data;
+        },
+        enabled: isOnboardingActive,
+        staleTime: 0,
+        gcTime: 0,
     });
 
     // Parse onboarding entity when data arrives
     useEffect(() => {
-        if (
-            onboardingData?.sys_get_onboarding_entity?.result &&
-            isOnboardingActive
-        ) {
-            try {
-                const result = JSON.parse(
-                    onboardingData.sys_get_onboarding_entity.result,
+        if (onboardingResult && isOnboardingActive) {
+            if (onboardingResult.success && onboardingResult.entity) {
+                setOnboardingEntity(onboardingResult.entity);
+                setError(null);
+            } else {
+                setError(
+                    onboardingResult.error ||
+                        "Failed to load onboarding entity",
                 );
-                if (result.success && result.entity) {
-                    setOnboardingEntity(result.entity);
-                    setError(null);
-                } else {
-                    setError(
-                        result.error || "Failed to load onboarding entity",
-                    );
-                }
-            } catch (e) {
-                console.error("Failed to parse onboarding entity:", e);
-                setError("Failed to parse onboarding entity response");
             }
             setIsLoading(false);
         }
-    }, [onboardingData, isOnboardingActive]);
+    }, [onboardingResult, isOnboardingActive]);
 
     /**
      * Start the onboarding process
      */
     const startOnboarding = useCallback(async () => {
+        // Clear ALL state first to ensure fresh start
+        setOnboardingEntity(null);
+        setCreatedEntity(null);
+        setError(null);
+        entityCreatedRef.current = false;
+
+        // Then activate and start loading
         setIsOnboardingActive(true);
         setIsLoading(true);
-        setError(null);
-        setCreatedEntity(null);
-        entityCreatedRef.current = false;
 
         // Trigger refetch to get fresh onboarding entity
         await refetchOnboarding();

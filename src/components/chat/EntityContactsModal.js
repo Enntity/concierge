@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useContext } from "react";
+import React, { useState, useMemo, useContext, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useMutation } from "@apollo/client";
 import {
     Search,
     Sparkles,
@@ -31,7 +30,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import EntityIcon from "./EntityIcon";
 import { useOnboarding } from "../../contexts/OnboardingContext";
-import { MUTATIONS } from "../../graphql";
 import { useGetChats, useAddChat } from "../../../app/queries/chats";
 import { useRouter } from "next/navigation";
 import { AuthContext } from "../../App";
@@ -60,6 +58,13 @@ export default function EntityContactsModal({
     const [entityToDelete, setEntityToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // Aggressively refetch entities when modal opens to get fresh avatars
+    useEffect(() => {
+        if (isOpen && refetchEntities) {
+            refetchEntities();
+        }
+    }, [isOpen, refetchEntities]);
+
     const { data: chatsData } = useGetChats();
     const addChat = useAddChat();
 
@@ -68,8 +73,6 @@ export default function EntityContactsModal({
         if (!chatsData?.pages) return [];
         return chatsData.pages.flat();
     }, [chatsData?.pages]);
-
-    const [disassociateEntity] = useMutation(MUTATIONS.SYS_DISASSOCIATE_ENTITY);
 
     // Filter and sort entities
     const filteredEntities = useMemo(() => {
@@ -169,19 +172,20 @@ export default function EntityContactsModal({
 
         setIsDeleting(true);
         try {
-            await disassociateEntity({
-                variables: {
-                    entityId: entityToDelete.id,
-                    contextId: user.contextId,
-                },
+            const response = await fetch(`/api/entities/${entityToDelete.id}`, {
+                method: "DELETE",
             });
+            const result = await response.json();
 
-            // Refetch entities if available
-            if (refetchEntities) {
-                await refetchEntities();
+            if (result.success) {
+                // Refetch entities if available
+                if (refetchEntities) {
+                    await refetchEntities();
+                }
+                setEntityToDelete(null);
+            } else {
+                console.error("Failed to remove contact:", result.error);
             }
-
-            setEntityToDelete(null);
         } catch (error) {
             console.error("Failed to remove contact:", error);
         } finally {
@@ -221,16 +225,13 @@ export default function EntityContactsModal({
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent
-                    className="sm:max-w-md max-h-[80vh] flex flex-col"
-                    aria-describedby="contacts-description"
-                >
+                <DialogContent className="sm:max-w-md max-h-[80vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Users className="w-5 h-5" />
                             {t("Your AI Contacts")}
                         </DialogTitle>
-                        <DialogDescription id="contacts-description">
+                        <DialogDescription>
                             {t("Select an AI to chat with or meet someone new")}
                         </DialogDescription>
                     </DialogHeader>
@@ -281,7 +282,10 @@ export default function EntityContactsModal({
                                             handleEntityClick(entity.id)
                                         }
                                     >
-                                        <EntityIcon entity={entity} size="md" />
+                                        <EntityIcon
+                                            entity={entity}
+                                            size="2xl"
+                                        />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -295,7 +299,10 @@ export default function EntityContactsModal({
                                                 )}
                                             </div>
                                             {entity.description && (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                                <p
+                                                    className="text-sm text-gray-500 dark:text-gray-400 truncate"
+                                                    title={entity.description}
+                                                >
                                                     {entity.description}
                                                 </p>
                                             )}

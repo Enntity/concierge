@@ -48,14 +48,7 @@ export async function PUT(request) {
 
 async function initializeUserApps(user) {
     // Get the default apps (excluding Home and Chat as they're core navigation)
-    const defaultAppSlugs = [
-        "translate",
-        "video",
-        "write",
-        "workspaces",
-        "media",
-        "jira",
-    ];
+    const defaultAppSlugs = ["translate", "media"];
 
     // Find the active apps by slug
     const apps = await App.find({

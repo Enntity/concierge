@@ -103,7 +103,14 @@ export async function getRecentChatsOfCurrentUser() {
             _id: { $in: recentChatIds },
             userId: currentUser._id,
         },
-        { _id: 1, title: 1, titleSetByUser: 1, isUnused: 1 },
+        {
+            _id: 1,
+            title: 1,
+            titleSetByUser: 1,
+            isUnused: 1,
+            selectedEntityId: 1,
+            selectedEntityName: 1,
+        },
     );
 
     // For chats without a custom title, fetch the first message separately

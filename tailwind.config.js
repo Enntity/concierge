@@ -186,6 +186,62 @@ module.exports = {
                         transform: "scale(1) rotate(180deg)",
                     },
                 },
+                // Onboarding-specific animations
+                "text-glow-pulse": {
+                    "0%, 100%": {
+                        textShadow:
+                            "0 0 80px rgba(34, 211, 238, 0.5), 0 0 40px rgba(167, 139, 250, 0.3)",
+                    },
+                    "50%": {
+                        textShadow:
+                            "0 0 100px rgba(34, 211, 238, 0.7), 0 0 60px rgba(167, 139, 250, 0.5)",
+                    },
+                },
+                "glow-breathe": {
+                    "0%, 100%": {
+                        opacity: "0.3",
+                        transform: "scale(1)",
+                    },
+                    "50%": {
+                        opacity: "0.5",
+                        transform: "scale(1.05)",
+                    },
+                },
+                // Streaming avatar animations
+                "avatar-scanline": {
+                    "0%": {
+                        transform: "translateY(-100%)",
+                        opacity: "0",
+                    },
+                    "10%": {
+                        opacity: "1",
+                    },
+                    "90%": {
+                        opacity: "1",
+                    },
+                    "100%": {
+                        transform: "translateY(100%)",
+                        opacity: "0",
+                    },
+                },
+                "avatar-glow-pulse": {
+                    "0%, 100%": {
+                        boxShadow:
+                            "0 0 15px 2px rgba(34, 211, 238, 0.4), 0 0 30px 4px rgba(34, 211, 238, 0.2)",
+                    },
+                    "50%": {
+                        boxShadow:
+                            "0 0 25px 4px rgba(34, 211, 238, 0.6), 0 0 50px 8px rgba(34, 211, 238, 0.3)",
+                    },
+                },
+                "avatar-scan-zoom": {
+                    "0%": {
+                        transform: "translateY(-50%)",
+                    },
+                    "100%": {
+                        transform: "translateY(0%)",
+                    },
+                },
             },
             animation: {
                 "accordion-down": "accordion-down 0.2s ease-out",
@@ -206,6 +262,14 @@ module.exports = {
                 "particle-float": "particle-float 15s linear infinite",
                 "shake-gentle": "shake-gentle 0.5s ease-in-out",
                 sparkle: "sparkle 3s ease-in-out infinite",
+                // Onboarding animations
+                "text-glow-pulse": "text-glow-pulse 4s ease-in-out infinite",
+                "glow-breathe": "glow-breathe 4s ease-in-out infinite",
+                // Streaming avatar animations
+                "avatar-scanline": "avatar-scanline 2s ease-in-out infinite",
+                "avatar-glow-pulse":
+                    "avatar-glow-pulse 4s ease-in-out infinite",
+                "avatar-scan-zoom": "avatar-scan-zoom 3s ease-in-out infinite",
             },
         },
     },

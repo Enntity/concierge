@@ -189,8 +189,8 @@ describe("Native Apps Seeding", () => {
 
         const nativeApps = await App.find({ type: APP_TYPES.NATIVE });
 
-        // Should have 6 native apps
-        expect(nativeApps.length).toBe(6);
+        // Should have 2 native apps (Translate, Media)
+        expect(nativeApps.length).toBe(2);
 
         // Check that each app has the expected properties
         const expectedApps = [
@@ -202,38 +202,10 @@ describe("Native Apps Seeding", () => {
                     "Translate text between multiple languages with AI-powered accuracy",
             },
             {
-                name: "Transcribe",
-                slug: "video",
-                icon: "Video",
-                description:
-                    "Transcribe and translate video and audio files with AI-powered accuracy",
-            },
-            {
-                name: "Write",
-                slug: "write",
-                icon: "Pencil",
-                description:
-                    "Write and edit content with AI-powered writing assistance",
-            },
-            {
-                name: "Workspaces",
-                slug: "workspaces",
-                icon: "AppWindow",
-                description:
-                    "Manage your AI workspaces and collaborate on projects",
-            },
-            {
                 name: "Media",
                 slug: "media",
                 icon: "Image",
                 description: "Generate and manage images and media content",
-            },
-            {
-                name: "Jira",
-                slug: "jira",
-                icon: "Bug",
-                description:
-                    "Integrate with Jira for issue tracking and project management",
             },
         ];
 
@@ -263,6 +235,6 @@ describe("Native Apps Seeding", () => {
         await seed();
 
         const nativeApps = await App.find({ type: APP_TYPES.NATIVE });
-        expect(nativeApps.length).toBe(6);
+        expect(nativeApps.length).toBe(2);
     });
 });
