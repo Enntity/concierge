@@ -77,150 +77,133 @@ export async function PUT(req, { params }) {
             }
         }
 
-        // Get MongoDB collection
-        let client;
-        try {
-            const result = await getContinuityMemoriesCollection();
-            client = result.client;
-            const { collection } = result;
+        // Get MongoDB collection (uses shared mongoose connection with CSFLE)
+        const { collection } = await getContinuityMemoriesCollection();
 
-            // Security: Verify memory belongs to this entity and user
-            // userId (contextId) must be in assocEntityIds array
-            const existingMemory = await collection.findOne({
-                id: memoryId,
-                entityId,
-                assocEntityIds: user.contextId, // MongoDB query: array contains
-            });
+        // Security: Verify memory belongs to this entity and user
+        // userId (contextId) must be in assocEntityIds array
+        const existingMemory = await collection.findOne({
+            id: memoryId,
+            entityId,
+            assocEntityIds: user.contextId, // MongoDB query: array contains
+        });
 
-            if (!existingMemory) {
-                return NextResponse.json(
-                    { error: "Memory not found" },
-                    { status: 404 },
-                );
-            }
-
-            // Check if content changed - if so, regenerate embeddings
-            const contentChanged =
-                updateData.content !== undefined &&
-                updateData.content !== existingMemory.content;
-
-            let newContentVector = existingMemory.contentVector;
-            if (
-                contentChanged &&
-                updateData.content &&
-                updateData.content.trim()
-            ) {
-                try {
-                    const graphqlClient = getClient();
-                    const embeddingResult = await graphqlClient.query({
-                        query: QUERIES.EMBEDDINGS,
-                        variables: { text: updateData.content },
-                        fetchPolicy: "network-only",
-                    });
-
-                    // Parse the result - embeddings pathway returns JSON string array
-                    const embeddingsResult =
-                        embeddingResult.data?.embeddings?.result;
-                    if (embeddingsResult) {
-                        try {
-                            const parsed =
-                                typeof embeddingsResult === "string"
-                                    ? JSON.parse(embeddingsResult)
-                                    : embeddingsResult;
-                            newContentVector = Array.isArray(parsed)
-                                ? parsed
-                                : Array.isArray(parsed[0])
-                                  ? parsed[0]
-                                  : null;
-                        } catch (e) {
-                            console.error(
-                                "Error parsing embeddings result:",
-                                e,
-                            );
-                            // Keep existing vector if parsing fails
-                        }
-                    }
-                } catch (error) {
-                    console.error(
-                        "Error generating embedding for updated memory:",
-                        error,
-                    );
-                    // Continue with update without new embedding - keep existing vector
-                }
-            }
-
-            // Build update object (don't allow changing entityId or assocEntityIds)
-            // Ensure arrays are properly formatted
-            if (
-                updateData.relatedMemoryIds !== undefined &&
-                !Array.isArray(updateData.relatedMemoryIds)
-            ) {
-                updateData.relatedMemoryIds = [];
-            }
-            if (
-                updateData.tags !== undefined &&
-                !Array.isArray(updateData.tags)
-            ) {
-                updateData.tags = [];
-            }
-            if (
-                updateData.synthesizedFrom !== undefined &&
-                !Array.isArray(updateData.synthesizedFrom)
-            ) {
-                updateData.synthesizedFrom = null;
-            }
-            // Handle assocEntityIds - if provided, ensure current user is included
-            if (updateData.assocEntityIds !== undefined) {
-                if (!Array.isArray(updateData.assocEntityIds)) {
-                    updateData.assocEntityIds = [user.contextId];
-                } else if (
-                    !updateData.assocEntityIds.includes(user.contextId)
-                ) {
-                    // Security: Always include current user in assocEntityIds
-                    updateData.assocEntityIds.push(user.contextId);
-                }
-            }
-
-            const update = {
-                ...updateData,
-                lastAccessed: new Date().toISOString(),
-            };
-
-            // Include new contentVector if content changed
-            if (contentChanged) {
-                update.contentVector = newContentVector;
-            }
-
-            delete update.entityId;
-            // Don't delete assocEntityIds - allow updates but ensure current user is included
-
-            // Update memory
-            await collection.updateOne(
-                {
-                    id: memoryId,
-                    entityId,
-                    assocEntityIds: user.contextId, // MongoDB query: array contains
-                },
-                { $set: update },
+        if (!existingMemory) {
+            return NextResponse.json(
+                { error: "Memory not found" },
+                { status: 404 },
             );
+        }
 
-            // Fetch updated memory
-            const updatedMemory = await collection.findOne({
-                id: memoryId,
-                entityId,
-                assocEntityIds: user.contextId, // MongoDB query: array contains
-            });
+        // Check if content changed - if so, regenerate embeddings
+        const contentChanged =
+            updateData.content !== undefined &&
+            updateData.content !== existingMemory.content;
 
-            // Return updated memory (vectors included for export/import)
-            return NextResponse.json({
-                success: true,
-                memory: updatedMemory,
-            });
-        } finally {
-            if (client) {
-                await client.close().catch(console.error);
+        let newContentVector = existingMemory.contentVector;
+        if (
+            contentChanged &&
+            updateData.content &&
+            updateData.content.trim()
+        ) {
+            try {
+                const graphqlClient = getClient();
+                const embeddingResult = await graphqlClient.query({
+                    query: QUERIES.EMBEDDINGS,
+                    variables: { text: updateData.content },
+                    fetchPolicy: "network-only",
+                });
+
+                // Parse the result - embeddings pathway returns JSON string array
+                const embeddingsResult =
+                    embeddingResult.data?.embeddings?.result;
+                if (embeddingsResult) {
+                    try {
+                        const parsed =
+                            typeof embeddingsResult === "string"
+                                ? JSON.parse(embeddingsResult)
+                                : embeddingsResult;
+                        newContentVector = Array.isArray(parsed)
+                            ? parsed
+                            : Array.isArray(parsed[0])
+                              ? parsed[0]
+                              : null;
+                    } catch (e) {
+                        console.error("Error parsing embeddings result:", e);
+                        // Keep existing vector if parsing fails
+                    }
+                }
+            } catch (error) {
+                console.error(
+                    "Error generating embedding for updated memory:",
+                    error,
+                );
+                // Continue with update without new embedding - keep existing vector
             }
         }
+
+        // Build update object (don't allow changing entityId or assocEntityIds)
+        // Ensure arrays are properly formatted
+        if (
+            updateData.relatedMemoryIds !== undefined &&
+            !Array.isArray(updateData.relatedMemoryIds)
+        ) {
+            updateData.relatedMemoryIds = [];
+        }
+        if (updateData.tags !== undefined && !Array.isArray(updateData.tags)) {
+            updateData.tags = [];
+        }
+        if (
+            updateData.synthesizedFrom !== undefined &&
+            !Array.isArray(updateData.synthesizedFrom)
+        ) {
+            updateData.synthesizedFrom = null;
+        }
+        // Handle assocEntityIds - if provided, ensure current user is included
+        if (updateData.assocEntityIds !== undefined) {
+            if (!Array.isArray(updateData.assocEntityIds)) {
+                updateData.assocEntityIds = [user.contextId];
+            } else if (!updateData.assocEntityIds.includes(user.contextId)) {
+                // Security: Always include current user in assocEntityIds
+                updateData.assocEntityIds.push(user.contextId);
+            }
+        }
+
+        const update = {
+            ...updateData,
+            lastAccessed: new Date().toISOString(),
+        };
+
+        // Include new contentVector if content changed
+        if (contentChanged) {
+            update.contentVector = newContentVector;
+        }
+
+        delete update.entityId;
+        // Don't delete assocEntityIds - allow updates but ensure current user is included
+
+        // Update memory
+        await collection.updateOne(
+            {
+                id: memoryId,
+                entityId,
+                assocEntityIds: user.contextId, // MongoDB query: array contains
+            },
+            { $set: update },
+        );
+
+        // Fetch updated memory
+        const updatedMemory = await collection.findOne({
+            id: memoryId,
+            entityId,
+            assocEntityIds: user.contextId, // MongoDB query: array contains
+        });
+
+        // Return updated memory (vectors included for export/import)
+        return NextResponse.json({
+            success: true,
+            memory: updatedMemory,
+        });
     } catch (error) {
         console.error("Error updating continuity memory:", error);
         return NextResponse.json(
@@ -259,36 +242,27 @@ export async function DELETE(req, { params }) {
             );
         }
 
-        // Get MongoDB collection
-        let client;
-        try {
-            const result = await getContinuityMemoriesCollection();
-            client = result.client;
-            const { collection } = result;
+        // Get MongoDB collection (uses shared mongoose connection with CSFLE)
+        const { collection } = await getContinuityMemoriesCollection();
 
-            // Security: Verify memory belongs to this entity and user before deleting
-            // userId (contextId) must be in assocEntityIds array
-            const deleteResult = await collection.deleteOne({
-                id: memoryId,
-                entityId,
-                assocEntityIds: user.contextId, // MongoDB query: array contains
-            });
+        // Security: Verify memory belongs to this entity and user before deleting
+        // userId (contextId) must be in assocEntityIds array
+        const deleteResult = await collection.deleteOne({
+            id: memoryId,
+            entityId,
+            assocEntityIds: user.contextId, // MongoDB query: array contains
+        });
 
-            if (deleteResult.deletedCount === 0) {
-                return NextResponse.json(
-                    { error: "Memory not found" },
-                    { status: 404 },
-                );
-            }
-
-            return NextResponse.json({
-                success: true,
-            });
-        } finally {
-            if (client) {
-                await client.close().catch(console.error);
-            }
+        if (deleteResult.deletedCount === 0) {
+            return NextResponse.json(
+                { error: "Memory not found" },
+                { status: 404 },
+            );
         }
+
+        return NextResponse.json({
+            success: true,
+        });
     } catch (error) {
         console.error("Error deleting continuity memory:", error);
         return NextResponse.json(

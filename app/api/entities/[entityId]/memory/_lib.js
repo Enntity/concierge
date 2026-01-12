@@ -1,35 +1,29 @@
-import { MongoClient } from "mongodb";
+import mongoose from "mongoose";
 import { connectToDatabase } from "../../../../../src/db.mjs";
 
 const DEFAULT_COLLECTION = "continuity_memories";
 
 /**
  * Get MongoDB collection for continuity memories
- * @returns {Promise<{collection: import('mongodb').Collection, client: MongoClient}>}
+ * Uses the mongoose connection which has CSFLE configured for the content field
+ * @returns {Promise<{collection: import('mongodb').Collection, client: null}>}
  */
 export async function getContinuityMemoriesCollection() {
+    // Ensure database is connected (with CSFLE if configured)
     await connectToDatabase();
-    const mongoUri = process.env.MONGO_URI;
-    if (!mongoUri) {
-        throw new Error("MongoDB not configured");
+
+    // Use the mongoose connection's underlying MongoDB client
+    // This client has autoEncryption configured in db.mjs
+    const db = mongoose.connection.db;
+    if (!db) {
+        throw new Error("MongoDB not connected");
     }
 
-    const client = new MongoClient(mongoUri);
-    await client.connect();
-
-    // Get database name from URI or use env variable
-    // Continuity memories are stored in the same database as other app data
-    const uriPath = new URL(mongoUri).pathname.split("/").filter(Boolean);
-    const dbName = uriPath[0] || process.env.MONGO_DB_NAME;
-    if (!dbName) {
-        throw new Error(
-            "Database name not found in MONGO_URI and MONGO_DB_NAME not set",
-        );
-    }
-    const db = client.db(dbName);
     const collection = db.collection(DEFAULT_COLLECTION);
 
-    return { collection, client };
+    // Return null for client since we're using the shared mongoose connection
+    // Callers should NOT close this client
+    return { collection, client: null };
 }
 
 /**
