@@ -58,7 +58,7 @@ export default function EntityContactsModal({
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState(SORT_OPTIONS.NAME_ASC);
     const [entityToDelete, setEntityToDelete] = useState(null);
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [deletedEntityIds, setDeletedEntityIds] = useState(new Set());
     const [memoryEditorEntityId, setMemoryEditorEntityId] = useState(null);
     const [memoryEditorEntityName, setMemoryEditorEntityName] = useState(null);
 
@@ -83,6 +83,9 @@ export default function EntityContactsModal({
         let filtered = entities.filter((entity) => {
             // Filter out system entities from the contacts list
             if (entity.isSystem) return false;
+
+            // Filter out optimistically deleted entities
+            if (deletedEntityIds.has(entity.id)) return false;
 
             // Search filter
             if (searchQuery) {
@@ -112,7 +115,7 @@ export default function EntityContactsModal({
         });
 
         return filtered;
-    }, [entities, searchQuery, sortBy]);
+    }, [entities, searchQuery, sortBy, deletedEntityIds]);
 
     // Find last chat with a specific entity
     const findLastChatWithEntity = (entityId) => {
@@ -174,27 +177,37 @@ export default function EntityContactsModal({
     const handleConfirmDelete = async () => {
         if (!entityToDelete || !user?.contextId) return;
 
-        setIsDeleting(true);
-        try {
-            const response = await fetch(`/api/entities/${entityToDelete.id}`, {
-                method: "DELETE",
-            });
-            const result = await response.json();
+        const entityIdToDelete = entityToDelete.id;
 
-            if (result.success) {
-                // Refetch entities if available
-                if (refetchEntities) {
-                    await refetchEntities();
+        // Optimistically remove from list and close dialog
+        setDeletedEntityIds((prev) => new Set([...prev, entityIdToDelete]));
+        setEntityToDelete(null);
+
+        // Delete in background - don't await
+        fetch(`/api/entities/${entityIdToDelete}`, {
+            method: "DELETE",
+        })
+            .then((response) => response.json())
+            .then((result) => {
+                if (!result.success) {
+                    console.error("Failed to remove contact:", result.error);
+                    // Restore on failure
+                    setDeletedEntityIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(entityIdToDelete);
+                        return next;
+                    });
                 }
-                setEntityToDelete(null);
-            } else {
-                console.error("Failed to remove contact:", result.error);
-            }
-        } catch (error) {
-            console.error("Failed to remove contact:", error);
-        } finally {
-            setIsDeleting(false);
-        }
+            })
+            .catch((error) => {
+                console.error("Failed to remove contact:", error);
+                // Restore on error
+                setDeletedEntityIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(entityIdToDelete);
+                    return next;
+                });
+            });
     };
 
     // Format relative time
@@ -412,15 +425,12 @@ export default function EntityContactsModal({
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeleting}>
-                            {t("Cancel")}
-                        </AlertDialogCancel>
+                        <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleConfirmDelete}
-                            disabled={isDeleting}
                             className="bg-red-500 hover:bg-red-600"
                         >
-                            {isDeleting ? t("Removing...") : t("Remove")}
+                            {t("Remove")}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

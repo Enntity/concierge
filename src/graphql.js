@@ -343,24 +343,6 @@ const GRAMMAR_AR = gql`
     }
 `;
 
-const GREETING = gql`
-    query Greeting(
-        $text: String!
-        $async: Boolean
-        $contextId: String
-        $aiName: String
-    ) {
-        greeting(
-            text: $text
-            async: $async
-            contextId: $contextId
-            aiName: $aiName
-        ) {
-            result
-        }
-    }
-`;
-
 const SPELLING = gql`
     query Spelling($text: String!, $async: Boolean) {
         spelling(text: $text, async: $async) {
@@ -1098,7 +1080,6 @@ const QUERIES = {
     SUMMARY,
     HASHTAGS,
     HEADLINE,
-    GREETING,
     GRAMMAR,
     GRAMMAR_AR,
     SPELLING,
