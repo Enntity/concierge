@@ -225,9 +225,7 @@ export async function POST(req, { params }) {
                         ? memoryData.relatedMemoryIds
                         : [],
                     parentMemoryId: memoryData.parentMemoryId || null,
-                    tags: Array.isArray(memoryData.tags)
-                        ? memoryData.tags
-                        : [],
+                    tags: Array.isArray(memoryData.tags) ? memoryData.tags : [],
                     timestamp: memoryData.timestamp || now,
                     lastAccessed: now,
                     recallCount:

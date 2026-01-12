@@ -101,11 +101,7 @@ export async function PUT(req, { params }) {
             updateData.content !== existingMemory.content;
 
         let newContentVector = existingMemory.contentVector;
-        if (
-            contentChanged &&
-            updateData.content &&
-            updateData.content.trim()
-        ) {
+        if (contentChanged && updateData.content && updateData.content.trim()) {
             try {
                 const graphqlClient = getClient();
                 const embeddingResult = await graphqlClient.query({
