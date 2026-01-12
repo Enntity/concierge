@@ -1,7 +1,5 @@
 import {
     HelpCircle,
-    PinIcon,
-    PinOffIcon,
     AppWindow,
     Grid3X3,
     EditIcon,
@@ -11,7 +9,7 @@ import {
 import * as Icons from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useContext, useState, useMemo } from "react";
+import React, { useContext, useState, useMemo, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
     useAddChat,
@@ -27,8 +25,15 @@ import config from "../../config";
 import SendFeedbackModal from "../components/help/SendFeedbackModal";
 import { LanguageContext } from "../contexts/LanguageProvider";
 import { ThemeContext } from "../contexts/ThemeProvider";
+import { useStreamingAvatar } from "../contexts/StreamingAvatarContext";
 import ChatNavigationItem from "./ChatNavigationItem";
 import { cn } from "@/lib/utils";
+import {
+    Dialog,
+    DialogContent,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
 
 // Helper function to get icon component
 const getIconComponent = (iconName) => {
@@ -44,7 +49,7 @@ const getIconComponent = (iconName) => {
 };
 
 // Subtle sparkles around the logo
-function LogoSparkles({ theme, isCollapsed }) {
+function LogoSparkles({ theme }) {
     const sparkles = useMemo(() => {
         return Array.from({ length: 10 }, (_, i) => {
             const driftRadius = 6 + Math.random() * 8;
@@ -70,8 +75,6 @@ function LogoSparkles({ theme, isCollapsed }) {
 
     // Only show sparkles in dark mode
     if (theme !== "dark") return null;
-
-    if (isCollapsed) return null;
 
     return (
         <div className="absolute inset-0 pointer-events-none overflow-visible">
@@ -158,43 +161,16 @@ const appNavigationMap = {
         name: "Translate",
         href: "/translate",
     },
-    video: {
-        name: "Transcribe",
-        href: "/video",
-    },
-    write: {
-        name: "Write",
-        href: "/write",
-    },
-    workspaces: {
-        name: "Applets",
-        href: "/workspaces",
-    },
     media: {
         name: "Media",
         href: "/media",
-    },
-    jira: {
-        name: "Jira",
-        href: "/code/jira",
     },
 };
 
 // Legacy navigation for backward compatibility
 export const navigation = Object.values(appNavigationMap);
 
-const routesToCollapseSidebarFor = ["/workspaces/"];
-
-export const shouldForceCollapse = (pathname) => {
-    return (
-        navigation.some(
-            (item) => item.collapsed && pathname?.startsWith(item.href),
-        ) ||
-        routesToCollapseSidebarFor.some((route) => pathname?.startsWith(route))
-    );
-};
-
-const AppletEditButton = ({ workspaceId, router, isCollapsed }) => {
+const AppletEditButton = ({ workspaceId, router }) => {
     const { t } = useTranslation();
     const { data: currentUser } = useCurrentUser();
     const { data: workspace } = useWorkspace(workspaceId);
@@ -216,28 +192,68 @@ const AppletEditButton = ({ workspaceId, router, isCollapsed }) => {
 
     return (
         <EditIcon
-            className={cn(
-                "h-4 w-4 ml-auto text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 cursor-pointer transition-colors",
-                isCollapsed
-                    ? "hidden group-hover:inline"
-                    : "invisible group-hover:visible",
-            )}
+            className="h-4 w-4 ml-auto text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 cursor-pointer transition-colors invisible group-hover:visible"
             onClick={handleEditClick}
             title={t("Edit applet")}
         />
     );
 };
 
-export default React.forwardRef(function Sidebar(
-    { isCollapsed: propIsCollapsed, onToggleCollapse, isMobile },
-    ref,
-) {
+export default React.forwardRef(function Sidebar({ isMobile }, ref) {
     const pathname = usePathname();
     const router = useRouter();
     const { getLogo, getSidebarLogo } = config.global;
     const { language } = useContext(LanguageContext);
     const { theme } = useContext(ThemeContext);
     const { t } = useTranslation();
+    const {
+        avatarFiles,
+        currentFileIndex,
+        avatarUrl,
+        avatarVisible,
+        isVideo,
+        clearStreamingAvatar,
+        pauseAutoFade,
+        resumeAutoFade,
+        nextFile,
+        previousFile,
+    } = useStreamingAvatar();
+    const [avatarZoomOpen, setAvatarZoomOpen] = useState(false);
+    const [avatarZoomLevel, setAvatarZoomLevel] = useState(0);
+    const avatarRef = useRef(null);
+
+    // Reset zoom when avatar changes
+    useEffect(() => {
+        setAvatarZoomLevel(0);
+    }, [avatarUrl]);
+
+    // Scroll wheel zoom - use native listener to allow preventDefault
+    useEffect(() => {
+        const el = avatarRef.current;
+        if (!el) return;
+
+        const handleWheel = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const delta = -e.deltaY * 0.005;
+            setAvatarZoomLevel((prev) =>
+                Math.max(0, Math.min(3, prev + delta)),
+            );
+        };
+
+        el.addEventListener("wheel", handleWheel, { passive: false });
+        return () => el.removeEventListener("wheel", handleWheel);
+    }, [avatarUrl]); // Re-attach when avatar changes
+
+    // Pause auto-fade timer when zoom dialog is open
+    useEffect(() => {
+        if (avatarZoomOpen) {
+            pauseAutoFade();
+        } else {
+            resumeAutoFade();
+        }
+    }, [avatarZoomOpen, pauseAutoFade, resumeAutoFade]);
+
     const { data: chatsData = [], isLoading: chatsLoading } =
         useGetActiveChats();
     const chats = chatsData || [];
@@ -254,14 +270,23 @@ export default React.forwardRef(function Sidebar(
     const addChat = useAddChat();
     const prefetchOnHover = usePrefetchOnHover();
 
-    const isCollapsed =
-        (propIsCollapsed || shouldForceCollapse(pathname)) && !isMobile;
-
     const handleNewChat = async () => {
         try {
-            // Always call server - it will find an unused chat or create a new one
-            // Server handles all the logic, we just navigate to the result
-            const { _id } = await addChat.mutateAsync({ messages: [] });
+            // Get the current chat's selected entity if we're on a chat page
+            const chatIdMatch = pathname.match(/\/chat\/([^/]+)/);
+            const currentChatId = chatIdMatch?.[1];
+            const currentChat = currentChatId
+                ? chats.find((c) => String(c._id) === currentChatId)
+                : null;
+
+            // Create new chat, optionally with the same entity as current chat
+            const { _id } = await addChat.mutateAsync({
+                messages: [],
+                ...(currentChat?.selectedEntityId && {
+                    selectedEntityId: currentChat.selectedEntityId,
+                    selectedEntityName: currentChat.selectedEntityName,
+                }),
+            });
             router.push(`/chat/${String(_id)}`);
         } catch (error) {
             console.error("Error adding chat:", error);
@@ -311,15 +336,6 @@ export default React.forwardRef(function Sidebar(
 
                 // Skip home and chat as they're always included
                 if (app.slug === "home" || app.slug === "chat") {
-                    return null;
-                }
-
-                // Hide Jira, Write, and Transcribe from sidebar
-                if (
-                    app.slug === "jira" ||
-                    app.slug === "write" ||
-                    app.slug === "video"
-                ) {
                     return null;
                 }
 
@@ -398,338 +414,518 @@ export default React.forwardRef(function Sidebar(
     });
 
     return (
-        <div
-            className={cn(
-                "flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 relative z-[41]",
-                isCollapsed &&
-                    "group overflow-y-hidden hover:overflow-y-auto hover:w-56 w-16 transition-[width] duration-100 shadow-xl",
-                !isCollapsed && "w-56 overflow-y-auto",
-            )}
-        >
-            <div className="relative">
-                <button
-                    onClick={onToggleCollapse}
+        <>
+            <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 pt-5 relative z-[41] w-56">
+                <div
                     className={cn(
-                        "hidden bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full p-1 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600",
-                        shouldForceCollapse(pathname)
-                            ? "lg:hidden"
-                            : "group-hover:block",
-                        isCollapsed
-                            ? "mx-auto mt-4 hidden group-hover:mt-0 group-hover:absolute group-hover:-right-3 group-hover:top-5"
-                            : "mx-auto lg:block absolute -right-3 top-5",
+                        "relative shrink-0 mb-4 transition-all duration-500",
+                        // When avatar is visible, expand to TV screen size
+                        avatarVisible
+                            ? "h-32"
+                            : "h-16 flex items-center justify-center",
                     )}
                 >
-                    {isCollapsed ? (
-                        <PinIcon className="h-4 w-4 text-gray-400" />
-                    ) : (
-                        <PinOffIcon className="h-4 w-4 text-gray-400" />
-                    )}
-                </button>
-            </div>
-
-            <div
-                className={cn(
-                    "relative flex h-16 shrink-0 items-center justify-center mb-4",
-                    isCollapsed ? "-mx-2" : "",
-                )}
-            >
-                <LogoSparkles theme={theme} isCollapsed={isCollapsed} />
-                <Link
-                    className="relative z-10 flex items-center justify-center w-full h-full"
-                    href="/"
-                >
-                    <img
-                        className={cn(
-                            "object-contain opacity-85 scale-150 transition-all duration-300",
-                            isCollapsed
-                                ? "max-h-14 group-hover:h-14"
-                                : "h-14 max-w-full",
-                            theme === "dark" && "sidebar-logo-glow",
-                        )}
-                        src={
-                            theme === "dark"
-                                ? "/app/assets/enntity_logo_dark.svg"
-                                : getLogo(language)
-                        }
-                        alt="Your Company"
-                    />
-                    <div
-                        className={cn(
-                            "transition-all",
-                            isCollapsed ? "hidden group-hover:block" : "",
-                        )}
-                    >
-                        {getSidebarLogo(language)}
-                    </div>
-                </Link>
-            </div>
-            <nav className="flex flex-1 flex-col">
-                {!isAuthenticated ? (
-                    // Signed out state
-                    <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-                        <div className="mb-4">
-                            <Icons.UserX className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto" />
+                    <LogoSparkles theme={theme} />
+                    {/* Streaming Avatar Overlay - TV Screen Style */}
+                    {avatarUrl && (
+                        <div
+                            className={cn(
+                                "absolute inset-0 z-20 transition-all duration-700 ease-out",
+                                avatarVisible ? "opacity-100" : "opacity-0",
+                            )}
+                        >
+                            <div className="relative group/avatar w-full h-full">
+                                {/* TV-screen media container */}
+                                <button
+                                    ref={avatarRef}
+                                    className={cn(
+                                        "w-full h-full overflow-hidden shadow-lg streaming-avatar-glow cursor-pointer select-none",
+                                        "ring-2 ring-cyan-400/50 hover:ring-cyan-300/70 transition-all duration-200",
+                                        "focus:outline-none rounded-2xl",
+                                    )}
+                                    onClick={() => setAvatarZoomOpen(true)}
+                                >
+                                    {isVideo ? (
+                                        <video
+                                            src={avatarUrl}
+                                            className="w-full h-full object-cover pointer-events-none"
+                                            style={{
+                                                transform: `scale(${1 + avatarZoomLevel * 0.5})`,
+                                                transition:
+                                                    "transform 0.15s ease-out",
+                                            }}
+                                            autoPlay
+                                            loop
+                                            muted
+                                            playsInline
+                                            onError={clearStreamingAvatar}
+                                        />
+                                    ) : (
+                                        <img
+                                            src={avatarUrl}
+                                            alt="AI Avatar"
+                                            className="w-full h-full object-cover pointer-events-none"
+                                            style={{
+                                                transform: `scale(${1 + avatarZoomLevel * 0.5})`,
+                                                transition:
+                                                    "transform 0.15s ease-out",
+                                            }}
+                                            onError={clearStreamingAvatar}
+                                            draggable={false}
+                                        />
+                                    )}
+                                </button>
+                                {/* Navigation controls for multiple files */}
+                                {avatarFiles && avatarFiles.length > 1 && (
+                                    <>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                previousFile();
+                                            }}
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 z-30 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-all opacity-0 group-hover/avatar:opacity-100"
+                                            aria-label="Previous image"
+                                        >
+                                            <svg
+                                                className="w-4 h-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M15 19l-7-7 7-7"
+                                                />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                nextFile();
+                                            }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 z-30 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-all opacity-0 group-hover/avatar:opacity-100"
+                                            aria-label="Next image"
+                                        >
+                                            <svg
+                                                className="w-4 h-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M9 5l7 7-7 7"
+                                                />
+                                            </svg>
+                                        </button>
+                                        {/* File indicator dots */}
+                                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                                            {avatarFiles.map((_, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={cn(
+                                                        "w-1.5 h-1.5 rounded-full transition-all",
+                                                        index ===
+                                                            currentFileIndex
+                                                            ? "bg-cyan-400 w-4"
+                                                            : "bg-white/50",
+                                                    )}
+                                                />
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                                {/* Futuristic scan line effect */}
+                                <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl">
+                                    <div className="streaming-avatar-scanline" />
+                                </div>
+                                {/* Corner accents for TV effect */}
+                                {
+                                    <>
+                                        <div className="absolute -top-1 -left-1 w-3 h-3 border-l-2 border-t-2 border-cyan-400/60 rounded-tl" />
+                                        <div className="absolute -top-1 -right-1 w-3 h-3 border-r-2 border-t-2 border-cyan-400/60 rounded-tr" />
+                                        <div className="absolute -bottom-1 -left-1 w-3 h-3 border-l-2 border-b-2 border-cyan-400/60 rounded-bl" />
+                                        <div className="absolute -bottom-1 -right-1 w-3 h-3 border-r-2 border-b-2 border-cyan-400/60 rounded-br" />
+                                    </>
+                                }
+                            </div>
                         </div>
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                            {isOnLoginPage
-                                ? t("Sign in to continue")
-                                : t("Not signed in")}
-                        </h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                            {isOnLoginPage
-                                ? t("Complete the form to access your account")
-                                : t(
-                                      "Please sign in to access your apps and chats",
-                                  )}
-                        </p>
-                        {!isOnLoginPage && (
-                            <Link
-                                href="/auth/login"
-                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-sky-600 hover:bg-sky-600/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
-                            >
-                                {t("Sign in")}
-                            </Link>
+                    )}
+                    <Link
+                        className={cn(
+                            "relative z-10 flex items-center justify-center w-full h-full transition-opacity duration-500",
+                            avatarVisible ? "opacity-0" : "opacity-100",
                         )}
-                    </div>
-                ) : (
-                    // Authenticated state - show normal navigation
-                    <ul className="flex flex-1 flex-col gap-y-4">
-                        <li className="grow">
-                            <ul className="-mx-2 space-y-1 overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                                {updatedNavigation.map((item) => (
-                                    <li
-                                        key={item.name}
-                                        className="rounded-md cursor-pointer group"
-                                        onMouseEnter={() => {
-                                            if (item.href) {
-                                                prefetchOnHover(item.href);
-                                            }
-                                        }}
-                                    >
-                                        <div
-                                            className={classNames(
-                                                "flex items-center justify-between",
-                                                item.href &&
-                                                    pathname.includes(
-                                                        item.href,
-                                                    ) &&
-                                                    pathname === item.href
-                                                    ? "bg-gray-100 dark:bg-gray-700"
-                                                    : "hover:bg-gray-100 dark:hover:bg-gray-700",
-                                                "rounded-md p-2 text-sm leading-6 font-semibold text-gray-700 dark:text-gray-200",
-                                            )}
-                                            onClick={() => {
+                        href="/"
+                    >
+                        <img
+                            className={cn(
+                                "object-contain opacity-85 scale-150 transition-all duration-300 h-14 max-w-full",
+                                theme === "dark" && "sidebar-logo-glow",
+                            )}
+                            src={
+                                theme === "dark"
+                                    ? "/app/assets/enntity_logo_dark.svg"
+                                    : getLogo(language)
+                            }
+                            alt="Your Company"
+                        />
+                        <div className="transition-all">
+                            {getSidebarLogo(language)}
+                        </div>
+                    </Link>
+                </div>
+                <nav className="flex flex-1 flex-col">
+                    {!isAuthenticated ? (
+                        // Signed out state
+                        <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
+                            <div className="mb-4">
+                                <Icons.UserX className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto" />
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                                {isOnLoginPage
+                                    ? t("Sign in to continue")
+                                    : t("Not signed in")}
+                            </h3>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                                {isOnLoginPage
+                                    ? t(
+                                          "Complete the form to access your account",
+                                      )
+                                    : t(
+                                          "Please sign in to access your apps and chats",
+                                      )}
+                            </p>
+                            {!isOnLoginPage && (
+                                <Link
+                                    href="/auth/login"
+                                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-sky-600 hover:bg-sky-600/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+                                >
+                                    {t("Sign in")}
+                                </Link>
+                            )}
+                        </div>
+                    ) : (
+                        // Authenticated state - show normal navigation
+                        <ul className="flex flex-1 flex-col gap-y-4">
+                            <li className="grow">
+                                <ul className="-mx-2 space-y-1 overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                                    {updatedNavigation.map((item) => (
+                                        <li
+                                            key={item.name}
+                                            className="rounded-md cursor-pointer group"
+                                            onMouseEnter={() => {
                                                 if (item.href) {
-                                                    router.push(item.href);
+                                                    prefetchOnHover(item.href);
                                                 }
                                             }}
                                         >
-                                            <div className="flex items-center grow gap-x-3">
-                                                <item.icon
-                                                    className="h-6 w-6 shrink-0 text-gray-400"
-                                                    aria-hidden="true"
-                                                />
-                                                <span
-                                                    className={cn(
-                                                        "select-none",
-                                                        isCollapsed
-                                                            ? "hidden group-hover:inline"
-                                                            : "inline",
-                                                    )}
-                                                >
-                                                    {t(item.name)}
-                                                </span>
-                                            </div>
-                                            {item.name === "Chat" && (
-                                                <Plus
-                                                    className={cn(
-                                                        "h-6 w-6 ml-auto p-1 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-800 hover:text-sky-800 dark:hover:text-sky-300 cursor-pointer",
-                                                        isCollapsed
-                                                            ? "hidden group-hover:inline"
-                                                            : "inline",
-                                                    )}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleNewChat();
-                                                    }}
-                                                />
-                                            )}
-                                            {item.type === "applet" &&
-                                                item.workspaceId && (
-                                                    <AppletEditButton
-                                                        workspaceId={
-                                                            item.workspaceId
-                                                        }
-                                                        router={router}
-                                                        isCollapsed={
-                                                            isCollapsed
-                                                        }
+                                            <div
+                                                className={classNames(
+                                                    "flex items-center justify-between",
+                                                    item.href &&
+                                                        pathname.includes(
+                                                            item.href,
+                                                        ) &&
+                                                        pathname === item.href
+                                                        ? "bg-gray-100 dark:bg-gray-700"
+                                                        : "hover:bg-gray-100 dark:hover:bg-gray-700",
+                                                    "rounded-md p-2 text-sm leading-6 font-semibold text-gray-700 dark:text-gray-200",
+                                                )}
+                                                onClick={() => {
+                                                    if (item.href) {
+                                                        router.push(item.href);
+                                                    }
+                                                }}
+                                            >
+                                                <div className="flex items-center grow gap-x-3">
+                                                    <item.icon
+                                                        className="h-6 w-6 shrink-0 text-gray-400"
+                                                        aria-hidden="true"
+                                                    />
+                                                    <span className="select-none inline">
+                                                        {t(item.name)}
+                                                    </span>
+                                                </div>
+                                                {item.name === "Chat" && (
+                                                    <Plus
+                                                        className="h-6 w-6 ml-auto p-1 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-800 hover:text-sky-800 dark:hover:text-sky-300 cursor-pointer inline"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleNewChat();
+                                                        }}
                                                     />
                                                 )}
-                                        </div>
-                                        {item.name === "Chat" &&
-                                        chatsLoading ? (
-                                            <div className="mt-1 px-1 flex items-center justify-center py-2">
-                                                <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                                            </div>
-                                        ) : (
-                                            item.children?.length > 0 && (
-                                                <ul
-                                                    className={cn(
-                                                        "mt-1 px-1",
-                                                        isCollapsed
-                                                            ? "hidden group-hover:block"
-                                                            : "block",
+                                                {item.type === "applet" &&
+                                                    item.workspaceId && (
+                                                        <AppletEditButton
+                                                            workspaceId={
+                                                                item.workspaceId
+                                                            }
+                                                            router={router}
+                                                        />
                                                     )}
-                                                >
-                                                    {item.children.map(
-                                                        (subItem, index) =>
-                                                            item.name ===
-                                                            "Chat" ? (
-                                                                <ChatNavigationItem
-                                                                    key={
-                                                                        subItem.key ||
-                                                                        `${item.name}-${index}`
-                                                                    }
-                                                                    subItem={
-                                                                        subItem
-                                                                    }
-                                                                    pathname={
-                                                                        pathname
-                                                                    }
-                                                                    router={
-                                                                        router
-                                                                    }
-                                                                    handleDeleteChat={
-                                                                        handleDeleteChat
-                                                                    }
-                                                                    isCollapsed={
-                                                                        isCollapsed
-                                                                    }
-                                                                />
-                                                            ) : (
-                                                                <li
-                                                                    key={
-                                                                        subItem.key ||
-                                                                        `${item.name}-${index}`
-                                                                    }
-                                                                    className={classNames(
-                                                                        "group flex items-center justify-between rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 my-0.5",
-                                                                        pathname ===
-                                                                            subItem?.href
-                                                                            ? "bg-gray-100 dark:bg-gray-700"
-                                                                            : "",
-                                                                    )}
-                                                                    onClick={() => {
-                                                                        if (
-                                                                            subItem.href
-                                                                        ) {
-                                                                            router.push(
-                                                                                subItem.href,
-                                                                            );
+                                            </div>
+                                            {item.name === "Chat" &&
+                                            chatsLoading ? (
+                                                <div className="mt-1 px-1 flex items-center justify-center py-2">
+                                                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                                                </div>
+                                            ) : (
+                                                item.children?.length > 0 && (
+                                                    <ul className="mt-1 px-1 block">
+                                                        {item.children.map(
+                                                            (subItem, index) =>
+                                                                item.name ===
+                                                                "Chat" ? (
+                                                                    <ChatNavigationItem
+                                                                        key={
+                                                                            subItem.key ||
+                                                                            `${item.name}-${index}`
                                                                         }
-                                                                    }}
-                                                                >
-                                                                    <div
-                                                                        className={`relative block py-2 pe-1 ${"text-xs ps-4 pe-4"} leading-6 text-gray-700 w-full select-none flex items-center justify-between`}
-                                                                        dir={
-                                                                            document
-                                                                                .documentElement
-                                                                                .dir
+                                                                        subItem={
+                                                                            subItem
                                                                         }
+                                                                        pathname={
+                                                                            pathname
+                                                                        }
+                                                                        router={
+                                                                            router
+                                                                        }
+                                                                        handleDeleteChat={
+                                                                            handleDeleteChat
+                                                                        }
+                                                                    />
+                                                                ) : (
+                                                                    <li
+                                                                        key={
+                                                                            subItem.key ||
+                                                                            `${item.name}-${index}`
+                                                                        }
+                                                                        className={classNames(
+                                                                            "group flex items-center justify-between rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 my-0.5",
+                                                                            pathname ===
+                                                                                subItem?.href
+                                                                                ? "bg-gray-100 dark:bg-gray-700"
+                                                                                : "",
+                                                                        )}
+                                                                        onClick={() => {
+                                                                            if (
+                                                                                subItem.href
+                                                                            ) {
+                                                                                router.push(
+                                                                                    subItem.href,
+                                                                                );
+                                                                            }
+                                                                        }}
                                                                     >
-                                                                        <span
-                                                                            className={`${
+                                                                        <div
+                                                                            className={`relative block py-2 pe-1 ${"text-xs ps-4 pe-4"} leading-6 text-gray-700 w-full select-none flex items-center justify-between`}
+                                                                            dir={
                                                                                 document
                                                                                     .documentElement
-                                                                                    .dir ===
-                                                                                "rtl"
-                                                                                    ? "pe-3"
-                                                                                    : "ps-3"
-                                                                            } truncate whitespace-nowrap overflow-hidden max-w-[150px]`}
-                                                                            title={t(
-                                                                                subItem.name ||
-                                                                                    "",
-                                                                            )}
+                                                                                    .dir
+                                                                            }
                                                                         >
-                                                                            {t(
-                                                                                subItem.name ||
-                                                                                    "",
-                                                                            )}
-                                                                        </span>
-                                                                    </div>
-                                                                </li>
-                                                            ),
-                                                    )}
-                                                </ul>
-                                            )
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
-                        </li>
-                        <li>
-                            <div className="pt-3 pb-2 bg-gray-50 dark:bg-gray-700 -mx-5 px-5 text-gray-700 dark:text-gray-200">
-                                <button
-                                    className="flex gap-2 items-center text-xs w-full hover:opacity-80 transition-opacity"
-                                    onClick={() => router.push("/apps")}
-                                >
-                                    <Grid3X3 className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-300" />
-                                    <span
-                                        className={cn(
-                                            "text-xs text-gray-500 dark:text-gray-300",
-                                            isCollapsed &&
-                                                "hidden group-hover:block",
-                                        )}
+                                                                            <span
+                                                                                className={`${
+                                                                                    document
+                                                                                        .documentElement
+                                                                                        .dir ===
+                                                                                    "rtl"
+                                                                                        ? "pe-3"
+                                                                                        : "ps-3"
+                                                                                } truncate whitespace-nowrap overflow-hidden max-w-[150px]`}
+                                                                                title={t(
+                                                                                    subItem.name ||
+                                                                                        "",
+                                                                                )}
+                                                                            >
+                                                                                {t(
+                                                                                    subItem.name ||
+                                                                                        "",
+                                                                                )}
+                                                                            </span>
+                                                                        </div>
+                                                                    </li>
+                                                                ),
+                                                        )}
+                                                    </ul>
+                                                )
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </li>
+                            <li>
+                                <div className="pt-3 pb-2 bg-gray-50 dark:bg-gray-700 -mx-5 px-5 text-gray-700 dark:text-gray-200">
+                                    <button
+                                        className="flex gap-2 items-center text-xs w-full hover:opacity-80 transition-opacity"
+                                        onClick={() => router.push("/apps")}
                                     >
-                                        {t("Manage Apps")}
-                                    </span>
-                                </button>
-                            </div>
-                            <div className="pt-2 pb-3 bg-gray-50 dark:bg-gray-700 -mx-5 px-5 text-gray-700 dark:text-gray-200">
-                                <SendFeedbackButton
-                                    ref={ref}
-                                    isCollapsed={isCollapsed}
-                                />
-                            </div>
-                        </li>
-                    </ul>
-                )}
-            </nav>
-        </div>
-    );
-});
-
-const SendFeedbackButton = React.forwardRef(function SendFeedbackButton(
-    { isCollapsed },
-    ref,
-) {
-    const [show, setShow] = useState(false);
-    const { t } = useTranslation();
-
-    const handleClick = () => setShow(true);
-
-    return (
-        <>
-            <SendFeedbackModal
-                ref={ref}
-                show={show}
-                onHide={() => setShow(false)}
-            />
-            <button
-                className="flex gap-2 items-center text-xs w-full hover:opacity-80 transition-opacity"
-                onClick={handleClick}
-            >
-                <HelpCircle className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-300" />
-                <span
-                    className={cn(
-                        "text-xs text-gray-500 dark:text-gray-300",
-                        isCollapsed && "hidden group-hover:block",
+                                        <Grid3X3 className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-300" />
+                                        <span className="text-xs text-gray-500 dark:text-gray-300">
+                                            {t("Manage Apps")}
+                                        </span>
+                                    </button>
+                                </div>
+                                <div className="pt-2 pb-3 bg-gray-50 dark:bg-gray-700 -mx-5 px-5 text-gray-700 dark:text-gray-200">
+                                    <SendFeedbackButton ref={ref} />
+                                </div>
+                            </li>
+                        </ul>
                     )}
-                >
-                    {t("Send feedback")}
-                </span>
-            </button>
+                </nav>
+            </div>
+
+            {/* Avatar Zoom Dialog - TV Screen Style */}
+            {avatarUrl && (
+                <Dialog open={avatarZoomOpen} onOpenChange={setAvatarZoomOpen}>
+                    <DialogContent
+                        className="max-w-[90vw] max-h-[90vh] p-0 bg-transparent border-0 shadow-none flex items-center justify-center"
+                        aria-describedby="avatar-zoom-description"
+                    >
+                        <DialogTitle className="sr-only">AI Avatar</DialogTitle>
+                        <DialogDescription
+                            id="avatar-zoom-description"
+                            className="sr-only"
+                        >
+                            Viewing AI avatar in full screen
+                        </DialogDescription>
+                        <div className="relative">
+                            {/* Outer glow */}
+                            <div className="absolute -inset-8 rounded-3xl bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20 blur-2xl animate-pulse" />
+                            <div className="absolute -inset-4 rounded-2xl bg-gradient-to-r from-cyan-400/30 via-blue-500/30 to-purple-400/30 blur-xl" />
+
+                            {/* Main media container */}
+                            <div className="relative">
+                                {isVideo ? (
+                                    <video
+                                        src={avatarUrl}
+                                        className={cn(
+                                            "max-w-[80vw] max-h-[70vh] rounded-2xl object-contain",
+                                            "ring-4 ring-cyan-400/60",
+                                            "shadow-[0_0_60px_rgba(34,211,238,0.4),0_0_100px_rgba(139,92,246,0.3)]",
+                                        )}
+                                        autoPlay
+                                        loop
+                                        muted
+                                        playsInline
+                                    />
+                                ) : (
+                                    <img
+                                        src={avatarUrl}
+                                        alt="AI Avatar"
+                                        className={cn(
+                                            "max-w-[80vw] max-h-[70vh] rounded-2xl object-contain",
+                                            "ring-4 ring-cyan-400/60",
+                                            "shadow-[0_0_60px_rgba(34,211,238,0.4),0_0_100px_rgba(139,92,246,0.3)]",
+                                        )}
+                                    />
+                                )}
+
+                                {/* Corner accents */}
+                                <div className="absolute -top-4 -left-4 w-8 h-8 border-l-2 border-t-2 border-cyan-400/60 rounded-tl-lg" />
+                                <div className="absolute -top-4 -right-4 w-8 h-8 border-r-2 border-t-2 border-cyan-400/60 rounded-tr-lg" />
+                                <div className="absolute -bottom-4 -left-4 w-8 h-8 border-l-2 border-b-2 border-cyan-400/60 rounded-bl-lg" />
+                                <div className="absolute -bottom-4 -right-4 w-8 h-8 border-r-2 border-b-2 border-cyan-400/60 rounded-br-lg" />
+
+                                {/* Scan line effect */}
+                                <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/10 to-transparent h-[200%] animate-[avatar-scan-zoom_3s_ease-in-out_infinite]" />
+                                </div>
+                            </div>
+
+                            {/* Navigation controls for multiple files in zoom dialog */}
+                            {avatarFiles && avatarFiles.length > 1 && (
+                                <>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            previousFile();
+                                        }}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-black/70 hover:bg-black/90 text-white rounded-full p-3 transition-all"
+                                        aria-label="Previous image"
+                                    >
+                                        <svg
+                                            className="w-6 h-6"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M15 19l-7-7 7-7"
+                                            />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            nextFile();
+                                        }}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-black/70 hover:bg-black/90 text-white rounded-full p-3 transition-all"
+                                        aria-label="Next image"
+                                    >
+                                        <svg
+                                            className="w-6 h-6"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M9 5l7 7-7 7"
+                                            />
+                                        </svg>
+                                    </button>
+                                    {/* File indicator */}
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 bg-black/70 rounded-full px-4 py-2 text-white text-sm">
+                                        {currentFileIndex + 1} /{" "}
+                                        {avatarFiles.length}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
         </>
     );
 });
+
+const SendFeedbackButton = React.forwardRef(
+    function SendFeedbackButton(_props, ref) {
+        const [show, setShow] = useState(false);
+        const { t } = useTranslation();
+
+        const handleClick = () => setShow(true);
+
+        return (
+            <>
+                <SendFeedbackModal
+                    ref={ref}
+                    show={show}
+                    onHide={() => setShow(false)}
+                />
+                <button
+                    className="flex gap-2 items-center text-xs w-full hover:opacity-80 transition-opacity"
+                    onClick={handleClick}
+                >
+                    <HelpCircle className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-300" />
+                    <span className="text-xs text-gray-500 dark:text-gray-300">
+                        {t("Send feedback")}
+                    </span>
+                </button>
+            </>
+        );
+    },
+);

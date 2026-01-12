@@ -312,11 +312,15 @@ export function FilePreviewDialog({ file, onClose, onDownload, t }) {
         <Dialog open={!!file} onOpenChange={(open) => !open && onClose()}>
             <DialogContent
                 className={`max-w-[95vw] max-h-[95vh] p-4 sm:p-6 flex items-center justify-center ${isRtl ? "text-right" : ""}`}
+                aria-describedby="file-preview-description"
             >
                 <DialogTitle className="sr-only">
                     {isYouTube ? t("YouTube video player") : t("File preview")}
                 </DialogTitle>
-                <DialogDescription className="sr-only">
+                <DialogDescription
+                    id="file-preview-description"
+                    className="sr-only"
+                >
                     {filename
                         ? t("Viewing {{filename}} in full screen", { filename })
                         : isYouTube

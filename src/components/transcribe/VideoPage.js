@@ -436,6 +436,11 @@ function EditableTranscriptSelect({
                                                 <DialogTitle>
                                                     {t("Select Taxonomy")}
                                                 </DialogTitle>
+                                                <DialogDescription>
+                                                    {t(
+                                                        "Choose a taxonomy to categorize the content",
+                                                    )}
+                                                </DialogDescription>
                                             </DialogHeader>
                                             <TaxonomySelector
                                                 text={
@@ -1909,6 +1914,11 @@ function VideoPage() {
                                                 <DialogTitle>
                                                     {t("Add video")}
                                                 </DialogTitle>
+                                                <DialogDescription>
+                                                    {t(
+                                                        "Enter a video URL or upload a video file",
+                                                    )}
+                                                </DialogDescription>
                                             </DialogHeader>
                                             <VideoInput
                                                 url={url}

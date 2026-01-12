@@ -11,7 +11,7 @@ export async function POST(req) {
             aiMemorySelfModify,
             aiName,
             agentModel,
-            useCustomEntities,
+            defaultEntityId,
         } = body;
 
         if (!mongoose.connection.readyState) {
@@ -33,8 +33,8 @@ export async function POST(req) {
             if (agentModel !== undefined) {
                 user.agentModel = agentModel;
             }
-            if (useCustomEntities !== undefined) {
-                user.useCustomEntities = useCustomEntities;
+            if (defaultEntityId !== undefined) {
+                user.defaultEntityId = defaultEntityId;
             }
             await user.save();
             return Response.json({ status: "success" });

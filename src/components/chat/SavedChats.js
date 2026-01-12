@@ -51,6 +51,8 @@ import {
     AlertDialogAction,
     AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import { AuthContext } from "../../App";
+import { useEntities } from "../../hooks/useEntities";
 import {
     Tooltip,
     TooltipTrigger,
@@ -85,6 +87,7 @@ const getCategoryTranslation = (category, t) => {
 function SavedChats({ displayState }) {
     const { t } = useTranslation();
     const { theme } = useContext(ThemeContext);
+    const { user } = useContext(AuthContext);
     const deleteChat = useDeleteChat();
     const bulkImportChats = useBulkImportChats();
     const bulkDeleteChats = useBulkDeleteChats();
@@ -99,6 +102,7 @@ function SavedChats({ displayState }) {
     const router = useRouter();
     const addChat = useAddChat();
     const updateChat = useUpdateChat();
+    const { entities } = useEntities(user?.contextId);
     const { getLogo } = config.global;
     const [editingId, setEditingId] = useState(null);
     const [editedName, setEditedName] = useState("");
@@ -127,6 +131,7 @@ function SavedChats({ displayState }) {
     });
     const [isBulkProcessing, setIsBulkProcessing] = useState(false);
     const [showSharedOnly, setShowSharedOnly] = useState(false);
+    const [entityFilter, setEntityFilter] = useState(""); // empty = all entities
     const queryClient = useQueryClient();
 
     const summarizeItems = useCallback(
@@ -165,20 +170,42 @@ function SavedChats({ displayState }) {
         }
     }, [data]);
 
-    const filterSharedChats = useCallback(
+    const filterChats = useCallback(
         (chats) => {
             if (!Array.isArray(chats)) {
                 return [];
             }
 
-            if (!showSharedOnly) {
-                return chats;
+            let filtered = chats;
+
+            if (showSharedOnly) {
+                filtered = filtered.filter((chat) => Boolean(chat?.isPublic));
             }
 
-            return chats.filter((chat) => Boolean(chat?.isPublic));
+            if (entityFilter) {
+                filtered = filtered.filter(
+                    (chat) => chat?.selectedEntityId === entityFilter,
+                );
+            }
+
+            return filtered;
         },
-        [showSharedOnly],
+        [showSharedOnly, entityFilter],
     );
+
+    // Get unique entities from all chats for the filter dropdown
+    const chatEntities = useMemo(() => {
+        const entityMap = new Map();
+        for (const chat of allChats) {
+            if (chat?.selectedEntityId && chat?.selectedEntityName) {
+                entityMap.set(chat.selectedEntityId, chat.selectedEntityName);
+            }
+        }
+        return Array.from(entityMap.entries()).map(([id, name]) => ({
+            id,
+            name,
+        }));
+    }, [allChats]);
 
     // Wrapper to clear selection and reset last selected
     const clearSelection = useCallback(() => {
@@ -630,7 +657,7 @@ function SavedChats({ displayState }) {
 
         const now = dayjs();
         data.pages.forEach((page) => {
-            filterSharedChats(page).forEach((chat) => {
+            filterChats(page).forEach((chat) => {
                 const chatDate = dayjs(chat.createdAt);
                 if (chatDate.isSame(now, "day")) {
                     categories.today.push(chat);
@@ -647,13 +674,22 @@ function SavedChats({ displayState }) {
         });
 
         return categories;
-    }, [data, filterSharedChats]);
+    }, [data, filterChats]);
 
     const handleCreateNewChat = async () => {
         try {
+            // Use the user's default entity
+            const defaultEntity = entities.find(
+                (e) => e.id === user?.defaultEntityId,
+            );
+            const newEntityName = defaultEntity?.name || user?.aiName || "AI";
+
             // Always call server - it will find an unused chat or create a new one
-            // Server handles all the logic, we just navigate to the result
-            const { _id } = await addChat.mutateAsync({ messages: [] });
+            const { _id } = await addChat.mutateAsync({
+                messages: [],
+                selectedEntityId: user?.defaultEntityId || "",
+                selectedEntityName: newEntityName,
+            });
             router.push(`/chat/${String(_id)}`);
         } catch (error) {
             console.error("Error adding chat:", error);
@@ -913,9 +949,16 @@ function SavedChats({ displayState }) {
                                         </ul>
                                     </div>
 
-                                    {/* Timestamp */}
-                                    <div className="text-[.7rem] text-gray-400 text-right mt-2">
-                                        {dayjs(chat.createdAt).fromNow()}
+                                    {/* Entity name and Timestamp */}
+                                    <div className="flex items-center justify-between text-[.7rem] text-gray-400 mt-2">
+                                        {chat.selectedEntityName && (
+                                            <span className="truncate max-w-[60%]">
+                                                {chat.selectedEntityName}
+                                            </span>
+                                        )}
+                                        <span className="flex-shrink-0">
+                                            {dayjs(chat.createdAt).fromNow()}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -937,8 +980,8 @@ function SavedChats({ displayState }) {
     });
 
     const filteredSearchResults = useMemo(
-        () => filterSharedChats(searchResults),
-        [filterSharedChats, searchResults],
+        () => filterChats(searchResults),
+        [filterChats, searchResults],
     );
 
     // Decide which content matches to show (server preferred), then memoize visible sets BEFORE any conditional returns
@@ -958,20 +1001,15 @@ function SavedChats({ displayState }) {
                 ? contentServerResults
                 : contentMatches;
 
-        // Filter out any chats that are already in title matches and apply shared filter
-        const sharedContentMatches = filterSharedChats(rawContentMatches);
+        // Filter out any chats that are already in title matches and apply filters
+        const filteredContentMatches = filterChats(rawContentMatches);
 
-        return sharedContentMatches.filter((chat) => {
+        return filteredContentMatches.filter((chat) => {
             if (!chat?._id) return false;
             const chatIdStr = getChatIdString(chat._id);
             return chatIdStr && !titleMatchIds.has(chatIdStr);
         });
-    }, [
-        contentServerResults,
-        contentMatches,
-        titleMatchIds,
-        filterSharedChats,
-    ]);
+    }, [contentServerResults, contentMatches, titleMatchIds, filterChats]);
 
     const updateBottomActionsPosition = useCallback(() => {
         if (typeof window === "undefined") {
@@ -1018,8 +1056,8 @@ function SavedChats({ displayState }) {
                 : [];
             return [...title, ...content];
         }
-        if (showSharedOnly) {
-            return filterSharedChats(allChats);
+        if (showSharedOnly || entityFilter) {
+            return filterChats(allChats);
         }
         return Array.isArray(allChats) ? allChats : [];
     }, [
@@ -1028,7 +1066,8 @@ function SavedChats({ displayState }) {
         contentMatchesDisplay,
         allChats,
         showSharedOnly,
-        filterSharedChats,
+        entityFilter,
+        filterChats,
     ]);
 
     const visibleIdSet = useMemo(() => {
@@ -1045,11 +1084,17 @@ function SavedChats({ displayState }) {
 
     // Calculate the count of visible chats for display
     const visibleChatCount = useMemo(() => {
-        if (searchQuery || showSharedOnly) {
+        if (searchQuery || showSharedOnly || entityFilter) {
             return visibleChats.length;
         }
         return totalChatCount;
-    }, [searchQuery, showSharedOnly, visibleChats.length, totalChatCount]);
+    }, [
+        searchQuery,
+        showSharedOnly,
+        entityFilter,
+        visibleChats.length,
+        totalChatCount,
+    ]);
 
     const allVisibleSelected = useMemo(
         () =>
@@ -1211,8 +1256,8 @@ function SavedChats({ displayState }) {
 
                 {/* Filter and Action Controls */}
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                    {/* Filter Search Control with Shared Chats Toggle */}
-                    <div className="flex items-center gap-2 w-full sm:flex-1 sm:max-w-lg">
+                    {/* Filter Search Control with Entity Filter and Shared Chats Toggle */}
+                    <div className="flex items-center gap-2 w-full sm:flex-1 sm:max-w-2xl">
                         <FilterInput
                             value={searchQuery}
                             onChange={(value) => {
@@ -1227,6 +1272,23 @@ function SavedChats({ displayState }) {
                             )}
                             className="flex-1"
                         />
+                        {/* Entity filter dropdown */}
+                        {chatEntities.length > 0 && (
+                            <select
+                                value={entityFilter}
+                                onChange={(e) =>
+                                    setEntityFilter(e.target.value)
+                                }
+                                className="h-9 px-2 rounded-md border text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            >
+                                <option value="">{t("All AIs")}</option>
+                                {chatEntities.map((entity) => (
+                                    <option key={entity.id} value={entity.id}>
+                                        {entity.name}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -1452,6 +1514,24 @@ function SavedChats({ displayState }) {
                             categorizedChats,
                         ).some((chats) => chats.length > 0);
 
+                        // Show empty state if entity filter is active and no matching chats
+                        if (entityFilter && !hasAnyChats) {
+                            const entityName = chatEntities.find(
+                                (e) => e.id === entityFilter,
+                            )?.name;
+                            return (
+                                <EmptyState
+                                    icon="🤖"
+                                    title={t("No chats with this AI")}
+                                    description={t(
+                                        `You don't have any chats with ${entityName || "this AI"} yet.`,
+                                    )}
+                                    action={() => setEntityFilter("")}
+                                    actionLabel={t("Show All Chats")}
+                                />
+                            );
+                        }
+
                         // Show empty state if shared filter is active and no shared chats
                         if (showSharedOnly && !hasAnyChats) {
                             return (
@@ -1472,6 +1552,7 @@ function SavedChats({ displayState }) {
                         // Show empty state if no chats at all (and not filtering)
                         if (
                             !showSharedOnly &&
+                            !entityFilter &&
                             !hasAnyChats &&
                             !areChatsLoading
                         ) {

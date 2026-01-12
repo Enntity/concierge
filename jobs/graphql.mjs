@@ -253,24 +253,6 @@ const FORMAT_PARAGRAPH_TURBO = gql`
     }
 `;
 
-const GREETING = gql`
-    query Greeting(
-        $text: String!
-        $async: Boolean
-        $contextId: String
-        $aiName: String
-    ) {
-        greeting(
-            text: $text
-            async: $async
-            contextId: $contextId
-            aiName: $aiName
-        ) {
-            result
-        }
-    }
-`;
-
 const GRAMMAR = gql`
     query Grammar($text: String!, $async: Boolean) {
         grammar(text: $text, async: $async) {
@@ -938,7 +920,6 @@ const QUERIES = {
     SUMMARY,
     HASHTAGS,
     HEADLINE,
-    GREETING,
     GRAMMAR,
     SPELLING,
     PARAPHRASE,

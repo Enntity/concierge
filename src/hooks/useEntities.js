@@ -1,47 +1,100 @@
-import { useQuery } from "@apollo/client";
-import { SYS_GET_ENTITIES } from "../graphql";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "../../app/utils/axios-client";
 
-export function useEntities(userAiName) {
-    const defaultResponse = {
-        entities: [
-            {
-                id: "default",
-                name: userAiName || "Enntity",
-                isDefault: true,
-            },
-        ],
-        defaultEntityId: "default",
-    };
+export function useEntities(contextId) {
+    const queryClient = useQueryClient();
 
-    const { data: entitiesData, error } = useQuery(SYS_GET_ENTITIES);
-
-    // If there's an error or no data, return a default entity
-    if (error || !entitiesData?.sys_get_entities?.result) {
-        return defaultResponse;
-    }
-
-    let entities;
-    try {
-        entities = JSON.parse(entitiesData.sys_get_entities.result);
-    } catch (parseError) {
-        console.error("Failed to parse entities:", parseError);
-        return defaultResponse;
-    }
-
-    // Find and update the default entity's name
-    const aliasedEntities = entities.map((entity) => {
-        if (entity.isDefault) {
-            return { ...entity, name: userAiName || "Enntity" };
-        }
-        return entity;
+    const {
+        data: entities,
+        error,
+        isLoading,
+        refetch,
+    } = useQuery({
+        queryKey: ["entities", contextId],
+        queryFn: async () => {
+            if (!contextId) return [];
+            const response = await axios.get("/api/entities", {
+                params: {
+                    includeSystem: true,
+                },
+            });
+            return response.data || [];
+        },
+        enabled: !!contextId,
+        staleTime: 0, // Always fetch fresh data to catch avatar updates
+        gcTime: 0, // Don't cache - we want fresh data every time
     });
 
-    // Find default entity ID
-    const defaultEntity = aliasedEntities.find((e) => e.isDefault);
-    const defaultEntityId = defaultEntity?.id || "default";
+    // Function to refetch a single entity and update the cache
+    const refetchEntity = async (entityId) => {
+        if (!contextId || !entityId) return;
+
+        try {
+            const response = await axios.get("/api/entities", {
+                params: {
+                    includeSystem: true,
+                    entityId,
+                },
+            });
+
+            // API always returns an array
+            const updatedEntity = response.data?.[0];
+
+            if (updatedEntity && entities) {
+                // Update the entities array in cache
+                const updatedEntities = entities.map((e) =>
+                    e.id === entityId ? updatedEntity : e,
+                );
+                queryClient.setQueryData(
+                    ["entities", contextId],
+                    updatedEntities,
+                );
+            }
+        } catch (error) {
+            console.error("Error refetching entity:", error);
+            // Fall back to full refetch on error
+            refetch();
+        }
+    };
+
+    const defaultResponse = {
+        entities: [],
+        needsOnboarding: false, // Don't show onboarding if we can't fetch entities
+        isLoading: false,
+        refetch,
+        refetchEntity,
+    };
+
+    // If no contextId yet, return loading state
+    if (!contextId) {
+        return {
+            ...defaultResponse,
+            isLoading: true,
+        };
+    }
+
+    // If loading, return loading state
+    if (isLoading) {
+        return {
+            ...defaultResponse,
+            isLoading: true,
+        };
+    }
+
+    // If there's an error or no data, return empty
+    if (error || !entities || !Array.isArray(entities)) {
+        return defaultResponse;
+    }
+
+    // Check if user needs onboarding - true if they have no non-system entities
+    const userEntities = entities.filter((e) => !e.isSystem);
+    const needsOnboarding = userEntities.length === 0;
 
     return {
-        entities: aliasedEntities,
-        defaultEntityId,
+        entities,
+        needsOnboarding,
+        isLoading: false,
+        refetch,
+        refetchEntity,
     };
 }

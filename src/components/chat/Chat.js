@@ -14,15 +14,8 @@ import { useContext, useState, useEffect, useRef, useMemo } from "react";
 import { AuthContext } from "../../App";
 import { useParams, useRouter } from "next/navigation";
 import EntityIcon from "./EntityIcon";
-import {
-    Trash2,
-    Check,
-    Download,
-    Users,
-    Copy,
-    Info,
-    ChevronDown,
-} from "lucide-react";
+import EntityContactsModal from "./EntityContactsModal";
+import { Trash2, Check, Download, Users, Copy, Info } from "lucide-react";
 import { useEntities } from "../../hooks/useEntities";
 import {
     AlertDialog,
@@ -142,29 +135,35 @@ function Chat({ viewingChat = null }) {
     const [selectedEntityId, setSelectedEntityId] = useState(
         chat?.selectedEntityId || "",
     );
+    const [selectedEntityName, setSelectedEntityName] = useState(
+        chat?.selectedEntityName || "",
+    );
     const [showPublicConfirm, setShowPublicConfirm] = useState(false);
     const [showUnshareConfirm, setShowUnshareConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showSharedByDialog, setShowSharedByDialog] = useState(false);
     const [copyStatus, setCopyStatus] = useState(false);
+    const [showContactsModal, setShowContactsModal] = useState(false);
 
-    const defaultAiName = user?.aiName || "Enntity";
-    const { entities, defaultEntityId } = useEntities(defaultAiName);
+    const { entities, refetch: refetchEntities } = useEntities(user?.contextId);
 
     // Sync local state with fetched chat data
+    // Every chat has an entityId stored - just use it
     useEffect(() => {
         const entityIdFromChat = chat?.selectedEntityId || "";
-        // If no entityId or entity doesn't exist, use default entity
-        const newEntityId =
-            entityIdFromChat && entities.some((e) => e.id === entityIdFromChat)
-                ? entityIdFromChat
-                : defaultEntityId;
-
-        if (newEntityId !== selectedEntityId) {
-            setSelectedEntityId(newEntityId);
+        const entityNameFromChat = chat?.selectedEntityName || "";
+        if (entityIdFromChat !== selectedEntityId) {
+            setSelectedEntityId(entityIdFromChat);
+        }
+        if (entityNameFromChat !== selectedEntityName) {
+            setSelectedEntityName(entityNameFromChat);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [chat?.selectedEntityId, entities, defaultEntityId]);
+    }, [chat?.selectedEntityId, chat?.selectedEntityName, activeChatId]);
+
+    // Check if the selected entity is available (in the user's entity list)
+    const isEntityUnavailable =
+        selectedEntityId && !entities.some((e) => e.id === selectedEntityId);
 
     const handleShare = () => {
         setShowPublicConfirm(true);
@@ -189,13 +188,16 @@ function Chat({ viewingChat = null }) {
         }
     };
 
-    const handleEntityChange = (value) => {
-        const newEntityId = value === defaultAiName ? "" : value;
-        setSelectedEntityId(newEntityId);
+    const handleEntityChange = (entityId) => {
+        const selectedEntity = entities.find((e) => e.id === entityId);
+        const newEntityName = selectedEntity?.name || "";
+        setSelectedEntityId(entityId);
+        setSelectedEntityName(newEntityName);
         if (activeChatId) {
             updateActiveChat.mutate({
                 chatId: activeChatId,
-                selectedEntityId: newEntityId,
+                selectedEntityId: entityId,
+                selectedEntityName: newEntityName,
             });
         }
     };
@@ -259,11 +261,19 @@ function Chat({ viewingChat = null }) {
             const chatToCopy = viewingChat || chat;
             if (!chatToCopy?._id || !chatToCopy?.messages?.length) return;
 
+            // Use the user's default entity
+            const defaultEntity = entities.find(
+                (e) => e.id === user?.defaultEntityId,
+            );
+            const newEntityName = defaultEntity?.name || user?.aiName || "AI";
+
             const { _id } = await addChat.mutateAsync({
                 messages: chatToCopy.messages,
                 title: chatToCopy.title
                     ? `${t("Copy of")} ${chatToCopy.title}`
                     : t("Copy of chat"),
+                selectedEntityId: user?.defaultEntityId || "",
+                selectedEntityName: newEntityName,
             });
             setShowSharedByDialog(false);
             router.push(`/chat/${_id}`);
@@ -300,120 +310,60 @@ function Chat({ viewingChat = null }) {
                             )}
                         </button>
                     ) : (
-                        <>
-                            {user?.useCustomEntities ? (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button
-                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-xs"
-                                            aria-label={t("Select entity")}
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                {selectedEntityId ? (
-                                                    <>
-                                                        <span className="hidden sm:inline">
-                                                            {t("Chatting with")}{" "}
-                                                            {t(
-                                                                entities.find(
-                                                                    (e) =>
-                                                                        e.id ===
-                                                                        selectedEntityId,
-                                                                )?.name,
-                                                            )}
-                                                        </span>
-                                                        <span className="sm:hidden">
-                                                            {t(
-                                                                entities.find(
-                                                                    (e) =>
-                                                                        e.id ===
-                                                                        selectedEntityId,
-                                                                )?.name,
-                                                            )}
-                                                        </span>
-                                                        <EntityIcon
-                                                            entity={entities.find(
-                                                                (e) =>
-                                                                    e.id ===
-                                                                    selectedEntityId,
-                                                            )}
-                                                            size="xs"
-                                                        />
-                                                    </>
-                                                ) : (
-                                                    <span>
-                                                        {t("Select entity")}
+                        <button
+                            onClick={() => setShowContactsModal(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-xs"
+                            aria-label={t("Select entity")}
+                        >
+                            <Users className="w-3.5 h-3.5" />
+                            <div className="flex items-center gap-2">
+                                {selectedEntityId ? (
+                                    <>
+                                        {(() => {
+                                            const selectedEntity =
+                                                entities.find(
+                                                    (e) =>
+                                                        e.id ===
+                                                        selectedEntityId,
+                                                );
+                                            // Use stored name from state if entity not in list
+                                            const entityName =
+                                                selectedEntity?.name ||
+                                                selectedEntityName ||
+                                                "Unknown";
+                                            return (
+                                                <>
+                                                    <span className="hidden sm:inline">
+                                                        {t("Chatting with")}{" "}
+                                                        {t(entityName)}
+                                                        {isEntityUnavailable && (
+                                                            <span className="text-amber-500 ml-1">
+                                                                (
+                                                                {t(
+                                                                    "unavailable",
+                                                                )}
+                                                                )
+                                                            </span>
+                                                        )}
                                                     </span>
-                                                )}
-                                            </div>
-                                            <ChevronDown className="w-3.5 h-3.5" />
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                        align={isRTL ? "start" : "end"}
-                                    >
-                                        {entities.map((entity) => (
-                                            <DropdownMenuItem
-                                                key={entity.id}
-                                                onClick={() =>
-                                                    handleEntityChange(
-                                                        entity.id,
-                                                    )
-                                                }
-                                                className="flex items-center gap-2 text-sm focus:bg-gray-100 dark:focus:bg-gray-700 dark:focus:text-gray-100"
-                                            >
-                                                <EntityIcon
-                                                    entity={entity}
-                                                    size="xs"
-                                                />
-                                                {t(entity.name)}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            ) : (
-                                <button
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 text-xs cursor-default"
-                                    aria-label={t("Select entity")}
-                                    tabIndex={-1}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        {selectedEntityId ? (
-                                            <>
-                                                <span className="hidden sm:inline">
-                                                    {t("Chatting with")}{" "}
-                                                    {t(
-                                                        entities.find(
-                                                            (e) =>
-                                                                e.id ===
-                                                                selectedEntityId,
-                                                        )?.name,
-                                                    )}
-                                                </span>
-                                                <span className="sm:hidden">
-                                                    {t(
-                                                        entities.find(
-                                                            (e) =>
-                                                                e.id ===
-                                                                selectedEntityId,
-                                                        )?.name,
-                                                    )}
-                                                </span>
-                                                <EntityIcon
-                                                    entity={entities.find(
-                                                        (e) =>
-                                                            e.id ===
-                                                            selectedEntityId,
-                                                    )}
-                                                    size="xs"
-                                                />
-                                            </>
-                                        ) : (
-                                            <span>{t("Select entity")}</span>
-                                        )}
-                                    </div>
-                                </button>
-                            )}
-                        </>
+                                                    <span className="sm:hidden">
+                                                        {t(entityName)}
+                                                        {isEntityUnavailable &&
+                                                            " ⚠️"}
+                                                    </span>
+                                                    <EntityIcon
+                                                        entity={selectedEntity}
+                                                        size="xs"
+                                                    />
+                                                </>
+                                            );
+                                        })()}
+                                    </>
+                                ) : (
+                                    <span>{t("Select entity")}</span>
+                                )}
+                            </div>
+                        </button>
                     )}
                     <ChatTopMenuDynamic
                         readOnly={readOnly || !!publicChatOwner}
@@ -547,6 +497,7 @@ function Chat({ viewingChat = null }) {
                     selectedEntityId={selectedEntityId}
                     entities={entities}
                     entityIconSize="lg"
+                    isEntityUnavailable={isEntityUnavailable}
                 />
             </div>
 
@@ -685,6 +636,15 @@ function Chat({ viewingChat = null }) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <EntityContactsModal
+                isOpen={showContactsModal}
+                onClose={() => setShowContactsModal(false)}
+                entities={entities}
+                selectedEntityId={selectedEntityId}
+                onEntitySelect={handleEntityChange}
+                refetchEntities={refetchEntities}
+            />
         </div>
     );
 }

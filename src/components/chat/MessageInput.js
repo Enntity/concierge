@@ -36,6 +36,7 @@ function MessageInput({
     isStreaming,
     onStopStreaming,
     initialShowFileUpload = false,
+    isEntityUnavailable = false,
 }) {
     const { t } = useTranslation();
     const activeChatId = useGetActiveChatId();
@@ -368,12 +369,14 @@ function MessageInput({
                             className={classNames(
                                 `w-full border-0 outline-none focus:shadow-none text-base leading-relaxed focus:ring-0 pt-2 resize-none bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400`,
                                 enableRag ? "px-1" : "px-3 rounded-s",
-                                viewingReadOnlyChat
+                                viewingReadOnlyChat || isEntityUnavailable
                                     ? "text-gray-400 dark:text-gray-400 cursor-not-allowed placeholder:text-gray-400 dark:placeholder:text-gray-400"
                                     : "",
                             )}
                             rows={1}
-                            disabled={viewingReadOnlyChat}
+                            disabled={
+                                viewingReadOnlyChat || isEntityUnavailable
+                            }
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && !e.shiftKey) {
                                     e.preventDefault();
@@ -383,7 +386,8 @@ function MessageInput({
                                         isSendingRef.current ||
                                         loading ||
                                         inputValue === "" ||
-                                        viewingReadOnlyChat
+                                        viewingReadOnlyChat ||
+                                        isEntityUnavailable
                                     ) {
                                         // Preventing submission during inappropriate times
                                         return;
@@ -702,7 +706,8 @@ function MessageInput({
                                 !loading &&
                                 (inputValue === "" ||
                                     isUploadingMedia ||
-                                    viewingReadOnlyChat)
+                                    viewingReadOnlyChat ||
+                                    isEntityUnavailable)
                             }
                             className={classNames(
                                 "ml-2 px-3 pb-2.5 text-base flex items-end",
@@ -710,7 +715,8 @@ function MessageInput({
                                 "disabled:cursor-not-allowed",
                                 inputValue === "" ||
                                     isUploadingMedia ||
-                                    viewingReadOnlyChat
+                                    viewingReadOnlyChat ||
+                                    isEntityUnavailable
                                     ? "text-gray-400 dark:text-gray-500"
                                     : "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:scale-110 active:scale-95",
                             )}
@@ -723,7 +729,8 @@ function MessageInput({
                                         className={`w-5 h-5 transition-all duration-300 ${
                                             inputValue === "" ||
                                             isUploadingMedia ||
-                                            viewingReadOnlyChat
+                                            viewingReadOnlyChat ||
+                                            isEntityUnavailable
                                                 ? "text-gray-400 dark:text-gray-500"
                                                 : "text-emerald-600 dark:text-emerald-400"
                                         }`}

@@ -19,7 +19,6 @@ const ChatNavigationItem = ({
     pathname,
     router,
     handleDeleteChat,
-    isCollapsed,
 }) => {
     const [editingId, setEditingId] = useState(null);
     const [editedName, setEditedName] = useState("");
@@ -107,12 +106,7 @@ const ChatNavigationItem = ({
                             <>
                                 <div className="basis-3 hidden sm:block">
                                     <EditIcon
-                                        className={classNames(
-                                            "h-3 w-3 text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 cursor-pointer transition-colors",
-                                            !isCollapsed
-                                                ? "invisible group-hover:visible"
-                                                : "invisible",
-                                        )}
+                                        className="h-3 w-3 text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 cursor-pointer transition-colors invisible group-hover:visible"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setEditingId(subItem.key);
@@ -129,12 +123,7 @@ const ChatNavigationItem = ({
                     {editingId !== subItem.key && (
                         <div className="basis-3 text-end hidden sm:block">
                             <Trash2
-                                className={classNames(
-                                    "h-3 w-3 text-gray-400 cursor-pointer hover:text-sky-500 dark:hover:text-sky-400 transition-colors",
-                                    !isCollapsed
-                                        ? "invisible group-hover:visible"
-                                        : "invisible",
-                                )}
+                                className="h-3 w-3 text-gray-400 cursor-pointer hover:text-sky-500 dark:hover:text-sky-400 transition-colors invisible group-hover:visible"
                                 aria-hidden="true"
                                 onClick={(e) => {
                                     e.stopPropagation();

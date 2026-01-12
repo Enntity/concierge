@@ -8,6 +8,7 @@ import ProgressUpdate from "../editor/ProgressUpdate";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -200,6 +201,9 @@ function ImageTile({
                                 ? t("Content blocked by safety system")
                                 : t("Media generation failed")}
                         </DialogTitle>
+                        <DialogDescription>
+                            {t("An error occurred while generating media")}
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="mt-4 space-y-3 overflow-auto">
                         <div>

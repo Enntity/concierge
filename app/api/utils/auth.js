@@ -54,7 +54,7 @@ export const getCurrentUser = async (convertToJsonObj = true) => {
                 contextKey,
                 aiMemorySelfModify: true,
                 aiName: "Enntity",
-                agentModel: "oai-gpt51",
+                agentModel: "gemini-flash-3-vision",
             });
         } catch (error) {
             // Handle race condition: if user was created by another request

@@ -54,8 +54,11 @@ function ChatBox() {
     const pathname = usePathname(); // Get the current pathname
     const activeChat = useGetActiveChat()?.data;
 
-    const { entities, defaultEntityId } = useEntities(aiName);
-    const selectedEntityId = activeChat?.selectedEntityId || defaultEntityId;
+    const { entities } = useEntities(user?.contextId);
+    const selectedEntityId = activeChat?.selectedEntityId || "";
+    // Check if the selected entity is available
+    const isEntityUnavailable =
+        selectedEntityId && !entities.some((e) => e.id === selectedEntityId);
     const updateChatHook = useUpdateChat();
     const [isResearchMode, setIsResearchMode] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -282,6 +285,7 @@ function ChatBox() {
                     entities={entities}
                     selectedEntityId={selectedEntityId}
                     entityIconSize="lg"
+                    isEntityUnavailable={isEntityUnavailable}
                 />
             </div>
         );
@@ -360,6 +364,7 @@ function ChatBox() {
                                 entities={entities}
                                 selectedEntityId={selectedEntityId}
                                 entityIconSize="sm"
+                                isEntityUnavailable={isEntityUnavailable}
                             />
                         </div>
                     )}

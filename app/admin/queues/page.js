@@ -12,6 +12,7 @@ import {
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -126,6 +127,9 @@ function DataCell({ data }) {
                 >
                     <DialogHeader>
                         <DialogTitle>Data Details</DialogTitle>
+                        <DialogDescription className="sr-only">
+                            View detailed data information
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md w-full overflow-auto">
                         <pre className="w-full whitespace-pre-wrap text-sm overflow-auto max-h-[60vh]">

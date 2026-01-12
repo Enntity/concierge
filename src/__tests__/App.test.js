@@ -21,8 +21,11 @@ const mockLanguageContext = {
 // Mock style imports - removing virtual: true option
 jest.mock("../tailwind.css", () => ({}));
 
-// Mock React's useContext to return our mockLanguageContext when LanguageContext is requested
+// Capture original React hooks before any mocking
+const originalUseState = React.useState;
 const originalUseContext = React.useContext;
+
+// Mock React's useContext to return our mockLanguageContext when LanguageContext is requested
 React.useContext = jest.fn((context) => {
     // Check if this is the LanguageContext
     if (context === LanguageContext) {
@@ -45,6 +48,19 @@ jest.mock("../i18n", () => ({}));
 
 jest.mock("@amplitude/analytics-browser", () => ({
     init: jest.fn(),
+}));
+
+// Mock next/navigation
+jest.mock("next/navigation", () => ({
+    usePathname: jest.fn(() => "/"),
+    useRouter: jest.fn(() => ({
+        push: jest.fn(),
+        replace: jest.fn(),
+        refresh: jest.fn(),
+        back: jest.fn(),
+        forward: jest.fn(),
+        prefetch: jest.fn(),
+    })),
 }));
 
 // Mock useDebounce hook
@@ -101,6 +117,24 @@ jest.mock("../contexts/ThemeProvider", () => ({
 jest.mock("../contexts/AutoTranscribeContext", () => ({
     AutoTranscribeProvider: ({ children }) => (
         <div data-testid="auto-transcribe-provider">{children}</div>
+    ),
+}));
+
+jest.mock("../contexts/OnboardingContext", () => ({
+    OnboardingProvider: ({ children }) => (
+        <div data-testid="onboarding-provider">{children}</div>
+    ),
+    useOnboarding: jest.fn(() => ({
+        isOnboardingOpen: false,
+        isFirstRun: false,
+        openOnboarding: jest.fn(),
+        closeOnboarding: jest.fn(),
+    })),
+}));
+
+jest.mock("../contexts/StreamingAvatarContext", () => ({
+    StreamingAvatarProvider: ({ children }) => (
+        <div data-testid="streaming-avatar-provider">{children}</div>
     ),
 }));
 
@@ -199,11 +233,9 @@ describe("App Component", () => {
             const setUserStateMock = jest.fn();
             let userStateValue = null;
 
-            // Save the original useState
-            const originalUseState = React.useState;
-
             // Create a mock implementation that tracks userState specifically
-            const mockUseState = jest.fn((initialValue) => {
+            // Uses module-level originalUseState captured before any mocking
+            jest.spyOn(React, "useState").mockImplementation((initialValue) => {
                 // Only intercept the userState (null initial value)
                 if (initialValue === null) {
                     return [userStateValue, setUserStateMock];
@@ -211,9 +243,6 @@ describe("App Component", () => {
                 // For all other useState calls, use the original implementation
                 return originalUseState(initialValue);
             });
-
-            // Apply our mock implementation
-            jest.spyOn(React, "useState").mockImplementation(mockUseState);
 
             // Initial server state
             const serverState = { preferences: { theme: "light" } };
@@ -292,7 +321,7 @@ describe("App Component", () => {
             const setUserStateMock = jest.fn();
             let userStateValue = null;
 
-            const originalUseState = React.useState;
+            // Uses module-level originalUseState captured before any mocking
             jest.spyOn(React, "useState").mockImplementation((initialValue) => {
                 if (initialValue === null) {
                     return [userStateValue, setUserStateMock];

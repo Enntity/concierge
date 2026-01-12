@@ -122,40 +122,6 @@ const VISION = gql`
     }
 `;
 
-const SYS_READ_MEMORY = gql`
-    query SysReadMemory(
-        $contextId: String!
-        $contextKey: String
-        $section: String
-    ) {
-        sys_read_memory(
-            contextId: $contextId
-            contextKey: $contextKey
-            section: $section
-        ) {
-            result
-        }
-    }
-`;
-
-const SYS_SAVE_MEMORY = gql`
-    mutation SysSaveMemory(
-        $aiMemory: String!
-        $contextId: String!
-        $contextKey: String
-        $section: String
-    ) {
-        sys_save_memory(
-            aiMemory: $aiMemory
-            contextId: $contextId
-            contextKey: $contextKey
-            section: $section
-        ) {
-            result
-        }
-    }
-`;
-
 const SYS_READ_FILE_COLLECTION = gql`
     query SysReadFileCollection(
         $agentContext: [AgentContextInput]
@@ -244,6 +210,34 @@ const SYS_ENTITY_AGENT = gql`
             tool
             warnings
             errors
+        }
+    }
+`;
+
+const SYS_STORE_CONTINUITY_MEMORY = gql`
+    mutation SysStoreContinuityMemory(
+        $entityId: String!
+        $userId: String!
+        $content: String!
+        $memoryType: String!
+        $importance: Int
+        $tags: [String!]
+        $emotionalValence: String
+        $emotionalIntensity: Float
+        $skipDedup: Boolean
+    ) {
+        sys_store_continuity_memory(
+            entityId: $entityId
+            userId: $userId
+            content: $content
+            memoryType: $memoryType
+            importance: $importance
+            tags: $tags
+            emotionalValence: $emotionalValence
+            emotionalIntensity: $emotionalIntensity
+            skipDedup: $skipDedup
+        ) {
+            result
         }
     }
 `;
@@ -349,24 +343,6 @@ const GRAMMAR_AR = gql`
     }
 `;
 
-const GREETING = gql`
-    query Greeting(
-        $text: String!
-        $async: Boolean
-        $contextId: String
-        $aiName: String
-    ) {
-        greeting(
-            text: $text
-            async: $async
-            contextId: $contextId
-            aiName: $aiName
-        ) {
-            result
-        }
-    }
-`;
-
 const SPELLING = gql`
     query Spelling($text: String!, $async: Boolean) {
         spelling(text: $text, async: $async) {
@@ -407,6 +383,14 @@ const KEYWORDS = gql`
 const TAGS = gql`
     query Tags($text: String!, $tags: String, $async: Boolean) {
         tags(text: $text, tags: $tags, async: $async) {
+            result
+        }
+    }
+`;
+
+const EMBEDDINGS = gql`
+    query Embeddings($text: String!) {
+        embeddings(text: $text) {
             result
         }
     }
@@ -1013,8 +997,24 @@ const AZURE_VIDEO_TRANSLATE = gql`
 `;
 
 const SYS_GET_ENTITIES = gql`
-    query Sys_get_entities {
-        sys_get_entities {
+    query Sys_get_entities($contextId: String!, $includeSystem: Boolean) {
+        sys_get_entities(contextId: $contextId, includeSystem: $includeSystem) {
+            result
+        }
+    }
+`;
+
+const SYS_GET_ONBOARDING_ENTITY = gql`
+    query Sys_get_onboarding_entity {
+        sys_get_onboarding_entity {
+            result
+        }
+    }
+`;
+
+const SYS_DISASSOCIATE_ENTITY = gql`
+    mutation Sys_disassociate_entity($entityId: String!, $contextId: String!) {
+        sys_disassociate_entity(entityId: $entityId, contextId: $contextId) {
             result
         }
     }
@@ -1067,12 +1067,11 @@ const QUERIES = {
     IMAGE_GEMINI_3,
     VIDEO_VEO,
     VIDEO_SEEDANCE,
-    SYS_READ_MEMORY,
-    SYS_SAVE_MEMORY,
     SYS_READ_FILE_COLLECTION,
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,
     SYS_GET_ENTITIES,
+    SYS_GET_ONBOARDING_ENTITY,
     SYS_TOOL_MERMAID,
     EXPAND_STORY,
     FORMAT_PARAGRAPH_TURBO,
@@ -1081,7 +1080,6 @@ const QUERIES = {
     SUMMARY,
     HASHTAGS,
     HEADLINE,
-    GREETING,
     GRAMMAR,
     GRAMMAR_AR,
     SPELLING,
@@ -1089,6 +1087,7 @@ const QUERIES = {
     TOPICS,
     KEYWORDS,
     TAGS,
+    EMBEDDINGS,
     JIRA_STORY,
     getWorkspacePromptQuery,
     getWorkspaceAgentQuery,
@@ -1152,6 +1151,8 @@ const MUTATIONS = {
     CANCEL_REQUEST,
     PUT_PATHWAY,
     DELETE_PATHWAY,
+    SYS_DISASSOCIATE_ENTITY,
+    SYS_STORE_CONTINUITY_MEMORY,
 };
 
 export {
@@ -1161,12 +1162,11 @@ export {
     COGNITIVE_INSERT,
     COGNITIVE_DELETE,
     EXPAND_STORY,
-    SYS_READ_MEMORY,
-    SYS_SAVE_MEMORY,
     SYS_READ_FILE_COLLECTION,
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,
     SYS_GET_ENTITIES,
+    SYS_GET_ONBOARDING_ENTITY,
     SYS_TOOL_MERMAID,
     SELECT_SERVICES,
     SUMMARY,

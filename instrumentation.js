@@ -135,43 +135,11 @@ async function seedNativeApps() {
                 "Translate text between multiple languages with AI-powered accuracy",
         },
         {
-            name: "Transcribe",
-            slug: "video",
-            type: APP_TYPES.NATIVE,
-            icon: "Video",
-            description:
-                "Transcribe and translate video and audio files with AI-powered accuracy",
-        },
-        {
-            name: "Write",
-            slug: "write",
-            type: APP_TYPES.NATIVE,
-            icon: "Pencil",
-            description:
-                "Write and edit content with AI-powered writing assistance",
-        },
-        {
-            name: "Workspaces",
-            slug: "workspaces",
-            type: APP_TYPES.NATIVE,
-            icon: "AppWindow",
-            description:
-                "Manage your AI workspaces and collaborate on projects",
-        },
-        {
             name: "Media",
             slug: "media",
             type: APP_TYPES.NATIVE,
             icon: "Image",
             description: "Generate and manage images and media content",
-        },
-        {
-            name: "Jira",
-            slug: "jira",
-            type: APP_TYPES.NATIVE,
-            icon: "Bug",
-            description:
-                "Integrate with Jira for issue tracking and project management",
         },
     ];
 
@@ -190,6 +158,20 @@ async function seedNativeApps() {
             {
                 upsert: true,
                 new: true,
+            },
+        );
+    }
+
+    // Mark deprecated native apps as inactive (so they don't show in Available Apps)
+    const deprecatedAppSlugs = ["write", "workspaces", "jira", "video"];
+    for (const slug of deprecatedAppSlugs) {
+        await App.updateMany(
+            {
+                slug: slug,
+                type: APP_TYPES.NATIVE,
+            },
+            {
+                status: APP_STATUS.INACTIVE,
             },
         );
     }

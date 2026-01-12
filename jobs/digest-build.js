@@ -1,10 +1,7 @@
 import Digest from "../app/api/models/digest.mjs";
 import Task from "../app/api/models/task.mjs";
 import User from "../app/api/models/user.mjs";
-import {
-    generateDigestBlockContent,
-    generateDigestGreeting,
-} from "./digest/digest.utils.js";
+import { generateDigestBlockContent } from "./digest/digest.utils.js";
 
 const { ACTIVE_USER_PERIOD_DAYS = 7 } =
     typeof process.env === "object" ? process.env : {};
@@ -20,8 +17,6 @@ async function buildDigestForUser(user, logger) {
         logger.log("[Digest] User does not have digest", owner);
         return;
     }
-
-    logger.log("[Digest] Generate greeting for user", owner);
 
     logger.log("[Digest] Building digest for user", owner);
     const promises = digest.blocks.map(async (block, i) => {
@@ -56,18 +51,13 @@ async function buildDigestForUser(user, logger) {
     });
 
     const updatedBlocks = await Promise.all(promises);
-    const greeting = await generateDigestGreeting(
-        user,
-        updatedBlocks[0]?.content,
-        logger,
-    );
 
     // Update the entire blocks array in one call
-    logger.log("[Digest] Updating greeting and blocks in database", owner);
+    logger.log("[Digest] Updating blocks in database", owner);
     try {
         digest = await Digest.findOneAndUpdate(
             { owner },
-            { $set: { blocks: updatedBlocks, greeting } }, // Update the entire blocks array
+            { $set: { blocks: updatedBlocks } },
             { upsert: true, new: true },
         );
 

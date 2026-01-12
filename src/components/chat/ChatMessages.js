@@ -96,6 +96,7 @@ const ChatMessages = React.memo(function ChatMessages({
     entityIconSize,
     contextId,
     contextKey,
+    isEntityUnavailable = false,
 }) {
     const { user } = useContext(AuthContext);
     const { t } = useTranslation();
@@ -112,11 +113,14 @@ const ChatMessages = React.memo(function ChatMessages({
     );
 
     const inputPlaceholder = useMemo(() => {
+        if (isEntityUnavailable) {
+            return t("Select an available AI to continue chatting");
+        }
         if (container === "codebox") {
             return t("Ask me to write, explain, or fix code");
         }
         return t("Send a message");
-    }, [container, t]);
+    }, [container, t, isEntityUnavailable]);
 
     return (
         <div className="flex flex-col h-full">
@@ -161,6 +165,7 @@ const ChatMessages = React.memo(function ChatMessages({
                     onSend={handleSendCallback}
                     isStreaming={isStreaming}
                     onStopStreaming={onStopStreaming}
+                    isEntityUnavailable={isEntityUnavailable}
                 />
             </div>
         </div>

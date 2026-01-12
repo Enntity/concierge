@@ -90,8 +90,9 @@ export async function connectToDatabase() {
         await conn.close();
     }
 
-    // Extract database name from MONGO_URI
-    const dbName = new URL(MONGO_URI).pathname.split("/")[1];
+    // Extract database name from MONGO_URI or use env variable or default
+    const uriPath = new URL(MONGO_URI).pathname.split("/").filter(Boolean);
+    const dbName = uriPath[0] || process.env.MONGO_DB_NAME || "concierge";
 
     const schemaMap = {
         [`${dbName}.users`]: {
@@ -312,6 +313,21 @@ export async function connectToDatabase() {
                     },
                 },
                 inputImageUrl3: {
+                    encrypt: {
+                        bsonType: "string",
+                        algorithm: "AEAD_AES_256_CBC_HMAC_SHA_512-Random",
+                    },
+                },
+            },
+            encryptMetadata: {
+                keyId: [_key],
+            },
+        },
+        // Continuity memories from cortex - encrypts memory content
+        [`${dbName}.continuity_memories`]: {
+            bsonType: "object",
+            properties: {
+                content: {
                     encrypt: {
                         bsonType: "string",
                         algorithm: "AEAD_AES_256_CBC_HMAC_SHA_512-Random",

@@ -122,7 +122,8 @@ export async function POST(req, { params }) {
                 stream: true,
                 entityId: finalEntityId,
                 researchMode: researchMode || chat.researchMode || false,
-                model: model || currentUser.agentModel || "oai-gpt51",
+                model:
+                    model || currentUser.agentModel || "gemini-flash-3-vision",
                 userInfo,
             },
             fetchPolicy: "network-only",

@@ -25,6 +25,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRunTask } from "../../../app/queries/notifications";
 import { useParams } from "next/navigation";
 import { composeUserDateTimeInfo } from "../../utils/datetimeUtils";
+import { useStreamingAvatar } from "../../contexts/StreamingAvatarContext";
+import { useEntities } from "../../hooks/useEntities";
 
 const contextMessageCount = 50;
 
@@ -57,6 +59,7 @@ function ChatContent({
     selectedEntityId: selectedEntityIdFromProp,
     entities,
     entityIconSize,
+    isEntityUnavailable = false,
 }) {
     const { t } = useTranslation();
     const client = useApolloClient();
@@ -68,6 +71,9 @@ function ChatContent({
     const updateChatHook = useUpdateChat();
     const queryClient = useQueryClient();
     const runTask = useRunTask();
+    const { refetch: refetchEntities, refetchEntity } = useEntities(
+        user?.contextId,
+    );
     const viewingReadOnlyChat = useMemo(
         () => displayState === "full" && viewingChat && viewingChat.readOnly,
         [displayState, viewingChat],
@@ -226,6 +232,29 @@ function ChatContent({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [memoizedMessages, chatId, viewingReadOnlyChat, t, updateChatHook]);
 
+    const { setStreamingAvatar, clearStreamingAvatar } = useStreamingAvatar();
+
+    // Clear streaming avatar when entity changes
+    useEffect(() => {
+        clearStreamingAvatar();
+    }, [selectedEntityIdFromProp, clearStreamingAvatar]);
+
+    const handleAvatarMessage = useCallback(
+        (avatarMessage) => {
+            if (avatarMessage?.type === "avatarImage") {
+                // Support both old format (url) and new format (files array)
+                if (avatarMessage.files && Array.isArray(avatarMessage.files)) {
+                    // New format: pass the full avatarMessage with files array
+                    setStreamingAvatar(avatarMessage);
+                } else if (avatarMessage.url) {
+                    // Old format: backward compatibility
+                    setStreamingAvatar({ url: avatarMessage.url });
+                }
+            }
+        },
+        [setStreamingAvatar],
+    );
+
     const {
         isStreaming,
         streamingContent,
@@ -241,6 +270,7 @@ function ChatContent({
         chat,
         updateChatHook,
         currentEntityId: selectedEntityIdFromProp,
+        onAvatarMessage: handleAvatarMessage,
     });
 
     const handleError = useCallback((error) => {
@@ -405,7 +435,7 @@ function ChatContent({
                         title: chat?.title,
                         entityId: currentSelectedEntityId,
                         researchMode: chat?.researchMode ? true : false,
-                        model: agentModel || "oai-gpt51",
+                        model: agentModel || "gemini-flash-3-vision",
                         userInfo,
                     }),
                 });
@@ -483,6 +513,9 @@ function ChatContent({
         return () => clearInterval(pollInterval);
     }, [chat?._id, isChatLoading, isStreaming, queryClient]);
 
+    // Track previous streaming state to detect when streaming completes
+    const prevIsStreamingRef = useRef(isStreaming);
+
     // Update the streaming effect with guardrails
     useEffect(() => {
         const checkForCodeRequestInLatestMessage = async () => {
@@ -532,6 +565,30 @@ function ChatContent({
         checkForCodeRequestInLatestMessage();
     }, [isStreaming, chat, runTask, updateChatHook]);
 
+    // Aggressively refetch the current entity when streaming completes
+    // This ensures avatars are fresh after agent tools may have updated them
+    useEffect(() => {
+        // Detect when streaming transitions from true to false (streaming just completed)
+        const streamingJustCompleted =
+            prevIsStreamingRef.current && !isStreaming;
+        prevIsStreamingRef.current = isStreaming;
+
+        // If streaming just completed and we have a selected entity, refetch just that entity
+        if (streamingJustCompleted && selectedEntityIdFromProp) {
+            // Small delay to ensure backend has processed any entity updates
+            const timer = setTimeout(() => {
+                if (refetchEntity) {
+                    // Optimize: only refetch the current entity
+                    refetchEntity(selectedEntityIdFromProp);
+                } else if (refetchEntities) {
+                    // Fallback to full refetch if refetchEntity not available
+                    refetchEntities();
+                }
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [isStreaming, selectedEntityIdFromProp, refetchEntity, refetchEntities]);
+
     return (
         <ChatMessages
             viewingReadOnlyChat={viewingReadOnlyChat}
@@ -554,6 +611,7 @@ function ChatContent({
             entityIconSize={entityIconSize}
             contextId={user?.contextId}
             contextKey={user?.contextKey}
+            isEntityUnavailable={isEntityUnavailable}
         />
     );
 }

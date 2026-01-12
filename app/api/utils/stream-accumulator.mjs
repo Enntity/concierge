@@ -9,7 +9,7 @@ export class StreamAccumulator {
         this.ephemeralContent = "";
         this.hasReceivedPersistent = false;
         this.accumulatedInfo = {};
-        this.toolCallsMap = new Map();
+        this.toolCallsMap = new Map(); // UI status tracking (icon, userMessage, status)
         this.thinkingStartTime = null;
         this.accumulatedThinkingTime = 0;
         this.isThinking = false;
@@ -68,6 +68,13 @@ export class StreamAccumulator {
 
         try {
             const parsed = JSON.parse(result);
+
+            // Skip tool call chunks - they come via info block toolMessage instead
+            const hasToolCalls = parsed?.choices?.[0]?.delta?.tool_calls;
+            if (hasToolCalls) {
+                return true; // Processed (but skipped) - don't treat as content
+            }
+
             let content;
             if (typeof parsed === "string") {
                 content = parsed;
@@ -111,6 +118,8 @@ export class StreamAccumulator {
                 }
                 return true;
             }
+
+            return false;
         } catch {
             // If parsing fails, treat as raw string content
             const isEphemeral = !!this.accumulatedInfo.ephemeral;
@@ -122,8 +131,6 @@ export class StreamAccumulator {
             }
             return true;
         }
-
-        return false;
     }
 
     /**

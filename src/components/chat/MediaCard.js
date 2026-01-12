@@ -344,7 +344,7 @@ const MediaCard = React.memo(function MediaCard({
             : `${cardWidth} ${previewHeight}`;
         return (
             <div
-                className={`${deletedCardClass} rounded-lg border border-red-200 dark:border-red-800/50 shadow-md overflow-hidden pointer-events-none bg-red-50/50 dark:bg-red-900/10 relative group`}
+                className={`${deletedCardClass} rounded-lg border border-red-200 dark:border-red-800/50 shadow-md overflow-hidden pointer-events-none bg-red-50/50 dark:bg-red-900/10 relative group/media`}
             >
                 {Icon ? (
                     <div className="w-full h-full rounded-lg bg-red-50/50 dark:bg-red-900/10 relative">
@@ -364,13 +364,13 @@ const MediaCard = React.memo(function MediaCard({
                     </div>
                 )}
                 {filename && (
-                    <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover/media:opacity-100 transition-opacity pointer-events-none">
                         <div className="overflow-hidden">
                             <span
                                 ref={deletedFilenameRef}
                                 className={`text-xs text-white text-start ${
                                     isFilenameTruncated
-                                        ? "whitespace-nowrap inline-block group-hover:animate-scroll-text"
+                                        ? "whitespace-nowrap inline-block group-hover/media:animate-scroll-text"
                                         : "truncate block"
                                 }`}
                                 style={
@@ -396,7 +396,7 @@ const MediaCard = React.memo(function MediaCard({
     return (
         <>
             <div
-                className={`${cardWidth} ${isSquareCard ? "aspect-square" : ""} ${className} bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden relative group ${
+                className={`${cardWidth} ${isSquareCard ? "aspect-square" : ""} ${className} bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden relative group/media ${
                     type !== "file" || hasFilePreview
                         ? "cursor-pointer hover:shadow-lg transition-shadow"
                         : ""
@@ -405,7 +405,7 @@ const MediaCard = React.memo(function MediaCard({
             >
                 {renderPreview()}
                 {filename && (
-                    <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover/media:opacity-100 transition-opacity pointer-events-none">
                         {type === "file" ? (
                             <div
                                 className="flex items-center justify-between gap-2"
@@ -416,7 +416,7 @@ const MediaCard = React.memo(function MediaCard({
                                         ref={fileFilenameRef}
                                         className={`text-xs text-white text-start ${
                                             isFilenameTruncated
-                                                ? "whitespace-nowrap inline-block group-hover:animate-scroll-text"
+                                                ? "whitespace-nowrap inline-block group-hover/media:animate-scroll-text"
                                                 : "truncate block"
                                         }`}
                                         style={
@@ -465,7 +465,7 @@ const MediaCard = React.memo(function MediaCard({
                                         ref={nonFileFilenameRef}
                                         className={`text-xs text-white text-start ${
                                             isFilenameTruncated
-                                                ? "whitespace-nowrap inline-block group-hover:animate-scroll-text"
+                                                ? "whitespace-nowrap inline-block group-hover/media:animate-scroll-text"
                                                 : "truncate block"
                                         }`}
                                         style={

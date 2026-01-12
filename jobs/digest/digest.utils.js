@@ -1,7 +1,56 @@
 import { QUERIES, getClient } from "../graphql.mjs";
+import { getEntitiesCollection } from "../../app/api/entities/_lib.js";
 
 const APPROXIMATE_DURATION_SECONDS = 60;
 const PROGRESS_UPDATE_INTERVAL = 3000;
+
+/**
+ * Validates that an entityId is in the user's contact list
+ * Returns the entityId if valid, null otherwise
+ */
+async function validateEntityAccess(entityId, userContextId, logger) {
+    if (!entityId || !userContextId) return null;
+
+    let client;
+    try {
+        const result = await getEntitiesCollection();
+        client = result.client;
+        const { collection } = result;
+
+        const entity = await collection.findOne({ id: entityId });
+
+        if (!entity) {
+            logger?.log(`Entity ${entityId} not found`);
+            return null;
+        }
+
+        // System entities are always accessible
+        if (entity.isSystem) {
+            return entityId;
+        }
+
+        // Check if user has this entity in their contacts
+        if (
+            entity.assocUserIds &&
+            Array.isArray(entity.assocUserIds) &&
+            entity.assocUserIds.includes(userContextId)
+        ) {
+            return entityId;
+        }
+
+        logger?.log(
+            `User ${userContextId} no longer has access to entity ${entityId}`,
+        );
+        return null;
+    } catch (e) {
+        logger?.log(`Error validating entity access: ${e.message}`);
+        return null;
+    } finally {
+        if (client) {
+            await client.close().catch(() => {});
+        }
+    }
+}
 
 const generateDigestBlockContent = async (
     block,
@@ -9,7 +58,7 @@ const generateDigestBlockContent = async (
     logger,
     onProgressUpdate,
 ) => {
-    const { prompt } = block;
+    const { prompt, entityId } = block;
 
     const systemMessage = {
         role: "system",
@@ -29,12 +78,36 @@ const generateDigestBlockContent = async (
           ]
         : [];
 
+    // Validate that the entityId is still accessible to the user
+    // Falls back to user's default entity if not
+    let resolvedEntityId = null;
+    if (entityId) {
+        resolvedEntityId = await validateEntityAccess(
+            entityId,
+            user?.contextId,
+            logger,
+        );
+        if (!resolvedEntityId && entityId) {
+            logger?.log(
+                `Entity ${entityId} no longer accessible, falling back to default`,
+                user?._id,
+                block?._id,
+            );
+        }
+    }
+
+    // Fall back to user's default entity
+    if (!resolvedEntityId) {
+        resolvedEntityId = user?.defaultEntityId || null;
+    }
+
     const variables = {
         chatHistory: [systemMessage, { role: "user", content: [prompt] }],
         agentContext,
         aiName: user?.aiName,
-        model: user?.agentModel || "oai-gpt51",
+        model: user?.agentModel || "gemini-flash-3-vision",
         useMemory: true,
+        entityId: resolvedEntityId,
     };
 
     const client = await getClient();
@@ -92,29 +165,4 @@ const generateDigestBlockContent = async (
     return content;
 };
 
-const generateDigestGreeting = async (user, text, logger) => {
-    console.log("Generating greeting for user", user?._id);
-    let graphql = await import("../graphql.mjs");
-    const { QUERIES, getClient } = graphql;
-
-    const client = await getClient();
-    const variables = {
-        text,
-        contextId: user?.contextId,
-        aiName: user?.aiName,
-    };
-
-    try {
-        const result = await client.query({
-            query: QUERIES.GREETING,
-            variables,
-        });
-
-        return result.data.greeting.result;
-    } catch (e) {
-        logger.log(`Error while generating greeting: ${e.message}`, user?._id);
-        return null;
-    }
-};
-
-export { generateDigestBlockContent, generateDigestGreeting };
+export { generateDigestBlockContent };

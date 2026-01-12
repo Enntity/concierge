@@ -7,7 +7,6 @@ import {
 import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
-import { LanguageContext } from "../contexts/LanguageProvider";
 import { ThemeContext } from "../contexts/ThemeProvider";
 import { AuthContext } from "../App";
 import {
@@ -23,7 +22,6 @@ import {
 
 export default function Footer() {
     const { t } = useTranslation();
-    const { language, changeLanguage } = useContext(LanguageContext);
     const { theme, changeTheme } = useContext(ThemeContext);
     const { user } = useContext(AuthContext);
     const currentYear = new Date().getFullYear();
@@ -69,7 +67,8 @@ export default function Footer() {
                         <span className="sm:hidden">⚙️</span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent side="top">
-                        <DropdownMenuItem
+                        {/* Arabic mode switch hidden - keeping code for future use */}
+                        {/* <DropdownMenuItem
                             onClick={() => {
                                 if (language === "en") {
                                     changeLanguage("ar");
@@ -80,7 +79,7 @@ export default function Footer() {
                             className="cursor-pointer"
                         >
                             {language === "en" ? "عربي" : "Switch to English"}
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                         <DropdownMenuItem
                             onClick={() => {
                                 if (theme === "light") {

@@ -7,9 +7,10 @@ const digestSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
         },
-        greeting: {
+        layout: {
             type: String,
-            required: false,
+            enum: ["single", "double"],
+            default: "double",
         },
         blocks: [
             {
@@ -20,6 +21,14 @@ const digestSchema = new mongoose.Schema(
                 prompt: {
                     type: String,
                     required: true,
+                },
+                entityId: {
+                    type: String,
+                    required: false,
+                },
+                entityName: {
+                    type: String,
+                    required: false,
                 },
                 content: {
                     type: String,
