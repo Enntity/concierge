@@ -723,25 +723,10 @@ export default function EntityOnboarding({
 
     // Auto-transition to chat when everything is ready
     useEffect(() => {
-        // Only proceed if:
-        // 1. We're in the contacting screen
-        // 2. Entity is ready
-        // 3. We have a prefetched chat ID (chat was successfully created)
-        // 4. Chat has entity content and streaming is complete
-        // 5. We haven't started transition yet
-
-        console.log("[Onboarding] Transition check:", {
-            showContacting,
-            isEntityReady,
-            prefetchedChatId,
-            isChatReady,
-            chatHasEntityContent,
-            isChatStreamingComplete,
-            transitionStarted: transitionStartedRef.current,
-        });
+        // Skip when not actively onboarding
+        if (!isOpen || !showContacting) return;
 
         if (
-            showContacting &&
             isEntityReady &&
             prefetchedChatId &&
             isChatReady &&
@@ -781,12 +766,11 @@ export default function EntityOnboarding({
             return () => clearTimeout(timer);
         }
     }, [
+        isOpen,
         showContacting,
         isEntityReady,
         prefetchedChatId,
         isChatReady,
-        chatHasEntityContent,
-        isChatStreamingComplete,
         actualEntityId,
         createdEntity,
         onComplete,

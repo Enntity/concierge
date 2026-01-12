@@ -182,7 +182,6 @@ export function StreamingAvatarProvider({ children }) {
                         : avatarMessage.duration;
             }
 
-
             // Clear any existing timers
             if (autoFadeTimerRef.current) {
                 clearTimeout(autoFadeTimerRef.current);

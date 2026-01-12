@@ -49,12 +49,14 @@ export function Modal({
                                     as="h3"
                                     className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4"
                                 >
-                                    <div className="justify-between flex">
+                                    <div className="justify-between flex items-center">
                                         <div>{title}</div>
                                         <div>
                                             <button
                                                 onClick={onHide}
-                                                className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none focus:ring-0"
+                                                type="button"
+                                                className="p-2 sm:p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none"
+                                                aria-label="Close"
                                             >
                                                 <X size={16} />
                                             </button>

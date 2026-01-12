@@ -10,6 +10,7 @@ import {
     Users,
     Trash2,
     MessageCircle,
+    Brain,
 } from "lucide-react";
 import {
     Dialog,
@@ -33,6 +34,7 @@ import { useOnboarding } from "../../contexts/OnboardingContext";
 import { useGetChats, useAddChat } from "../../../app/queries/chats";
 import { useRouter } from "next/navigation";
 import { AuthContext } from "../../App";
+import ContinuityMemoryEditor from "../ContinuityMemoryEditor";
 
 // Sort options
 const SORT_OPTIONS = {
@@ -57,6 +59,8 @@ export default function EntityContactsModal({
     const [sortBy, setSortBy] = useState(SORT_OPTIONS.NAME_ASC);
     const [entityToDelete, setEntityToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [memoryEditorEntityId, setMemoryEditorEntityId] = useState(null);
+    const [memoryEditorEntityName, setMemoryEditorEntityName] = useState(null);
 
     // Aggressively refetch entities when modal opens to get fresh avatars
     useEffect(() => {
@@ -329,10 +333,28 @@ export default function EntityContactsModal({
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    // Close contacts modal first to avoid focus trap conflicts
+                                                    onClose();
+                                                    // Then open memory editor
+                                                    setMemoryEditorEntityId(
+                                                        entity.id,
+                                                    );
+                                                    setMemoryEditorEntityName(
+                                                        entity.name,
+                                                    );
+                                                }}
+                                                className="p-1.5 rounded-md text-gray-400 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/30 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                                                title={t("Edit Memory")}
+                                            >
+                                                <Brain className="w-4 h-4" />
+                                            </button>
+                                            <button
                                                 onClick={(e) =>
                                                     handleDeleteClick(e, entity)
                                                 }
-                                                className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                                                 title={t("Remove contact")}
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -403,6 +425,17 @@ export default function EntityContactsModal({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Memory Editor */}
+            <ContinuityMemoryEditor
+                show={!!memoryEditorEntityId}
+                onClose={() => {
+                    setMemoryEditorEntityId(null);
+                    setMemoryEditorEntityName(null);
+                }}
+                entityId={memoryEditorEntityId}
+                entityName={memoryEditorEntityName}
+            />
         </>
     );
 }

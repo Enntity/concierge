@@ -122,40 +122,6 @@ const VISION = gql`
     }
 `;
 
-const SYS_READ_MEMORY = gql`
-    query SysReadMemory(
-        $contextId: String!
-        $contextKey: String
-        $section: String
-    ) {
-        sys_read_memory(
-            contextId: $contextId
-            contextKey: $contextKey
-            section: $section
-        ) {
-            result
-        }
-    }
-`;
-
-const SYS_SAVE_MEMORY = gql`
-    mutation SysSaveMemory(
-        $aiMemory: String!
-        $contextId: String!
-        $contextKey: String
-        $section: String
-    ) {
-        sys_save_memory(
-            aiMemory: $aiMemory
-            contextId: $contextId
-            contextKey: $contextKey
-            section: $section
-        ) {
-            result
-        }
-    }
-`;
-
 const SYS_READ_FILE_COLLECTION = gql`
     query SysReadFileCollection(
         $agentContext: [AgentContextInput]
@@ -244,6 +210,34 @@ const SYS_ENTITY_AGENT = gql`
             tool
             warnings
             errors
+        }
+    }
+`;
+
+const SYS_STORE_CONTINUITY_MEMORY = gql`
+    mutation SysStoreContinuityMemory(
+        $entityId: String!
+        $userId: String!
+        $content: String!
+        $memoryType: String!
+        $importance: Int
+        $tags: [String!]
+        $emotionalValence: String
+        $emotionalIntensity: Float
+        $skipDedup: Boolean
+    ) {
+        sys_store_continuity_memory(
+            entityId: $entityId
+            userId: $userId
+            content: $content
+            memoryType: $memoryType
+            importance: $importance
+            tags: $tags
+            emotionalValence: $emotionalValence
+            emotionalIntensity: $emotionalIntensity
+            skipDedup: $skipDedup
+        ) {
+            result
         }
     }
 `;
@@ -407,6 +401,14 @@ const KEYWORDS = gql`
 const TAGS = gql`
     query Tags($text: String!, $tags: String, $async: Boolean) {
         tags(text: $text, tags: $tags, async: $async) {
+            result
+        }
+    }
+`;
+
+const EMBEDDINGS = gql`
+    query Embeddings($text: String!) {
+        embeddings(text: $text) {
             result
         }
     }
@@ -1083,8 +1085,6 @@ const QUERIES = {
     IMAGE_GEMINI_3,
     VIDEO_VEO,
     VIDEO_SEEDANCE,
-    SYS_READ_MEMORY,
-    SYS_SAVE_MEMORY,
     SYS_READ_FILE_COLLECTION,
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,
@@ -1106,6 +1106,7 @@ const QUERIES = {
     TOPICS,
     KEYWORDS,
     TAGS,
+    EMBEDDINGS,
     JIRA_STORY,
     getWorkspacePromptQuery,
     getWorkspaceAgentQuery,
@@ -1170,6 +1171,7 @@ const MUTATIONS = {
     PUT_PATHWAY,
     DELETE_PATHWAY,
     SYS_DISASSOCIATE_ENTITY,
+    SYS_STORE_CONTINUITY_MEMORY,
 };
 
 export {
@@ -1179,8 +1181,6 @@ export {
     COGNITIVE_INSERT,
     COGNITIVE_DELETE,
     EXPAND_STORY,
-    SYS_READ_MEMORY,
-    SYS_SAVE_MEMORY,
     SYS_READ_FILE_COLLECTION,
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,

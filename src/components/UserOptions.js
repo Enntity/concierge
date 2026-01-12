@@ -1,7 +1,7 @@
 import { Modal } from "@/components/ui/modal";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { User, X, Settings, Sparkles } from "lucide-react";
+import { User, X, Sparkles } from "lucide-react";
 import { useUpdateAiOptions } from "../../app/queries/options";
 import { useUpdateCurrentUser } from "../../app/queries/users";
 import { AuthContext } from "../App";
@@ -9,7 +9,6 @@ import { LanguageContext } from "../contexts/LanguageProvider";
 import { useOnboarding } from "../contexts/OnboardingContext";
 import { useEntities } from "../hooks/useEntities";
 import axios from "../../app/utils/axios-client";
-import { MemoryEditorContent } from "./MemoryEditor";
 import {
     AGENT_MODEL_OPTIONS,
     DEFAULT_AGENT_MODEL,
@@ -43,7 +42,6 @@ const UserOptions = ({ show, handleClose }) => {
     const [uploadingProfilePicture, setUploadingProfilePicture] =
         useState(false);
     const [error, setError] = useState("");
-    const [showMemoryEditor, setShowMemoryEditor] = useState(false);
 
     const updateAiOptionsMutation = useUpdateAiOptions();
     const updateCurrentUserMutation = useUpdateCurrentUser();
@@ -190,18 +188,12 @@ const UserOptions = ({ show, handleClose }) => {
 
     return (
         <Modal
-            widthClassName={showMemoryEditor ? "max-w-6xl" : "max-w-2xl"}
-            title={showMemoryEditor ? t("Memory Editor") : t("Options")}
+            widthClassName="max-w-2xl"
+            title={t("Options")}
             show={show}
             onHide={handleClose}
         >
-            {showMemoryEditor ? (
-                <MemoryEditorContent
-                    user={user}
-                    aiName={aiName}
-                    onClose={() => setShowMemoryEditor(false)}
-                />
-            ) : (
+            {
                 <div className="flex flex-col gap-4">
                     {error && (
                         <div
@@ -449,14 +441,6 @@ const UserOptions = ({ show, handleClose }) => {
                                 {t("Allow the AI to modify its own memory")}
                             </label>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => setShowMemoryEditor(true)}
-                            className="lb-primary text-sm w-full sm:w-auto mt-2"
-                        >
-                            <Settings className="w-4 h-4 inline me-2" />
-                            {t("Edit Memory")}
-                        </button>
                     </section>
 
                     {/* Footer */}
@@ -472,7 +456,7 @@ const UserOptions = ({ show, handleClose }) => {
                         </button>
                     </div>
                 </div>
-            )}
+            }
         </Modal>
     );
 };
