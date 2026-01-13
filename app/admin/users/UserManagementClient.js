@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Ban, CheckCircle } from "lucide-react";
 import {
     AdminTableContainer,
     AdminTable,
@@ -59,6 +60,30 @@ export default function UserManagementClient({
         }
     };
 
+    const handleBlockToggle = async (userId, currentlyBlocked) => {
+        try {
+            const response = await fetch(`/api/users/${userId}/block`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ blocked: !currentlyBlocked }),
+            });
+
+            if (response.ok) {
+                setUsers(
+                    users.map((u) =>
+                        u._id === userId ? { ...u, blocked: !currentlyBlocked } : u,
+                    ),
+                );
+            } else {
+                const error = await response.json();
+                alert(error.error || "Failed to update block status");
+            }
+        } catch (error) {
+            console.error("Error updating user block status:", error);
+            alert("Failed to update block status");
+        }
+    };
+
     const handleSearch = (e) => {
         e.preventDefault();
         const params = new URLSearchParams(searchParams.toString());
@@ -89,13 +114,14 @@ export default function UserManagementClient({
                                 Username
                             </AdminTableHeaderCell>
                             <AdminTableHeaderCell>Role</AdminTableHeaderCell>
+                            <AdminTableHeaderCell>Status</AdminTableHeaderCell>
                             <AdminTableHeaderCell>Actions</AdminTableHeaderCell>
                         </tr>
                     </AdminTableHead>
                     <AdminTableBody>
                         {users.length === 0 ? (
                             <AdminTableEmpty
-                                colSpan={4}
+                                colSpan={5}
                                 message="No users found"
                             />
                         ) : (
@@ -113,27 +139,68 @@ export default function UserManagementClient({
                                         </span>
                                     </AdminTableCell>
                                     <AdminTableCell>
-                                        <Select
-                                            value={user.role || "user"}
-                                            onValueChange={(v) =>
-                                                handleRoleChange(user._id, v)
-                                            }
-                                            disabled={
-                                                user._id === currentUser?._id
-                                            }
-                                        >
-                                            <SelectTrigger className="w-[120px]">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="user">
-                                                    User
-                                                </SelectItem>
-                                                <SelectItem value="admin">
-                                                    Admin
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        {user.blocked ? (
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                                Blocked
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                Active
+                                            </span>
+                                        )}
+                                    </AdminTableCell>
+                                    <AdminTableCell>
+                                        <div className="flex gap-2">
+                                            <Select
+                                                value={user.role || "user"}
+                                                onValueChange={(v) =>
+                                                    handleRoleChange(user._id, v)
+                                                }
+                                                disabled={
+                                                    user._id === currentUser?._id
+                                                }
+                                            >
+                                                <SelectTrigger className="w-[120px]">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="user">
+                                                        User
+                                                    </SelectItem>
+                                                    <SelectItem value="admin">
+                                                        Admin
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <Button
+                                                onClick={() =>
+                                                    handleBlockToggle(
+                                                        user._id,
+                                                        user.blocked,
+                                                    )
+                                                }
+                                                disabled={user._id === currentUser?._id}
+                                                variant={
+                                                    user.blocked
+                                                        ? "default"
+                                                        : "destructive"
+                                                }
+                                                size="sm"
+                                                className="flex items-center gap-2"
+                                            >
+                                                {user.blocked ? (
+                                                    <>
+                                                        <CheckCircle className="h-4 w-4" />
+                                                        Unblock
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Ban className="h-4 w-4" />
+                                                        Block
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
                                     </AdminTableCell>
                                 </AdminTableRow>
                             ))

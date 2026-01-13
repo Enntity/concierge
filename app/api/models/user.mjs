@@ -114,6 +114,11 @@ const userSchema = new mongoose.Schema(
             required: false,
             trim: true,
         },
+        blocked: {
+            type: Boolean,
+            required: false,
+            default: false,
+        },
     },
     {
         timestamps: true,

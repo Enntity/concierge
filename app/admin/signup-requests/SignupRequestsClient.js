@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Mail, User, Calendar } from "lucide-react";
+import { Search, Mail, User, Calendar, Check } from "lucide-react";
 import {
     AdminTableContainer,
     AdminTable,
@@ -16,6 +16,76 @@ import {
     AdminTableEmpty,
     AdminPagination,
 } from "../components/AdminTable";
+
+function SignupRequestRow({ request, formatDate, onApprove }) {
+    const [isApproving, setIsApproving] = useState(false);
+
+    const handleApprove = async () => {
+        setIsApproving(true);
+        try {
+            const response = await fetch(
+                `/api/signup-requests/${request._id}/approve`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                },
+            );
+
+            if (response.ok) {
+                onApprove();
+            } else {
+                const error = await response.json();
+                alert(error.error || "Failed to approve signup request");
+            }
+        } catch (error) {
+            console.error("Error approving signup request:", error);
+            alert("Failed to approve signup request");
+        } finally {
+            setIsApproving(false);
+        }
+    };
+
+    return (
+        <AdminTableRow>
+            <AdminTableCell>
+                <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {request.email}
+                    </span>
+                </div>
+            </AdminTableCell>
+            <AdminTableCell>
+                <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-900 dark:text-gray-100">
+                        {request.name}
+                    </span>
+                </div>
+            </AdminTableCell>
+            <AdminTableCell className="text-gray-900 dark:text-gray-100">
+                {request.domain}
+            </AdminTableCell>
+            <AdminTableCell>
+                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                    <Calendar className="h-4 w-4" />
+                    {formatDate(request.requestedAt)}
+                </div>
+            </AdminTableCell>
+            <AdminTableCell>
+                <Button
+                    onClick={handleApprove}
+                    disabled={isApproving}
+                    size="sm"
+                    className="flex items-center gap-2"
+                >
+                    <Check className="h-4 w-4" />
+                    {isApproving ? "Approving..." : "Approve"}
+                </Button>
+            </AdminTableCell>
+        </AdminTableRow>
+    );
+}
 
 export default function SignupRequestsClient({
     initialRequests,
@@ -87,43 +157,29 @@ export default function SignupRequestsClient({
                             <AdminTableHeaderCell>
                                 Requested
                             </AdminTableHeaderCell>
+                            <AdminTableHeaderCell>Actions</AdminTableHeaderCell>
                         </tr>
                     </AdminTableHead>
                     <AdminTableBody>
                         {requests.length === 0 ? (
                             <AdminTableEmpty
-                                colSpan={4}
+                                colSpan={5}
                                 message="No signup requests found"
                             />
                         ) : (
                             requests.map((request) => (
-                                <AdminTableRow key={request._id}>
-                                    <AdminTableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Mail className="h-4 w-4 text-gray-400" />
-                                            <span className="font-medium text-gray-900 dark:text-gray-100">
-                                                {request.email}
-                                            </span>
-                                        </div>
-                                    </AdminTableCell>
-                                    <AdminTableCell>
-                                        <div className="flex items-center gap-2">
-                                            <User className="h-4 w-4 text-gray-400" />
-                                            <span className="text-gray-900 dark:text-gray-100">
-                                                {request.name}
-                                            </span>
-                                        </div>
-                                    </AdminTableCell>
-                                    <AdminTableCell className="text-gray-900 dark:text-gray-100">
-                                        {request.domain}
-                                    </AdminTableCell>
-                                    <AdminTableCell>
-                                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                                            <Calendar className="h-4 w-4" />
-                                            {formatDate(request.requestedAt)}
-                                        </div>
-                                    </AdminTableCell>
-                                </AdminTableRow>
+                                <SignupRequestRow
+                                    key={request._id}
+                                    request={request}
+                                    formatDate={formatDate}
+                                    onApprove={() => {
+                                        setRequests(
+                                            requests.filter(
+                                                (r) => r._id !== request._id,
+                                            ),
+                                        );
+                                    }}
+                                />
                             ))
                         )}
                     </AdminTableBody>

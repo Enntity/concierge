@@ -39,21 +39,45 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return session;
         },
         async signIn({ user }) {
-            // Restrict to specific email domains if configured
-            const allowedDomains = process.env.AUTH_ALLOWED_DOMAINS;
-            if (allowedDomains && user.email) {
-                const domains = allowedDomains
-                    .split(",")
-                    .map((d) => d.trim().toLowerCase());
-                const userDomain = user.email.split("@")[1]?.toLowerCase();
-                if (!domains.includes(userDomain)) {
-                    // Log the signup request for admin review via API route
-                    // (can't use mongoose directly in Edge Runtime)
+            if (!user.email) {
+                return false;
+            }
+
+            // Check if user exists in database and is not blocked
+            // (can't use mongoose directly in Edge Runtime)
+            try {
+                const baseUrl =
+                    process.env.NEXTAUTH_URL ||
+                    process.env.AUTH_URL ||
+                    "http://localhost:3000";
+                
+                const checkResponse = await fetch(`${baseUrl}/api/auth/check-user`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-auth-secret": process.env.AUTH_SECRET,
+                    },
+                    body: JSON.stringify({
+                        email: user.email,
+                    }),
+                });
+
+                if (!checkResponse.ok) {
+                    console.error("Failed to check user:", await checkResponse.text());
+                    return false;
+                }
+
+                const { exists, blocked } = await checkResponse.json();
+
+                // If user is blocked, deny sign-in
+                if (blocked) {
+                    return false;
+                }
+
+                // If user doesn't exist, log signup request for admin review
+                if (!exists) {
+                    const userDomain = user.email.split("@")[1]?.toLowerCase();
                     try {
-                        const baseUrl =
-                            process.env.NEXTAUTH_URL ||
-                            process.env.AUTH_URL ||
-                            "http://localhost:3000";
                         await fetch(`${baseUrl}/api/auth/log-signup-request`, {
                             method: "POST",
                             headers: {
@@ -72,8 +96,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     }
                     return false;
                 }
+
+                // User exists and is not blocked - allow sign-in
+                return true;
+            } catch (error) {
+                console.error("Error checking user during sign-in:", error);
+                return false;
             }
-            return true;
         },
     },
     session: {
