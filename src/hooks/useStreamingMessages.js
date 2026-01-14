@@ -394,7 +394,57 @@ export function useStreamingMessages({
                     const { done, value } = await reader.read();
 
                     if (done) {
-                        // Stream ended - refetch to get persisted message, then clear streaming
+                        // Stream ended - process any remaining buffer data first
+                        // This handles cases where the connection dropped mid-message (common on mobile)
+                        if (buffer.trim()) {
+                            const remainingLines = buffer.split("\n\n");
+                            for (const line of remainingLines) {
+                                if (cancelled) break;
+                                if (line.startsWith("data: ")) {
+                                    try {
+                                        const data = JSON.parse(line.slice(6));
+                                        const { event, data: eventData } = data;
+                                        if (
+                                            event === "data" ||
+                                            event === "info" ||
+                                            event === "progress"
+                                        ) {
+                                            messageQueueRef.current.push({
+                                                progress: eventData?.progress,
+                                                result:
+                                                    event === "data"
+                                                        ? eventData?.result
+                                                        : null,
+                                                info: eventData?.info || null,
+                                            });
+                                        }
+                                    } catch (e) {
+                                        // Incomplete JSON, skip
+                                    }
+                                }
+                            }
+                            // Process any queued messages before finishing
+                            if (
+                                messageQueueRef.current.length > 0 &&
+                                !processingRef.current
+                            ) {
+                                await latestProcessMessageQueueRef.current();
+                            }
+                        }
+
+                        // Call onStreamComplete with accumulated content even if no "complete" event was received
+                        // This ensures partial content is preserved on mobile network interruptions
+                        const accumulatedContent = streamingMessageRef.current;
+                        if (
+                            accumulatedContent &&
+                            latestOnStreamCompleteRef.current
+                        ) {
+                            latestOnStreamCompleteRef.current(
+                                accumulatedContent,
+                            );
+                        }
+
+                        // Refetch to get persisted message, then clear streaming
                         if (!cancelled && latestChatRef.current?._id) {
                             const chatId = String(latestChatRef.current._id);
                             await latestQueryClientRef.current.refetchQueries({
