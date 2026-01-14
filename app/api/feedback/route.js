@@ -1,5 +1,6 @@
-import axios from "../../utils/axios-client";
 import { getCurrentUser } from "../utils/auth";
+import Feedback from "../models/feedback.mjs";
+import { connectToDatabase } from "../../../src/db.mjs";
 
 export async function POST(req, res) {
     try {
@@ -7,60 +8,34 @@ export async function POST(req, res) {
         const { message, screenshot } = body;
 
         const user = await getCurrentUser();
-
-        const blocks = [
-            {
-                type: "rich_text",
-                elements: [
-                    {
-                        type: "rich_text_section",
-                        elements: [
-                            {
-                                type: "text",
-                                text: `Feedback from ${user.name}:`,
-                                style: {
-                                    bold: true,
-                                },
-                            },
-                        ],
-                    },
-                ],
-            },
-            {
-                type: "rich_text",
-                elements: [
-                    {
-                        type: "rich_text_section",
-                        elements: [
-                            {
-                                type: "text",
-                                text: message,
-                            },
-                        ],
-                    },
-                ],
-            },
-        ];
-
-        if (screenshot) {
-            blocks.push({
-                type: "image",
-                title: {
-                    type: "plain_text",
-                    text: "Screenshot",
-                    emoji: true,
-                },
-                image_url: screenshot,
-                alt_text: "Screenshot",
-            });
+        if (!user || ["anonymous", "nodb"].includes(user.userId)) {
+            return Response.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (!message || typeof message !== "string") {
+            return Response.json(
+                { error: "Message is required" },
+                { status: 400 },
+            );
         }
 
-        axios.post(process.env.SLACK_WEBHOOK_URL, {
-            blocks: blocks,
+        await connectToDatabase();
+
+        const userId =
+            user?._id && typeof user._id.toString === "function"
+                ? user._id.toString()
+                : user?._id || null;
+
+        await Feedback.create({
+            message: message.trim(),
+            screenshot: screenshot || null,
+            userId,
+            username: user?.username || null,
+            name: user?.name || null,
         });
+
         return Response.json({ success: true });
     } catch (error) {
-        console.error("Error sending Slack message:", error);
+        console.error("Error saving feedback:", error);
         return Response.json({ error: "Failed to send message" }, 500);
     }
 }
