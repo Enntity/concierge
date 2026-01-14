@@ -9,9 +9,11 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Loader2 } from "lucide-react";
+import { convertMessageToMarkdown } from "../chat/ChatMessage";
 import { AuthContext } from "../../App";
 import { useEntityOnboarding } from "../../hooks/useEntityOnboarding";
 import { useEntities } from "../../hooks/useEntities";
+import { useOnboarding } from "../../contexts/OnboardingContext";
 import { useStreamingMessages } from "../../hooks/useStreamingMessages";
 import {
     useAddChat,
@@ -26,6 +28,32 @@ import {
 } from "../../../app/auth/components/AuthBackground";
 import AnimatedLogo from "../common/AnimatedLogo";
 import { composeUserDateTimeInfo } from "../../utils/datetimeUtils";
+
+/**
+ * Generate avatar image via server endpoint
+ * Handles Gemini generation + cloud upload
+ * Returns the image URL or null on failure
+ */
+const generateAvatarImage = async (avatarText) => {
+    try {
+        console.log("[Onboarding] Starting parallel avatar generation...");
+        const response = await axios.post("/api/entities/generate-avatar", {
+            avatarText,
+        });
+
+        const imageUrl = response.data?.url;
+        if (imageUrl) {
+            console.log(
+                "[Onboarding] Avatar generation complete:",
+                imageUrl.substring(0, 50) + "...",
+            );
+        }
+        return imageUrl || null;
+    } catch (error) {
+        console.error("[Onboarding] Avatar generation failed:", error.message);
+        return null;
+    }
+};
 
 // Drifting sparkles around the logo (adapted from sidebar)
 const OnboardingSparkles = React.memo(({ size = 120 }) => {
@@ -84,16 +112,10 @@ const OnboardingSparkles = React.memo(({ size = 120 }) => {
     );
 });
 
-// Floating text component for entity messages
+// Floating text component for entity messages with full markdown support
 const FloatingEntityMessage = React.memo(
     ({ content, isVisible, isStreaming }) => {
-        // Strip markdown for cleaner display
-        const cleanContent =
-            content
-                ?.replace(/\*\*/g, "")
-                ?.replace(/\*/g, "")
-                ?.replace(/`/g, "")
-                ?.trim() || "";
+        const textContent = content?.trim() || "";
 
         return (
             <div
@@ -103,22 +125,12 @@ const FloatingEntityMessage = React.memo(
             `}
                 style={{ transitionDuration: isVisible ? "1000ms" : "300ms" }}
             >
-                <p
-                    className="text-xl md:text-2xl font-light text-center leading-relaxed text-slate-200"
-                    style={{
-                        textShadow: `
-                        0 0 10px rgba(34, 211, 238, 0.5),
-                        0 0 20px rgba(34, 211, 238, 0.4),
-                        0 0 40px rgba(34, 211, 238, 0.25),
-                        0 0 60px rgba(167, 139, 250, 0.2)
-                    `,
-                    }}
-                >
-                    {cleanContent}
+                <div className="onboarding-message-content text-xl md:text-2xl font-light text-center leading-relaxed text-slate-200">
+                    {convertMessageToMarkdown({ payload: textContent })}
                     {isStreaming && (
                         <span className="inline-block w-0.5 h-5 ml-1 bg-cyan-400 animate-pulse align-middle" />
                     )}
-                </p>
+                </div>
             </div>
         );
     },
@@ -209,117 +221,407 @@ const EtherealInput = React.memo(
     },
 );
 
-// Contacting Screen - clean, minimal "calling" motif
+// Orbiting particles around the avatar portal
+const OrbitingParticles = React.memo(
+    ({ count = 12, radius = 100, speed = 1, isConnected }) => {
+        const particles = React.useMemo(() => {
+            return Array.from({ length: count }, (_, i) => ({
+                id: i,
+                startAngle: (i * 360) / count,
+                size: 2 + Math.random() * 3,
+                opacity: 0.4 + Math.random() * 0.4,
+                orbitSpeed: (0.8 + Math.random() * 0.4) * speed,
+                wobble: Math.random() * 8,
+                wobbleSpeed: 2 + Math.random() * 2,
+                color: Math.random() > 0.5 ? "cyan" : "purple",
+            }));
+        }, [count, speed]);
+
+        return (
+            <div className="absolute inset-0 pointer-events-none">
+                {particles.map((p) => (
+                    <div
+                        key={p.id}
+                        className="absolute rounded-full orbit-particle"
+                        style={{
+                            width: `${p.size}px`,
+                            height: `${p.size}px`,
+                            left: "50%",
+                            top: "50%",
+                            background:
+                                p.color === "cyan"
+                                    ? `radial-gradient(circle, rgba(34, 211, 238, ${p.opacity}) 0%, rgba(34, 211, 238, 0) 70%)`
+                                    : `radial-gradient(circle, rgba(167, 139, 250, ${p.opacity}) 0%, rgba(167, 139, 250, 0) 70%)`,
+                            boxShadow:
+                                p.color === "cyan"
+                                    ? `0 0 ${p.size * 3}px rgba(34, 211, 238, ${p.opacity})`
+                                    : `0 0 ${p.size * 3}px rgba(167, 139, 250, ${p.opacity})`,
+                            "--orbit-radius": `${radius}px`,
+                            "--start-angle": `${p.startAngle}deg`,
+                            "--orbit-duration": `${8 / p.orbitSpeed}s`,
+                            "--wobble": `${p.wobble}px`,
+                            "--wobble-duration": `${p.wobbleSpeed}s`,
+                            animation: isConnected
+                                ? `orbit-scatter 1s ease-out forwards`
+                                : `orbit-spin var(--orbit-duration) linear infinite, orbit-wobble var(--wobble-duration) ease-in-out infinite`,
+                        }}
+                    />
+                ))}
+            </div>
+        );
+    },
+);
+
+// Energy rings that pulse outward
+const EnergyRings = React.memo(({ isConnected }) => {
+    const rings = [
+        { delay: 0, scale: 1, opacity: 0.3 },
+        { delay: 0.5, scale: 1.3, opacity: 0.2 },
+        { delay: 1, scale: 1.6, opacity: 0.15 },
+        { delay: 1.5, scale: 1.9, opacity: 0.1 },
+    ];
+
+    return (
+        <div className="absolute inset-0 pointer-events-none">
+            {rings.map((ring, i) => (
+                <div
+                    key={i}
+                    className="absolute inset-0 rounded-full energy-ring"
+                    style={{
+                        border: "1px solid",
+                        borderColor: `rgba(34, 211, 238, ${ring.opacity})`,
+                        transform: `scale(${ring.scale})`,
+                        animationName: isConnected
+                            ? "ring-burst"
+                            : "ring-pulse",
+                        animationDuration: isConnected ? "0.8s" : "3s",
+                        animationTimingFunction: "ease-out",
+                        animationIterationCount: isConnected ? 1 : "infinite",
+                        animationFillMode: isConnected ? "forwards" : "none",
+                        animationDelay: `${ring.delay}s`,
+                        boxShadow: `inset 0 0 20px rgba(34, 211, 238, ${ring.opacity * 0.5}), 0 0 20px rgba(34, 211, 238, ${ring.opacity * 0.3})`,
+                    }}
+                />
+            ))}
+        </div>
+    );
+});
+
+// Floating ambient particles in background
+const AmbientParticles = React.memo(({ count = 30 }) => {
+    const particles = React.useMemo(() => {
+        return Array.from({ length: count }, (_, i) => ({
+            id: i,
+            x: Math.random() * 100,
+            y: Math.random() * 100,
+            size: 1 + Math.random() * 2,
+            duration: 10 + Math.random() * 20,
+            delay: Math.random() * 10,
+            opacity: 0.1 + Math.random() * 0.3,
+        }));
+    }, [count]);
+
+    return (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {particles.map((p) => (
+                <div
+                    key={p.id}
+                    className="absolute rounded-full"
+                    style={{
+                        left: `${p.x}%`,
+                        top: `${p.y}%`,
+                        width: `${p.size}px`,
+                        height: `${p.size}px`,
+                        background: `radial-gradient(circle, rgba(34, 211, 238, ${p.opacity}) 0%, transparent 70%)`,
+                        animationName: "ambient-float",
+                        animationDuration: `${p.duration}s`,
+                        animationTimingFunction: "ease-in-out",
+                        animationIterationCount: "infinite",
+                        animationDelay: `${p.delay}s`,
+                    }}
+                />
+            ))}
+        </div>
+    );
+});
+
+// Portal/summoning effect around avatar - magic mirror / wormhole / stargate
+const PortalEffect = React.memo(({ isConnected, hasAvatar }) => {
+    return (
+        <div className="absolute inset-0 pointer-events-none">
+            {/* Deep space void center */}
+            <div
+                className="absolute inset-2 rounded-full"
+                style={{
+                    background: hasAvatar
+                        ? "transparent"
+                        : `radial-gradient(circle, rgba(0, 0, 20, 0.95) 0%, rgba(15, 23, 42, 0.9) 50%, transparent 70%)`,
+                    transition: "background 0.8s ease-out",
+                }}
+            />
+
+            {/* Inner event horizon glow */}
+            <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                    background: `radial-gradient(circle, transparent 30%, rgba(34, 211, 238, ${isConnected ? 0.4 : 0.2}) 60%, transparent 70%)`,
+                    animation: isConnected
+                        ? "none"
+                        : "portal-pulse 2s ease-in-out infinite",
+                }}
+            />
+
+            {/* Swirling energy layer 1 - fast inner */}
+            <div
+                className="absolute -inset-2 rounded-full"
+                style={{
+                    background: `conic-gradient(from 0deg, transparent 0%, rgba(34, 211, 238, 0.5) 10%, transparent 20%, rgba(167, 139, 250, 0.4) 30%, transparent 40%, rgba(34, 211, 238, 0.3) 50%, transparent 60%, rgba(167, 139, 250, 0.5) 70%, transparent 80%, rgba(34, 211, 238, 0.4) 90%, transparent 100%)`,
+                    animation: isConnected
+                        ? "none"
+                        : "portal-spin 3s linear infinite",
+                    opacity: isConnected ? 0 : 1,
+                    transition: "opacity 0.8s ease-out",
+                }}
+            />
+
+            {/* Swirling energy layer 2 - medium */}
+            <div
+                className="absolute -inset-6 rounded-full"
+                style={{
+                    background: `conic-gradient(from 120deg, transparent 0%, rgba(167, 139, 250, 0.3) 15%, transparent 30%, rgba(34, 211, 238, 0.25) 45%, transparent 60%, rgba(167, 139, 250, 0.35) 75%, transparent 90%)`,
+                    animation: isConnected
+                        ? "none"
+                        : "portal-spin-reverse 5s linear infinite",
+                    opacity: isConnected ? 0 : 0.8,
+                    transition: "opacity 0.8s ease-out",
+                }}
+            />
+
+            {/* Swirling energy layer 3 - slow outer */}
+            <div
+                className="absolute -inset-10 rounded-full"
+                style={{
+                    background: `conic-gradient(from 240deg, transparent 0%, rgba(34, 211, 238, 0.15) 20%, transparent 40%, rgba(167, 139, 250, 0.2) 60%, transparent 80%)`,
+                    animation: isConnected
+                        ? "none"
+                        : "portal-spin 8s linear infinite",
+                    opacity: isConnected ? 0 : 0.6,
+                    transition: "opacity 0.8s ease-out",
+                }}
+            />
+
+            {/* Starfield/particle layer */}
+            <div
+                className="absolute -inset-4 rounded-full overflow-hidden"
+                style={{
+                    background: isConnected
+                        ? "transparent"
+                        : `
+                        radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.8) 0%, transparent 100%),
+                        radial-gradient(1px 1px at 40% 70%, rgba(34, 211, 238, 0.9) 0%, transparent 100%),
+                        radial-gradient(1px 1px at 60% 20%, rgba(167, 139, 250, 0.8) 0%, transparent 100%),
+                        radial-gradient(1px 1px at 80% 60%, rgba(255,255,255,0.7) 0%, transparent 100%),
+                        radial-gradient(1px 1px at 10% 80%, rgba(34, 211, 238, 0.8) 0%, transparent 100%),
+                        radial-gradient(1px 1px at 70% 40%, rgba(167, 139, 250, 0.9) 0%, transparent 100%),
+                        radial-gradient(1px 1px at 30% 50%, rgba(255,255,255,0.6) 0%, transparent 100%),
+                        radial-gradient(1px 1px at 90% 10%, rgba(34, 211, 238, 0.7) 0%, transparent 100%)
+                    `,
+                    animation: isConnected
+                        ? "none"
+                        : "portal-spin-reverse 20s linear infinite",
+                    opacity: isConnected ? 0 : 0.7,
+                    transition: "opacity 0.8s ease-out",
+                }}
+            />
+
+            {/* Success burst effect */}
+            {isConnected && (
+                <div
+                    className="absolute -inset-8 rounded-full"
+                    style={{
+                        background: `radial-gradient(circle, rgba(34, 211, 238, 0.6) 0%, rgba(167, 139, 250, 0.4) 30%, transparent 70%)`,
+                        animation: "success-burst 1.2s ease-out forwards",
+                    }}
+                />
+            )}
+        </div>
+    );
+});
+
+// Contacting Screen - immersive portal summoning experience
 const ContactingScreen = ({
     entityName,
-    avatarText,
+    avatarIcon,
     avatarImageUrl,
     isConnected,
 }) => {
     const { t } = useTranslation();
-    const [dots, setDots] = useState("");
+    const [showAvatar, setShowAvatar] = useState(false);
+    const [avatarRevealed, setAvatarRevealed] = useState(false);
+    const prevAvatarUrl = useRef(null);
 
-    // Animated dots for "Contacting..."
+    // Track when avatar image arrives for dramatic reveal
     useEffect(() => {
-        if (isConnected) return;
-        const interval = setInterval(() => {
-            setDots((prev) => (prev.length >= 3 ? "" : prev + "."));
-        }, 500);
-        return () => clearInterval(interval);
-    }, [isConnected]);
+        if (avatarImageUrl && avatarImageUrl !== prevAvatarUrl.current) {
+            prevAvatarUrl.current = avatarImageUrl;
+            // Dramatic delay before reveal
+            setShowAvatar(false);
+            const timer1 = setTimeout(() => setShowAvatar(true), 100);
+            const timer2 = setTimeout(() => setAvatarRevealed(true), 600);
+            return () => {
+                clearTimeout(timer1);
+                clearTimeout(timer2);
+            };
+        }
+    }, [avatarImageUrl]);
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
-            {/* Avatar with pulsing rings */}
-            <div className="relative mb-10">
-                {/* Outer pulsing ring - subtle "calling" effect */}
-                {!isConnected && (
-                    <>
+        <div className="relative flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
+            {/* Ambient background particles */}
+            <AmbientParticles count={40} />
+
+            {/* Main portal container */}
+            <div className="relative mb-12">
+                {/* Outer energy rings */}
+                <div className="absolute -inset-16">
+                    <EnergyRings isConnected={isConnected} />
+                </div>
+
+                {/* Orbiting particles */}
+                <div className="absolute -inset-8">
+                    <OrbitingParticles
+                        count={16}
+                        radius={90}
+                        speed={1}
+                        isConnected={isConnected}
+                    />
+                </div>
+                <div className="absolute -inset-4">
+                    <OrbitingParticles
+                        count={10}
+                        radius={70}
+                        speed={1.5}
+                        isConnected={isConnected}
+                    />
+                </div>
+
+                {/* Portal effect */}
+                <div className="relative w-40 h-40">
+                    <PortalEffect
+                        isConnected={isConnected}
+                        hasAvatar={!!avatarImageUrl}
+                    />
+
+                    {/* Avatar container */}
+                    <div
+                        className={`relative w-40 h-40 rounded-full flex items-center justify-center text-7xl overflow-hidden transition-all duration-700
+                            ${isConnected ? "avatar-connected" : "avatar-summoning"}
+                            ${avatarRevealed ? "avatar-revealed" : ""}
+                        `}
+                        style={{
+                            background:
+                                avatarImageUrl && showAvatar
+                                    ? "transparent"
+                                    : "linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%)",
+                            border: `2px solid rgba(34, 211, 238, ${isConnected ? 0.8 : 0.4})`,
+                            boxShadow: isConnected
+                                ? `0 0 60px rgba(34, 211, 238, 0.6), 0 0 120px rgba(167, 139, 250, 0.3), inset 0 0 40px rgba(34, 211, 238, 0.2)`
+                                : `0 0 30px rgba(34, 211, 238, 0.3), inset 0 0 20px rgba(34, 211, 238, 0.1)`,
+                        }}
+                    >
+                        {avatarImageUrl && showAvatar ? (
+                            <img
+                                src={avatarImageUrl}
+                                alt={entityName}
+                                className={`w-full h-full object-cover transition-all duration-700 ${avatarRevealed ? "avatar-image-reveal" : "opacity-0 scale-110 blur-sm"}`}
+                            />
+                        ) : (
+                            <span
+                                className="select-none transition-all duration-500"
+                                style={{
+                                    filter: "drop-shadow(0 0 20px rgba(34, 211, 238, 0.5))",
+                                    animation:
+                                        "emoji-float 3s ease-in-out infinite",
+                                }}
+                            >
+                                {avatarIcon || "✨"}
+                            </span>
+                        )}
+
+                        {/* Inner glow overlay */}
                         <div
-                            className="absolute inset-0 rounded-full border-2 border-cyan-400/20 animate-ping"
-                            style={{ animationDuration: "2s" }}
-                        />
-                        <div
-                            className="absolute -inset-4 rounded-full border border-cyan-400/10 animate-ping"
+                            className="absolute inset-0 rounded-full pointer-events-none"
                             style={{
-                                animationDuration: "2.5s",
-                                animationDelay: "0.5s",
+                                background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1) 0%, transparent 60%)`,
                             }}
                         />
-                    </>
-                )}
-
-                {/* Connected glow effect */}
-                {isConnected && (
-                    <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-cyan-400/20 to-purple-400/20 blur-xl animate-pulse" />
-                )}
-
-                {/* Avatar container */}
-                <div
-                    className={`relative w-32 h-32 rounded-full flex items-center justify-center text-6xl overflow-hidden transition-all duration-700 ${isConnected ? "scale-105 ring-2 ring-cyan-400/50" : "scale-100"}`}
-                    style={{
-                        background: avatarImageUrl
-                            ? "transparent"
-                            : "linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(167, 139, 250, 0.15) 100%)",
-                        border: `2px solid ${isConnected ? "rgba(34, 211, 238, 0.6)" : "rgba(34, 211, 238, 0.3)"}`,
-                        boxShadow: isConnected
-                            ? `0 0 40px rgba(34, 211, 238, 0.4)`
-                            : `0 0 20px rgba(34, 211, 238, 0.2)`,
-                        transition: "all 0.7s ease-out",
-                    }}
-                >
-                    {avatarImageUrl ? (
-                        <img
-                            src={avatarImageUrl}
-                            alt={entityName}
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <span className="select-none">
-                            {avatarText || "✨"}
-                        </span>
-                    )}
+                    </div>
                 </div>
             </div>
 
-            {/* Name */}
+            {/* Name with dramatic reveal */}
             <h1
-                className="text-3xl md:text-4xl font-light text-slate-100 mb-3"
+                className={`text-4xl md:text-5xl font-light mb-4 transition-all duration-700 ${isConnected ? "name-connected" : "name-summoning"}`}
                 style={{
-                    textShadow: `0 0 20px rgba(34, 211, 238, 0.4)`,
+                    color: isConnected ? "#67e8f9" : "#e2e8f0",
+                    textShadow: isConnected
+                        ? "0 0 30px rgba(103, 232, 249, 0.8), 0 0 60px rgba(167, 139, 250, 0.5)"
+                        : "0 0 20px rgba(34, 211, 238, 0.3)",
                 }}
             >
                 {entityName}
             </h1>
 
-            {/* Status text */}
+            {/* Status - simple connecting message */}
             <div className="h-8 flex items-center justify-center">
                 {isConnected ? (
-                    <p className="text-lg text-cyan-400 font-light">
-                        {t("Connected")} ✓
+                    <p
+                        className="text-lg font-light tracking-wide connecting-status-appear"
+                        style={{
+                            color: "#34d399",
+                            textShadow: "0 0 20px rgba(52, 211, 153, 0.5)",
+                        }}
+                    >
+                        ✓ {t("Connected")}
                     </p>
                 ) : (
-                    <p className="text-lg text-slate-400 font-light">
+                    <p className="text-lg text-slate-400 font-light tracking-wide">
                         {t("Connecting")}
-                        <span className="inline-block w-6 text-left">
-                            {dots}
+                        <span className="inline-flex ml-1 items-center">
+                            <span
+                                className="w-1 h-1 rounded-full bg-cyan-400/70 mx-0.5"
+                                style={{
+                                    animationName: "pulse",
+                                    animationDuration: "1.5s",
+                                    animationTimingFunction: "ease-in-out",
+                                    animationIterationCount: "infinite",
+                                    animationDelay: "0ms",
+                                }}
+                            />
+                            <span
+                                className="w-1 h-1 rounded-full bg-cyan-400/70 mx-0.5"
+                                style={{
+                                    animationName: "pulse",
+                                    animationDuration: "1.5s",
+                                    animationTimingFunction: "ease-in-out",
+                                    animationIterationCount: "infinite",
+                                    animationDelay: "300ms",
+                                }}
+                            />
+                            <span
+                                className="w-1 h-1 rounded-full bg-cyan-400/70 mx-0.5"
+                                style={{
+                                    animationName: "pulse",
+                                    animationDuration: "1.5s",
+                                    animationTimingFunction: "ease-in-out",
+                                    animationIterationCount: "infinite",
+                                    animationDelay: "600ms",
+                                }}
+                            />
                         </span>
                     </p>
                 )}
             </div>
-
-            {/* Subtle progress indicator */}
-            {!isConnected && (
-                <div className="mt-6 w-32 h-0.5 rounded-full overflow-hidden bg-slate-700/30">
-                    <div
-                        className="h-full bg-cyan-400/60 rounded-full"
-                        style={{
-                            width: "100%",
-                            animation: "shimmer 1.5s ease-in-out infinite",
-                        }}
-                    />
-                </div>
-            )}
         </div>
     );
 };
@@ -333,6 +635,7 @@ export default function EntityOnboarding({
 }) {
     const { t } = useTranslation();
     const { user } = useContext(AuthContext);
+    const { onboardingChatReady, finalizeOnboarding } = useOnboarding();
 
     const {
         isLoading,
@@ -362,53 +665,78 @@ export default function EntityOnboarding({
     const hasStartedRef = useRef(false);
     const prefetchStartedRef = useRef(false);
 
+    // Refs for parallel avatar generation
+    const avatarGenerationStartedRef = useRef(false);
+    const generatedAvatarUrlRef = useRef(null);
+
+    // State to track when avatar generation completes (success or failure)
+    // Using state so effects can react to it
+    const [avatarGenerationDone, setAvatarGenerationDone] = useState(false);
+
     const addChat = useAddChat();
     const updateChat = useUpdateChat();
     const deleteChat = useDeleteChat();
-    const {
-        entities,
-        refetch: refetchEntities,
-        refetchEntity,
-    } = useEntities(user?.contextId);
+    const { refetch: refetchEntities } = useEntities(user?.contextId);
 
     // Monitor prefetched chat for messages and streaming state
     const { data: prefetchedChat, refetch: refetchPrefetchedChat } =
         useGetChatById(prefetchedChatId);
 
     // Check if the prefetched chat has entity content ready
-    // We consider it ready when:
-    // 1. Chat exists with messages
-    // 2. Has at least one incoming message (from entity)
-    // 3. Streaming has completed (isChatLoading is false)
-    const chatHasEntityContent = prefetchedChat?.messages?.some(
+    // Just need at least one incoming message from the entity
+    // We have a 10s failover anyway, so don't be too strict here
+    const isChatReady = prefetchedChat?.messages?.some(
         (m) => m.direction === "incoming" && m.payload,
     );
-    const isChatStreamingComplete =
-        prefetchedChat && !prefetchedChat.isChatLoading;
-    const isChatReady = chatHasEntityContent && isChatStreamingComplete;
 
-    // Watch for avatar updates from entities array
+    // Ref to track if we've already updated the entity with our generated avatar
+    const avatarUpdateSentRef = useRef(false);
+
+    // Update entity with our generated avatar once we have both entityId and generated URL
     useEffect(() => {
-        if (!actualEntityId || !entities || avatarImageUrl) return;
-
-        const entity = entities.find((e) => e.id === actualEntityId);
-        if (entity?.avatar?.image?.url) {
-            console.log(
-                "[Onboarding] Avatar found from entities:",
-                entity.avatar.image.url,
-            );
-            setAvatarImageUrl(entity.avatar.image.url);
+        // Only proceed if:
+        // - We have an actual entity ID
+        // - We have a generated avatar URL from our parallel generation
+        // - We haven't already sent the update
+        // - We don't already have an avatar from Cortex (first-wins)
+        const generatedUrl = generatedAvatarUrlRef.current;
+        if (!actualEntityId || !generatedUrl || avatarUpdateSentRef.current) {
+            return;
         }
-    }, [entities, actualEntityId, avatarImageUrl]);
 
-    // Poll for entity avatar updates and chat content during connecting phase
+        // Mark as sent to prevent duplicate updates
+        avatarUpdateSentRef.current = true;
+
+        console.log("[Onboarding] Updating entity with generated avatar...");
+        axios
+            .patch(`/api/entities/${actualEntityId}/avatar`, {
+                imageUrl: generatedUrl,
+            })
+            .then((response) => {
+                if (response.data?.success) {
+                    console.log(
+                        "[Onboarding] Entity avatar updated successfully",
+                    );
+                    // Ensure we're showing the generated avatar
+                    setAvatarImageUrl(generatedUrl);
+                    // Refresh entities list so sidebar shows new avatar
+                    refetchEntities();
+                }
+            })
+            .catch((err) => {
+                console.error(
+                    "[Onboarding] Failed to update entity avatar:",
+                    err.message,
+                );
+                // Non-fatal - the entity still works, just might not have the avatar persisted
+            });
+    }, [actualEntityId, refetchEntities]);
+
+    // Poll for chat content during connecting phase (avatar is generated in parallel)
     const pollRef = useRef(null);
     useEffect(() => {
-        // Stop polling if:
-        // - Not in connecting phase
-        // - Chat is ready (has entity content and streaming complete)
-        // - No prefetched chat ID yet
-        if (!showContacting || isChatReady || !prefetchedChatId) {
+        // Stop polling when chat is ready or not in connecting phase
+        if (!isOpen || !showContacting || isChatReady || !prefetchedChatId) {
             if (pollRef.current) {
                 clearInterval(pollRef.current);
                 pollRef.current = null;
@@ -416,22 +744,9 @@ export default function EntityOnboarding({
             return;
         }
 
-        // Poll every 1.5 seconds for:
-        // - Avatar updates (entity)
-        // - Chat content updates (messages)
-        pollRef.current = setInterval(async () => {
-            try {
-                // Poll for avatar if we don't have one yet
-                if (refetchEntity && actualEntityId && !avatarImageUrl) {
-                    await refetchEntity(actualEntityId);
-                }
-                // Poll for chat content
-                if (refetchPrefetchedChat) {
-                    await refetchPrefetchedChat();
-                }
-            } catch (e) {
-                console.error("[Onboarding] Poll error:", e);
-            }
+        // Poll for chat content every 1.5s
+        pollRef.current = setInterval(() => {
+            refetchPrefetchedChat?.().catch(() => {});
         }, 1500);
 
         return () => {
@@ -441,10 +756,8 @@ export default function EntityOnboarding({
             }
         };
     }, [
+        isOpen,
         showContacting,
-        actualEntityId,
-        avatarImageUrl,
-        refetchEntity,
         prefetchedChatId,
         refetchPrefetchedChat,
         isChatReady,
@@ -457,18 +770,71 @@ export default function EntityOnboarding({
 
     const handleToolMessage = useCallback(
         (toolMessage) => {
-            const isCreateEntity =
-                toolMessage?.toolName?.toLowerCase() === "createentity";
+            // Check both toolName and tool fields (Cortex may use either)
+            const toolNameLower = (
+                toolMessage?.toolName ||
+                toolMessage?.tool ||
+                ""
+            ).toLowerCase();
+            const isCreateEntity = toolNameLower === "createentity";
             if (!isCreateEntity) return;
 
             if (toolMessage.type === "start" && toolMessage.params) {
+                // Build avatar prompt from avatarText (physical description) + identity
+                // avatarText is the primary description, identity adds personality context
+                const avatarParts = [];
+                if (toolMessage.params.avatarText) {
+                    avatarParts.push(toolMessage.params.avatarText);
+                }
+                if (toolMessage.params.identity) {
+                    avatarParts.push(
+                        `Personality: ${toolMessage.params.identity}`,
+                    );
+                }
+                const avatarDescription =
+                    avatarParts.join("\n\n") || toolMessage.params.name;
+
                 // Store entity details from start message
                 pendingEntityRef.current = {
                     name: toolMessage.params.name,
-                    avatarText: toolMessage.params.avatarText,
+                    avatarText: avatarDescription,
+                    avatarIcon: toolMessage.params.avatarIcon,
                 };
                 // Show the contacting screen immediately
                 setShowContacting(true);
+
+                // Fire off parallel avatar generation (don't await)
+                if (avatarDescription && !avatarGenerationStartedRef.current) {
+                    avatarGenerationStartedRef.current = true;
+                    console.log(
+                        "[Onboarding] Firing parallel avatar generation for:",
+                        avatarDescription.substring(0, 100),
+                    );
+
+                    generateAvatarImage(avatarDescription)
+                        .then((url) => {
+                            setAvatarGenerationDone(true);
+                            if (url) {
+                                console.log(
+                                    "[Onboarding] Parallel avatar ready, storing URL",
+                                );
+                                generatedAvatarUrlRef.current = url;
+                                // If we don't have an avatar yet from Cortex, use ours
+                                setAvatarImageUrl((current) => current || url);
+                            } else {
+                                console.log(
+                                    "[Onboarding] Avatar generation returned no URL",
+                                );
+                            }
+                        })
+                        .catch((err) => {
+                            setAvatarGenerationDone(true);
+                            console.error(
+                                "[Onboarding] Parallel avatar generation failed:",
+                                err,
+                            );
+                        });
+                }
             } else if (toolMessage.type === "finish") {
                 entityCreatedRef.current = true;
 
@@ -526,6 +892,16 @@ export default function EntityOnboarding({
             entityCreatedRef.current = false;
             transitionStartedRef.current = false;
             pendingEntityRef.current = null;
+            // Reset parallel avatar generation state
+            avatarGenerationStartedRef.current = false;
+            generatedAvatarUrlRef.current = null;
+            avatarUpdateSentRef.current = false;
+            setAvatarGenerationDone(false);
+            // Reset failover timer
+            if (failoverTimerRef.current) {
+                clearTimeout(failoverTimerRef.current);
+                failoverTimerRef.current = null;
+            }
             clearStreamingState();
             setMounted(true);
             startOnboarding();
@@ -542,7 +918,7 @@ export default function EntityOnboarding({
 
         const startConversation = async () => {
             try {
-                // First, cleanup any stale onboarding chats (best effort)
+                // First, cleanup any stale onboarding chats (best effort, don't block on failures)
                 try {
                     const response = await axios.get(
                         "/api/chats/active/detail",
@@ -551,11 +927,16 @@ export default function EntityOnboarding({
                     const staleChats = activeChats.filter(
                         (c) => c.selectedEntityId === onboardingEntity.id,
                     );
-                    for (const chat of staleChats) {
-                        await deleteChat.mutateAsync({ chatId: chat._id });
-                    }
+                    // Delete in parallel, ignore individual failures
+                    await Promise.allSettled(
+                        staleChats.map((chat) =>
+                            deleteChat
+                                .mutateAsync({ chatId: chat._id })
+                                .catch(() => {}),
+                        ),
+                    );
                 } catch (e) {
-                    console.error("[Onboarding] Cleanup error (non-fatal):", e);
+                    // Non-fatal - continue with onboarding
                 }
 
                 // Create a fresh chat
@@ -690,7 +1071,7 @@ export default function EntityOnboarding({
                                     {
                                         role: "user",
                                         content:
-                                            "Please use your tools to create a suitable avatar image for yourself and then introduce yourself warmly to your new friend. This is your first conversation together!",
+                                            "Please introduce yourself warmly to your new friend. This is your first conversation together! Don't create an avatar - one is being created in the background for you.",
                                     },
                                 ],
                                 agentContext: user.contextId
@@ -721,49 +1102,50 @@ export default function EntityOnboarding({
         prefetch();
     }, [showContacting, createdEntity, refetchEntities, addChat, user]);
 
-    // Auto-transition to chat when everything is ready
+    // Ref to hold failover timer so it survives effect re-runs
+    const failoverTimerRef = useRef(null);
+
+    // Trigger navigation when entity and prefetched chat are ready
+    // Modal stays open showing "Connecting" until chat page confirms ready
     useEffect(() => {
-        // Skip when not actively onboarding
-        if (!isOpen || !showContacting) return;
+        if (!isOpen || !showContacting || !isEntityReady || !prefetchedChatId)
+            return;
+        if (transitionStartedRef.current) return;
 
-        if (
-            isEntityReady &&
-            prefetchedChatId &&
-            isChatReady &&
-            !transitionStartedRef.current
-        ) {
+        // Determine readiness: avatar is "ready" if we have it OR generation failed
+        const avatarReady = !!avatarImageUrl || avatarGenerationDone;
+        const allReady = isChatReady && avatarReady;
+
+        const triggerNavigation = () => {
+            if (transitionStartedRef.current) return;
             transitionStartedRef.current = true;
-            console.log(
-                "[Onboarding] Starting transition to chat:",
-                prefetchedChatId,
-            );
 
-            // Brief delay to show "Connected" state, then transition
-            const timer = setTimeout(() => {
-                const newEntityId = actualEntityId || createdEntity?.id;
-                console.log(
-                    "[Onboarding] Executing transition with entityId:",
-                    newEntityId,
+            const newEntityId = actualEntityId || createdEntity?.id;
+            completeOnboarding();
+
+            // Delete onboarding chat (best effort)
+            if (onboardingChat?._id) {
+                deleteChat.mutate(
+                    { chatId: onboardingChat._id },
+                    { onError: () => {} },
                 );
+            }
 
-                // Complete onboarding
-                completeOnboarding();
+            console.log("[Onboarding] Triggering navigation to new chat");
+            onComplete?.(newEntityId, createdEntity, prefetchedChatId);
+        };
 
-                // Delete the onboarding chat - best effort, don't block on failure
-                if (onboardingChat?._id) {
-                    deleteChat.mutate(
-                        { chatId: onboardingChat._id },
-                        {
-                            onError: () => {}, // Silently ignore delete errors
-                        },
-                    );
-                }
-
-                // Transition to the new chat
-                onComplete?.(newEntityId, createdEntity, prefetchedChatId);
-                onClose();
-            }, 1200);
-            return () => clearTimeout(timer);
+        if (allReady) {
+            // Everything ready - trigger navigation immediately
+            triggerNavigation();
+        } else if (!failoverTimerRef.current) {
+            // Not all ready yet - set up failover timeout
+            failoverTimerRef.current = setTimeout(() => {
+                console.log(
+                    "[Onboarding] Failover: proceeding without full readiness",
+                );
+                triggerNavigation();
+            }, 8000);
         }
     }, [
         isOpen,
@@ -771,14 +1153,38 @@ export default function EntityOnboarding({
         isEntityReady,
         prefetchedChatId,
         isChatReady,
+        avatarImageUrl,
+        avatarGenerationDone,
         actualEntityId,
         createdEntity,
         onComplete,
-        onClose,
         completeOnboarding,
         deleteChat,
         onboardingChat,
     ]);
+
+    // When chat confirms ready, show "Connected" for 1 second then finalize
+    useEffect(() => {
+        if (!onboardingChatReady) return;
+
+        console.log(
+            "[Onboarding] Chat ready, showing Connected for 1 second...",
+        );
+        const timer = setTimeout(() => {
+            console.log("[Onboarding] Finalizing onboarding");
+            finalizeOnboarding();
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    }, [onboardingChatReady, finalizeOnboarding]);
+
+    // Cleanup failover timer on unmount
+    useEffect(() => {
+        return () => {
+            if (failoverTimerRef.current)
+                clearTimeout(failoverTimerRef.current);
+        };
+    }, []);
 
     // Handle user sending a message
     const handleSendMessage = useCallback(
@@ -919,14 +1325,13 @@ export default function EntityOnboarding({
                             createdEntity?.name ||
                             "..."
                         }
-                        avatarText={
-                            pendingEntityRef.current?.avatarText ||
-                            createdEntity?.avatarText
+                        avatarIcon={
+                            pendingEntityRef.current?.avatarIcon ||
+                            createdEntity?.avatarIcon ||
+                            "✨"
                         }
                         avatarImageUrl={avatarImageUrl}
-                        isConnected={
-                            isEntityReady && !!prefetchedChatId && isChatReady
-                        }
+                        isConnected={onboardingChatReady}
                     />
                 ) : (
                     <div className="relative min-h-[60vh]">
@@ -947,10 +1352,7 @@ export default function EntityOnboarding({
                             {/* Loading */}
                             {isLoading && !onboardingEntity ? (
                                 <div className="flex flex-col items-center gap-4 mt-12">
-                                    <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-                                    <p className="text-slate-400 font-light">
-                                        {t("Preparing...")}
-                                    </p>
+                                    {/* Logo pulsing is enough, no spinner text needed */}
                                 </div>
                             ) : error ? (
                                 <div className="text-center">
@@ -1109,6 +1511,298 @@ export default function EntityOnboarding({
                 }
                 .logo-heartbeat {
                     animation: logo-heartbeat 3s ease-in-out infinite;
+                }
+
+                /* Connecting screen animations */
+                @keyframes orbit-spin {
+                    from {
+                        transform: translate(-50%, -50%)
+                            rotate(var(--start-angle))
+                            translateX(var(--orbit-radius))
+                            rotate(calc(-1 * var(--start-angle)));
+                    }
+                    to {
+                        transform: translate(-50%, -50%)
+                            rotate(calc(var(--start-angle) + 360deg))
+                            translateX(var(--orbit-radius))
+                            rotate(calc(-1 * var(--start-angle) - 360deg));
+                    }
+                }
+                @keyframes orbit-wobble {
+                    0%,
+                    100% {
+                        margin-top: 0;
+                    }
+                    50% {
+                        margin-top: var(--wobble);
+                    }
+                }
+                @keyframes orbit-scatter {
+                    to {
+                        transform: translate(-50%, -50%)
+                            rotate(var(--start-angle))
+                            translateX(calc(var(--orbit-radius) * 3));
+                        opacity: 0;
+                    }
+                }
+                @keyframes ring-pulse {
+                    0%,
+                    100% {
+                        transform: scale(1);
+                        opacity: 0.3;
+                    }
+                    50% {
+                        transform: scale(1.1);
+                        opacity: 0.5;
+                    }
+                }
+                @keyframes ring-burst {
+                    to {
+                        transform: scale(3);
+                        opacity: 0;
+                    }
+                }
+                @keyframes portal-breathe {
+                    0%,
+                    100% {
+                        transform: scale(1);
+                        opacity: 0.8;
+                    }
+                    50% {
+                        transform: scale(1.05);
+                        opacity: 1;
+                    }
+                }
+                @keyframes portal-pulse {
+                    0%,
+                    100% {
+                        opacity: 0.6;
+                        transform: scale(1);
+                    }
+                    50% {
+                        opacity: 1;
+                        transform: scale(1.02);
+                    }
+                }
+                @keyframes portal-spin {
+                    from {
+                        transform: rotate(0deg);
+                    }
+                    to {
+                        transform: rotate(360deg);
+                    }
+                }
+                @keyframes portal-spin-reverse {
+                    from {
+                        transform: rotate(360deg);
+                    }
+                    to {
+                        transform: rotate(0deg);
+                    }
+                }
+                @keyframes success-burst {
+                    0% {
+                        transform: scale(1);
+                        opacity: 0.8;
+                    }
+                    100% {
+                        transform: scale(2.5);
+                        opacity: 0;
+                    }
+                }
+                @keyframes emoji-float {
+                    0%,
+                    100% {
+                        transform: translateY(0) scale(1);
+                    }
+                    50% {
+                        transform: translateY(-5px) scale(1.05);
+                    }
+                }
+                @keyframes gradient-shift {
+                    0%,
+                    100% {
+                        background-position: 0% center;
+                    }
+                    50% {
+                        background-position: 100% center;
+                    }
+                }
+                @keyframes ambient-float {
+                    0%,
+                    100% {
+                        transform: translateY(0) translateX(0);
+                        opacity: 0;
+                    }
+                    25% {
+                        opacity: 1;
+                    }
+                    50% {
+                        transform: translateY(-30px) translateX(10px);
+                        opacity: 0.5;
+                    }
+                    75% {
+                        opacity: 1;
+                    }
+                }
+                .avatar-summoning {
+                    animation: avatar-pulse 2s ease-in-out infinite;
+                }
+                @keyframes avatar-pulse {
+                    0%,
+                    100% {
+                        transform: scale(1);
+                    }
+                    50% {
+                        transform: scale(1.02);
+                    }
+                }
+                .avatar-connected {
+                    animation: avatar-success 0.6s ease-out forwards;
+                }
+                @keyframes avatar-success {
+                    0% {
+                        transform: scale(1);
+                    }
+                    50% {
+                        transform: scale(1.1);
+                    }
+                    100% {
+                        transform: scale(1.05);
+                    }
+                }
+                .avatar-image-reveal {
+                    animation: avatar-emerge 1s ease-out forwards;
+                }
+                @keyframes avatar-emerge {
+                    0% {
+                        opacity: 0;
+                        transform: scale(1.2);
+                        filter: blur(10px) brightness(2);
+                    }
+                    50% {
+                        opacity: 0.8;
+                        filter: blur(2px) brightness(1.3);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: scale(1);
+                        filter: blur(0) brightness(1);
+                    }
+                }
+                .name-connected {
+                    animation: name-glow 0.6s ease-out forwards;
+                }
+                @keyframes name-glow {
+                    0% {
+                        transform: scale(1);
+                    }
+                    50% {
+                        transform: scale(1.05);
+                    }
+                    100% {
+                        transform: scale(1);
+                    }
+                }
+                .connecting-status-appear {
+                    animation: connecting-status-appear 0.5s ease-out forwards;
+                }
+                @keyframes connecting-status-appear {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                /* Ethereal styling for onboarding message markdown */
+                .onboarding-message-content {
+                    text-shadow:
+                        0 0 10px rgba(34, 211, 238, 0.5),
+                        0 0 20px rgba(34, 211, 238, 0.4),
+                        0 0 40px rgba(34, 211, 238, 0.25),
+                        0 0 60px rgba(167, 139, 250, 0.2);
+                }
+                .onboarding-message-content .chat-message {
+                    min-height: auto;
+                    font-size: inherit;
+                    line-height: inherit;
+                }
+                .onboarding-message-content .chat-message p,
+                .onboarding-message-content .chat-message div,
+                .onboarding-message-content .chat-message span,
+                .onboarding-message-content .chat-message li {
+                    font-size: inherit;
+                    line-height: inherit;
+                }
+                .onboarding-message-content p,
+                .onboarding-message-content div {
+                    margin-bottom: 0.5rem;
+                }
+                .onboarding-message-content p:last-child,
+                .onboarding-message-content div:last-child {
+                    margin-bottom: 0;
+                }
+                .onboarding-message-content strong {
+                    font-weight: 600;
+                    color: #67e8f9;
+                    text-shadow: 0 0 12px rgba(103, 232, 249, 0.6);
+                }
+                .onboarding-message-content em {
+                    font-style: italic;
+                    color: #c4b5fd;
+                    text-shadow: 0 0 12px rgba(196, 181, 253, 0.5);
+                }
+                .onboarding-message-content ul,
+                .onboarding-message-content ol {
+                    text-align: left;
+                    margin: 0.75rem 0;
+                    padding-left: 1.5rem;
+                }
+                .onboarding-message-content li {
+                    margin-bottom: 0.25rem;
+                }
+                .onboarding-message-content a {
+                    color: #67e8f9;
+                    text-decoration: underline;
+                    text-underline-offset: 2px;
+                    transition: color 0.2s;
+                }
+                .onboarding-message-content a:hover {
+                    color: #a5f3fc;
+                }
+                .onboarding-message-content code {
+                    padding: 0.125rem 0.375rem;
+                    border-radius: 0.25rem;
+                    background: rgba(51, 65, 85, 0.5);
+                    color: #67e8f9;
+                    font-family: monospace;
+                    font-size: 0.875em;
+                }
+                .onboarding-message-content pre {
+                    background: rgba(15, 23, 42, 0.6);
+                    border-radius: 0.5rem;
+                    padding: 1rem;
+                    margin: 0.75rem 0;
+                    overflow-x: auto;
+                }
+                .onboarding-message-content pre code {
+                    background: none;
+                    padding: 0;
+                }
+                /* Emotion display in onboarding */
+                .onboarding-message-content .inline-emotion-display {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.25rem;
+                    padding: 0.125rem 0.5rem;
+                    border-radius: 9999px;
+                    background: rgba(103, 232, 249, 0.15);
+                    border: 1px solid rgba(103, 232, 249, 0.3);
+                    font-size: 0.875em;
                 }
             `}</style>
         </div>

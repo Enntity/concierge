@@ -34,7 +34,9 @@ export async function POST(request, { params }) {
         const existingUser = await User.findOne({
             $or: [
                 { username: signupRequest.email },
-                { userId: `oauth_${signupRequest.email.replace("@", "_").replace(/\./g, "_")}` },
+                {
+                    userId: `oauth_${signupRequest.email.replace("@", "_").replace(/\./g, "_")}`,
+                },
             ],
         });
 

@@ -171,6 +171,8 @@ const InlineEmotionDisplay = ({ emotion, children }) => {
     const textRef = useRef(null);
     const bubbleRef = useRef(null);
     const timeoutRef = useRef(null);
+    const autoDismissRef = useRef(null);
+    const isTouchDevice = useRef(false);
 
     const lowercaseEmotion = emotion.toLowerCase();
     const emotionInfo = emotionData[lowercaseEmotion] || {
@@ -182,7 +184,51 @@ const InlineEmotionDisplay = ({ emotion, children }) => {
     const backgroundColor = color;
     const textColor = getContrastColor(backgroundColor);
 
+    // Detect touch device on first touch
+    const handleTouchStart = useCallback(() => {
+        isTouchDevice.current = true;
+    }, []);
+
+    // Handle tap on mobile - toggle bubble visibility
+    const handleTap = useCallback((e) => {
+        if (!isTouchDevice.current) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const rect = textRef.current?.getBoundingClientRect();
+        if (rect) {
+            setBubblePosition({
+                x: rect.left + rect.width / 2,
+                y: 0,
+            });
+        }
+
+        setShowBubble((prev) => {
+            const newValue = !prev;
+
+            // Clear any existing auto-dismiss timeout
+            if (autoDismissRef.current) {
+                clearTimeout(autoDismissRef.current);
+            }
+
+            // Auto-dismiss after 3 seconds on mobile
+            if (newValue) {
+                autoDismissRef.current = setTimeout(() => {
+                    setShowBubble(false);
+                    setIsUnderlined(false);
+                }, 3000);
+            }
+
+            return newValue;
+        });
+        setIsUnderlined((prev) => !prev);
+    }, []);
+
     const handleMouseEnter = useCallback((e) => {
+        // Skip hover behavior on touch devices
+        if (isTouchDevice.current) return;
+
         setIsUnderlined(true);
         setBubblePosition({ x: e.clientX, y: 0 });
 
@@ -198,6 +244,9 @@ const InlineEmotionDisplay = ({ emotion, children }) => {
     }, []);
 
     const handleMouseLeave = useCallback(() => {
+        // Skip hover behavior on touch devices
+        if (isTouchDevice.current) return;
+
         setIsUnderlined(false);
         setShowBubble(false);
 
@@ -208,7 +257,17 @@ const InlineEmotionDisplay = ({ emotion, children }) => {
     }, []);
 
     const handleMouseDown = useCallback(() => {
+        // Skip on touch devices - they use handleTap
+        if (isTouchDevice.current) return;
         setShowBubble(false);
+    }, []);
+
+    // Cleanup timeouts on unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            if (autoDismissRef.current) clearTimeout(autoDismissRef.current);
+        };
     }, []);
 
     useEffect(() => {
@@ -236,9 +295,13 @@ const InlineEmotionDisplay = ({ emotion, children }) => {
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTap}
             style={{
                 display: "inline",
                 position: "relative",
+                cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
             }}
         >
             <style>{pulseKeyframes}</style>

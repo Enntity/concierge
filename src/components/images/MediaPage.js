@@ -24,8 +24,7 @@ import Loader from "../../../app/components/loader";
 import { LanguageContext } from "../../contexts/LanguageProvider";
 import { AuthContext } from "../../App";
 import { Modal } from "../../../@/components/ui/modal";
-import { getClient } from "../../graphql";
-import { gql } from "@apollo/client";
+import { gql, useApolloClient } from "@apollo/client";
 
 import {
     Tooltip,
@@ -92,6 +91,7 @@ import EmptyState from "../common/EmptyState";
 function MediaPage() {
     const { direction } = useContext(LanguageContext);
     const { userState, debouncedUpdateUserState } = useContext(AuthContext);
+    const apolloClient = useApolloClient();
     const [prompt, setPrompt] = useState("");
     const [generationPrompt, setGenerationPrompt] = useState("");
     const [quality, setQuality] = useState("draft");
@@ -458,7 +458,7 @@ function MediaPage() {
         setIsOptimizing(true);
         try {
             const hasInputImages = selectedImageCount > 0;
-            const response = await getClient().query({
+            const response = await apolloClient.query({
                 query: gql`
                     query ImagePromptOptimizer(
                         $userPrompt: String!
@@ -488,7 +488,7 @@ function MediaPage() {
         } finally {
             setIsOptimizing(false);
         }
-    }, [prompt, isOptimizing, selectedImageCount]);
+    }, [prompt, isOptimizing, selectedImageCount, apolloClient]);
 
     // Wrapper functions to pass required parameters to hooks
     const handleModifySelectedWrapper = useCallback(async () => {

@@ -63,7 +63,9 @@ export async function DELETE(req, { params }) {
         });
 
         if (!chat) {
-            throw new Error("Chat not found");
+            // Chat already deleted or doesn't exist - that's fine, just clean up refs
+            await deleteChatIdFromRecentList(id).catch(() => {});
+            return NextResponse.json({ success: true, alreadyDeleted: true });
         }
 
         const response = await deleteChatIdFromRecentList(id);

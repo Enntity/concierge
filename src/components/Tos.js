@@ -13,6 +13,7 @@ import {
     AlertDialogFooter,
     AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import { useOnboarding } from "../contexts/OnboardingContext";
 
 const Tos = ({ showTos, setShowTos }) => {
     const { getTosContent } = config.global;
@@ -20,6 +21,7 @@ const Tos = ({ showTos, setShowTos }) => {
     const { t } = useTranslation();
     const tosContent = getTosContent(language);
     const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+    const { isOnboardingOpen, hasCheckedOnboarding } = useOnboarding();
 
     const handleTosClose = () => {
         setHasScrolledToBottom(false);
@@ -48,9 +50,22 @@ const Tos = ({ showTos, setShowTos }) => {
     };
 
     useEffect(() => {
+        // Wait for onboarding system to finish its check before showing TOS
+        // This prevents TOS from flashing before onboarding can open
+        if (!hasCheckedOnboarding) {
+            return;
+        }
+
+        // If onboarding is open, hide TOS until it closes
+        if (isOnboardingOpen) {
+            setShowTos(false);
+            return;
+        }
+
+        // Otherwise, check if TOS should be shown normally
         const shouldShowTos = checkShowTos();
         setShowTos(shouldShowTos);
-    }, [setShowTos]);
+    }, [setShowTos, isOnboardingOpen, hasCheckedOnboarding]);
 
     const checkShowTos = () => {
         const acceptDateString =

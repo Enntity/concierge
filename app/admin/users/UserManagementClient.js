@@ -71,7 +71,9 @@ export default function UserManagementClient({
             if (response.ok) {
                 setUsers(
                     users.map((u) =>
-                        u._id === userId ? { ...u, blocked: !currentlyBlocked } : u,
+                        u._id === userId
+                            ? { ...u, blocked: !currentlyBlocked }
+                            : u,
                     ),
                 );
             } else {
@@ -154,10 +156,14 @@ export default function UserManagementClient({
                                             <Select
                                                 value={user.role || "user"}
                                                 onValueChange={(v) =>
-                                                    handleRoleChange(user._id, v)
+                                                    handleRoleChange(
+                                                        user._id,
+                                                        v,
+                                                    )
                                                 }
                                                 disabled={
-                                                    user._id === currentUser?._id
+                                                    user._id ===
+                                                    currentUser?._id
                                                 }
                                             >
                                                 <SelectTrigger className="w-[120px]">
@@ -179,7 +185,10 @@ export default function UserManagementClient({
                                                         user.blocked,
                                                     )
                                                 }
-                                                disabled={user._id === currentUser?._id}
+                                                disabled={
+                                                    user._id ===
+                                                    currentUser?._id
+                                                }
                                                 variant={
                                                     user.blocked
                                                         ? "default"

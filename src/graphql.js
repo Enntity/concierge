@@ -668,6 +668,7 @@ const IMAGE_FLUX = gql`
             safety_tolerance: $safety_tolerance
         ) {
             result
+            resultData
         }
     }
 `;

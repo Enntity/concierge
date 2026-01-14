@@ -50,20 +50,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     process.env.NEXTAUTH_URL ||
                     process.env.AUTH_URL ||
                     "http://localhost:3000";
-                
-                const checkResponse = await fetch(`${baseUrl}/api/auth/check-user`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "x-auth-secret": process.env.AUTH_SECRET,
+
+                const checkResponse = await fetch(
+                    `${baseUrl}/api/auth/check-user`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "x-auth-secret": process.env.AUTH_SECRET,
+                        },
+                        body: JSON.stringify({
+                            email: user.email,
+                        }),
                     },
-                    body: JSON.stringify({
-                        email: user.email,
-                    }),
-                });
+                );
 
                 if (!checkResponse.ok) {
-                    console.error("Failed to check user:", await checkResponse.text());
+                    console.error(
+                        "Failed to check user:",
+                        await checkResponse.text(),
+                    );
                     return false;
                 }
 

@@ -17,6 +17,7 @@ import EntityIcon from "./EntityIcon";
 import EntityContactsModal from "./EntityContactsModal";
 import { Trash2, Check, Download, Users, Copy, Info } from "lucide-react";
 import { useEntities } from "../../hooks/useEntities";
+import { useOnboarding } from "../../contexts/OnboardingContext";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -86,6 +87,8 @@ function Chat({ viewingChat = null }) {
     const addChat = useAddChat();
     const { data: activeChat } = useGetActiveChat();
     const { data: urlChat } = useGetChatById(urlChatId);
+    const { pendingOnboardingNav, confirmOnboardingNavigation } =
+        useOnboarding();
 
     const isRTL = i18n.dir() === "rtl";
 
@@ -132,6 +135,15 @@ function Chat({ viewingChat = null }) {
             },
         });
     }, [urlChatId, activeChat?._id, viewingChat, urlChat, setActiveChatId]);
+
+    // Signal to onboarding that this chat is ready (closes the onboarding modal)
+    useEffect(() => {
+        if (pendingOnboardingNav && urlChatId && urlChat) {
+            // Chat data is loaded and ready to display
+            confirmOnboardingNavigation(urlChatId);
+        }
+    }, [pendingOnboardingNav, urlChatId, urlChat, confirmOnboardingNavigation]);
+
     const [selectedEntityId, setSelectedEntityId] = useState(
         chat?.selectedEntityId || "",
     );
