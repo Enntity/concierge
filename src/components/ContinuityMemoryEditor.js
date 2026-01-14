@@ -141,7 +141,7 @@ function ContinuityMemoryItem({
                         <select
                             value={editType}
                             onChange={(e) => setEditType(e.target.value)}
-                            className="lb-input w-full text-xs"
+                            className="lb-input w-full text-base md:text-xs"
                             dir={direction}
                         >
                             {memoryTypes.map((mt) => (
@@ -163,7 +163,7 @@ function ContinuityMemoryItem({
                             max="10"
                             value={editImportance}
                             onChange={(e) => setEditImportance(e.target.value)}
-                            className="lb-input w-full text-xs"
+                            className="lb-input w-full text-base md:text-xs"
                             placeholder="5"
                             dir={direction}
                         />
@@ -178,7 +178,7 @@ function ContinuityMemoryItem({
                             type="text"
                             value={editTags}
                             onChange={(e) => setEditTags(e.target.value)}
-                            className="lb-input w-full text-xs"
+                            className="lb-input w-full text-base md:text-xs"
                             placeholder="tag1, tag2"
                             dir={direction}
                         />
@@ -188,7 +188,7 @@ function ContinuityMemoryItem({
                     ref={textareaRef}
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    className="lb-input font-mono w-full text-xs mb-1.5 resize-none"
+                    className="lb-input font-mono w-full text-base md:text-xs mb-1.5 resize-none"
                     rows={3}
                     dir={direction}
                     placeholder={t("Memory content...")}

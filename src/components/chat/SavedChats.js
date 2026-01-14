@@ -1279,7 +1279,7 @@ function SavedChats({ displayState }) {
                                 onChange={(e) =>
                                     setEntityFilter(e.target.value)
                                 }
-                                className="h-9 px-2 rounded-md border text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                className="h-9 px-2 rounded-md border text-base md:text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
                             >
                                 <option value="">{t("All AIs")}</option>
                                 {chatEntities.map((entity) => (

@@ -73,8 +73,8 @@ function ChatTopMenu({ displayState = "full", readOnly = false }) {
                 open={showFileCollectionDialog}
                 onOpenChange={setShowFileCollectionDialog}
             >
-                <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] sm:w-full overflow-hidden">
-                    <DialogHeader>
+                <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] sm:w-full max-h-[85vh] flex flex-col overflow-hidden">
+                    <DialogHeader className="flex-shrink-0">
                         <DialogTitle>{t("Chat Files")}</DialogTitle>
                         <DialogDescription>
                             {t(
@@ -82,15 +82,19 @@ function ChatTopMenu({ displayState = "full", readOnly = false }) {
                             )}
                         </DialogDescription>
                     </DialogHeader>
-                    {user?.contextId && (
-                        <UserFileCollection
-                            contextId={user.contextId}
-                            contextKey={user.contextKey}
-                            chatId={activeChatId ? String(activeChatId) : null}
-                            messages={chat?.messages || []}
-                            updateChatHook={updateChatHook}
-                        />
-                    )}
+                    <div className="flex-1 overflow-y-auto min-h-0">
+                        {user?.contextId && (
+                            <UserFileCollection
+                                contextId={user.contextId}
+                                contextKey={user.contextKey}
+                                chatId={
+                                    activeChatId ? String(activeChatId) : null
+                                }
+                                messages={chat?.messages || []}
+                                updateChatHook={updateChatHook}
+                            />
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
         </>

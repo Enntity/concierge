@@ -529,13 +529,13 @@ export function BlockEditForm({ block, entities, onChange }) {
                 <input
                     placeholder={t("e.g., Daily News Summary")}
                     className="
-                        w-full px-3 py-2 rounded-lg 
-                        border border-gray-200 dark:border-gray-600 
-                        bg-white dark:bg-gray-700/50 
-                        text-gray-900 dark:text-gray-100 
-                        placeholder:text-gray-400 dark:placeholder:text-gray-500 
+                        w-full px-3 py-2 rounded-lg
+                        border border-gray-200 dark:border-gray-600
+                        bg-white dark:bg-gray-700/50
+                        text-gray-900 dark:text-gray-100
+                        placeholder:text-gray-400 dark:placeholder:text-gray-500
                         focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500
-                        transition-all duration-200 text-sm
+                        transition-all duration-200 text-base md:text-sm
                     "
                     value={block.title || ""}
                     onChange={(e) =>
@@ -567,7 +567,7 @@ export function BlockEditForm({ block, entities, onChange }) {
                         });
                     }}
                 >
-                    <SelectTrigger className="w-full h-9 rounded-lg border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-sm">
+                    <SelectTrigger className="w-full h-9 rounded-lg border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-base md:text-sm">
                         <SelectValue placeholder={t("Use default entity")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -609,13 +609,13 @@ export function BlockEditForm({ block, entities, onChange }) {
                 <textarea
                     placeholder={t("What would you like this block to show?")}
                     className="
-                        w-full px-3 py-2 rounded-lg 
-                        border border-gray-200 dark:border-gray-600 
-                        bg-white dark:bg-gray-700/50 
-                        text-gray-900 dark:text-gray-100 
-                        placeholder:text-gray-400 dark:placeholder:text-gray-500 
+                        w-full px-3 py-2 rounded-lg
+                        border border-gray-200 dark:border-gray-600
+                        bg-white dark:bg-gray-700/50
+                        text-gray-900 dark:text-gray-100
+                        placeholder:text-gray-400 dark:placeholder:text-gray-500
                         focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500
-                        transition-all duration-200 resize-none text-sm
+                        transition-all duration-200 resize-none text-base md:text-sm
                     "
                     rows={3}
                     value={block.prompt || ""}

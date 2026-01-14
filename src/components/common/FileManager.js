@@ -1334,7 +1334,7 @@ export default function FileManager({
                                                             aria-label={t(
                                                                 "Edit filename",
                                                             )}
-                                                            className="w-full text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-sky-500 dark:border-sky-400 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400"
+                                                            className="w-full text-base md:text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-sky-500 dark:border-sky-400 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400"
                                                         />
                                                     ) : file?.notes ? (
                                                         <TooltipProvider>

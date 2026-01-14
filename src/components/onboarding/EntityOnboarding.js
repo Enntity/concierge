@@ -125,7 +125,7 @@ const FloatingEntityMessage = React.memo(
             `}
                 style={{ transitionDuration: isVisible ? "1000ms" : "300ms" }}
             >
-                <div className="onboarding-message-content text-xl md:text-2xl font-light text-center leading-relaxed text-slate-200">
+                <div className="onboarding-message-content text-base sm:text-lg md:text-2xl font-light text-center leading-relaxed text-slate-200">
                     {convertMessageToMarkdown({ payload: textContent })}
                     {isStreaming && (
                         <span className="inline-block w-0.5 h-5 ml-1 bg-cyan-400 animate-pulse align-middle" />
@@ -176,7 +176,7 @@ const EtherealInput = React.memo(
                         placeholder={placeholder}
                         className="
                         w-full px-0 py-3
-                        text-lg md:text-xl font-light text-center
+                        text-base sm:text-lg md:text-xl font-light text-center
                         bg-transparent border-none outline-none
                         text-cyan-100 placeholder-slate-600
                         disabled:opacity-50

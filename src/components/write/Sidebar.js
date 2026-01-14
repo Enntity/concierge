@@ -129,7 +129,7 @@ const SummaryOptions = ({
         <div className="flex items-center gap-2.5 text-xs mb-3">
             <div>{t("Length")}</div>
             <input
-                className="flex-shrink-0 w-20 h-6 text-xs p-1 min-w-[50px] lb-input rounded"
+                className="flex-shrink-0 w-20 h-6 text-base md:text-xs p-1 min-w-[50px] lb-input rounded"
                 key="summary-length"
                 type="number"
                 value={value.targetLength}
