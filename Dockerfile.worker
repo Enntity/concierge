@@ -1,7 +1,8 @@
 FROM ubuntu:20.04 AS base
 
+# Node.js 22.x LTS - patched for CVE async_hooks stack overflow vulnerability
 RUN apt-get update && apt-get install -y curl && \
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
     apt-get install -y curl libssl1.1 && \
     curl -O https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz && \

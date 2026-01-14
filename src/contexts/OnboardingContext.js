@@ -118,6 +118,9 @@ export function OnboardingProvider({ children }) {
 
     // Open onboarding (for manual trigger, e.g., from UserOptions)
     const openOnboarding = useCallback(() => {
+        // Reset navigation state to prevent immediate close if reopening from a chat page
+        setPendingOnboardingNav(null);
+        setOnboardingChatReady(false);
         setIsFirstRun(false);
         setIsOnboardingOpen(true);
     }, []);
@@ -193,6 +196,11 @@ export function OnboardingProvider({ children }) {
         [router, updateAiOptions, user?.userId, finalizeOnboarding],
     );
 
+    // Hide app chrome during first-run onboarding or while checking if needed
+    // This prevents the "half-baked app" flash before Vesper appears
+    const shouldHideAppChrome =
+        !hasCheckedOnboarding || (isFirstRun && isOnboardingOpen);
+
     return (
         <OnboardingContext.Provider
             value={{
@@ -201,6 +209,7 @@ export function OnboardingProvider({ children }) {
                 hasCheckedOnboarding, // Expose this so TOS can wait for it
                 pendingOnboardingNav,
                 onboardingChatReady,
+                shouldHideAppChrome, // True when chrome should be hidden for first-run
                 openOnboarding,
                 closeOnboarding,
                 confirmOnboardingNavigation,

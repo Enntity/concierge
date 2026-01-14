@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../utils/auth";
 import { getClient, IMAGE_FLUX } from "../../../../src/graphql";
+import {
+    hashBuffer,
+    uploadBufferToMediaService,
+} from "../../utils/media-service-utils";
 
 /**
  * POST /api/entities/generate-avatar
  * Generate an avatar image using Flux
- * Then re-upload to our cloud storage for consistency
+ * Then fetch, hash, and upload properly to cloud storage
  */
 export async function POST(req) {
     try {
@@ -42,7 +46,7 @@ Photo-realistic, centered face, clean background, suitable for profile picture, 
             query: IMAGE_FLUX,
             variables: {
                 text: prompt,
-                model: "replicate-flux-11-pro",
+                model: "replicate-flux-2-pro",
                 async: false,
                 aspectRatio: "1:1",
                 resolution: "512",
@@ -67,37 +71,56 @@ Photo-realistic, centered face, clean background, suitable for profile picture, 
             imageUrl.substring(0, 60) + "...",
         );
 
-        // Re-upload to our cloud storage for consistency and user scoping
-        const mediaApiUrl = process.env.CORTEX_MEDIA_API_URL;
-        if (!mediaApiUrl) {
-            // If no media API, just return the Replicate URL directly
+        // Fetch the image data locally
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+            console.error("[GenerateAvatar] Failed to fetch generated image");
             return NextResponse.json({
                 success: true,
-                url: imageUrl,
+                url: imageUrl, // Fall back to original URL
             });
         }
 
-        // Upload the URL to our cloud storage
-        const uploadUrl = new URL(mediaApiUrl);
-        uploadUrl.searchParams.set("fetch", imageUrl);
-        uploadUrl.searchParams.set("contextId", user.contextId);
+        const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+        const hash = await hashBuffer(imageBuffer);
 
-        const uploadResponse = await fetch(uploadUrl.toString(), {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-        });
+        // Determine content type and filename
+        const contentType =
+            imageResponse.headers.get("content-type") || "image/webp";
+        const extension = contentType.includes("webp")
+            ? "webp"
+            : contentType.includes("png")
+              ? "png"
+              : "jpg";
+        const filename = `avatar-${hash.substring(0, 8)}.${extension}`;
 
-        if (!uploadResponse.ok) {
+        console.log(
+            "[GenerateAvatar] Uploading with hash:",
+            hash.substring(0, 16),
+        );
+
+        // Upload properly with hash to media service
+        const uploadResult = await uploadBufferToMediaService(
+            imageBuffer,
+            {
+                filename,
+                mimeType: contentType,
+                hash,
+            },
+            false, // not permanent (entity avatars can be regenerated)
+            user.contextId,
+        );
+
+        if (uploadResult.error) {
             // Fall back to the original URL if upload fails
-            console.warn("[GenerateAvatar] Re-upload failed, using direct URL");
+            console.warn("[GenerateAvatar] Upload failed, using direct URL");
             return NextResponse.json({
                 success: true,
                 url: imageUrl,
             });
         }
 
-        const uploadData = await uploadResponse.json();
-        const finalUrl = uploadData.url || uploadData.gcs || imageUrl;
+        const finalUrl = uploadResult.data.url || imageUrl;
 
         console.log(
             "[GenerateAvatar] Success:",
@@ -107,6 +130,7 @@ Photo-realistic, centered face, clean background, suitable for profile picture, 
         return NextResponse.json({
             success: true,
             url: finalUrl,
+            hash: uploadResult.data.hash,
         });
     } catch (error) {
         console.error("[GenerateAvatar] Error:", error.message);

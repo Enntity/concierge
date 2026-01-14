@@ -8,7 +8,8 @@ import React, {
     useContext,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Loader2 } from "lucide-react";
+import { X } from "lucide-react";
+import Loader from "../../../app/components/loader";
 import { convertMessageToMarkdown } from "../chat/ChatMessage";
 import { AuthContext } from "../../App";
 import { useEntityOnboarding } from "../../hooks/useEntityOnboarding";
@@ -21,6 +22,7 @@ import {
     useDeleteChat,
     useGetChatById,
 } from "../../../app/queries/chats";
+import { useQueryClient } from "@tanstack/react-query";
 import axios from "../../../app/utils/axios-client";
 import {
     Particles,
@@ -649,16 +651,16 @@ export default function EntityOnboarding({
     } = useEntityOnboarding();
 
     // Local state
-    const [currentMessage, setCurrentMessage] = useState("");
     const [inputValue, setInputValue] = useState("");
     const [showContacting, setShowContacting] = useState(false);
     const [isEntityReady, setIsEntityReady] = useState(false);
     const [mounted, setMounted] = useState(false);
-    const [onboardingChat, setOnboardingChat] = useState(null);
+    const [onboardingChatId, setOnboardingChatId] = useState(null); // Store ID, not object
     const [prefetchedChatId, setPrefetchedChatId] = useState(null);
     const [actualEntityId, setActualEntityId] = useState(null);
     const [avatarImageUrl, setAvatarImageUrl] = useState(null);
     const [isFading, setIsFading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState(null); // For error display
 
     // Simple refs for tracking
     const conversationRef = useRef([]);
@@ -677,6 +679,12 @@ export default function EntityOnboarding({
     const updateChat = useUpdateChat();
     const deleteChat = useDeleteChat();
     const { refetch: refetchEntities } = useEntities(user?.contextId);
+    const queryClient = useQueryClient();
+
+    // Monitor onboarding chat for messages - same pattern as regular chat
+    // This ensures we get persisted messages even if SSE stream is interrupted
+    const { data: onboardingChat, refetch: refetchOnboardingChat } =
+        useGetChatById(onboardingChatId);
 
     // Monitor prefetched chat for messages and streaming state
     const { data: prefetchedChat, refetch: refetchPrefetchedChat } =
@@ -730,7 +738,8 @@ export default function EntityOnboarding({
                 );
                 // Non-fatal - the entity still works, just might not have the avatar persisted
             });
-    }, [actualEntityId, refetchEntities]);
+        // avatarGenerationDone triggers re-run when ref is populated
+    }, [actualEntityId, refetchEntities, avatarGenerationDone]);
 
     // Poll for chat content during connecting phase (avatar is generated in parallel)
     const pollRef = useRef(null);
@@ -852,9 +861,9 @@ export default function EntityOnboarding({
     );
 
     const handleStreamComplete = useCallback((content) => {
-        // Set message content (unless entity was created - celebration will take over)
+        // Add to conversation history for context (message is persisted in DB by server)
+        // We no longer rely on this for display - we get it from the persisted chat
         if (content && !entityCreatedRef.current) {
-            setCurrentMessage(content);
             conversationRef.current.push({ role: "assistant", content });
         }
     }, []);
@@ -873,19 +882,19 @@ export default function EntityOnboarding({
         onStreamComplete: handleStreamComplete,
     });
 
-    // Initialize when opened - only reset when isOpen actually changes to true
+    // Reset all state when closing - this ensures clean state for next open
     useEffect(() => {
-        if (isOpen) {
-            // Reset everything
-            setCurrentMessage("");
+        if (!isOpen) {
+            // Reset everything when closing so next open starts fresh
             setShowContacting(false);
             setIsEntityReady(false);
-            setOnboardingChat(null);
+            setOnboardingChatId(null);
             setPrefetchedChatId(null);
             setActualEntityId(null);
             setAvatarImageUrl(null);
             setIsFading(false);
             setInputValue("");
+            setErrorMessage(null);
             conversationRef.current = [];
             hasStartedRef.current = false;
             prefetchStartedRef.current = false;
@@ -903,13 +912,33 @@ export default function EntityOnboarding({
                 failoverTimerRef.current = null;
             }
             clearStreamingState();
-            setMounted(true);
-            startOnboarding();
-        } else {
             setMounted(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
+
+    // Initialize when opened - state is already clean from close reset
+    useEffect(() => {
+        if (isOpen) {
+            setMounted(true);
+            startOnboarding();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]); // Only trigger on isOpen change, not on function reference changes
+
+    // Poll for onboarding chat completion - same pattern as regular chat (ChatContent.js)
+    // This ensures we get persisted messages even if SSE stream is interrupted on mobile
+    useEffect(() => {
+        if (!onboardingChatId || !isStreaming) return;
+
+        const pollInterval = setInterval(() => {
+            queryClient.refetchQueries({
+                queryKey: ["chat", String(onboardingChatId)],
+            });
+        }, 2000);
+
+        return () => clearInterval(pollInterval);
+    }, [onboardingChatId, isStreaming, queryClient]);
 
     // Create chat and start conversation when entity is ready
     useEffect(() => {
@@ -947,7 +976,7 @@ export default function EntityOnboarding({
                     selectedEntityName: onboardingEntity.name,
                     forceNew: true,
                 });
-                setOnboardingChat(chat);
+                setOnboardingChatId(chat._id);
 
                 // Build and send the priming message
                 const userName = user?.name || "the user";
@@ -959,8 +988,9 @@ export default function EntityOnboarding({
                     { role: "user", content: primingMessage },
                 ];
 
-                setIsStreaming(true);
+                // Clear first, THEN set streaming to true (clearStreamingState sets it to false)
                 clearStreamingState();
+                setIsStreaming(true);
 
                 const streamResponse = await fetch(
                     `/api/chats/${chat._id}/stream`,
@@ -996,9 +1026,7 @@ export default function EntityOnboarding({
                 setSubscriptionId(streamResponse);
             } catch (error) {
                 console.error("[Onboarding] Start error:", error);
-                setCurrentMessage(
-                    t("I encountered an issue. Let's try again."),
-                );
+                setErrorMessage(t("I encountered an issue. Let's try again."));
             }
         };
 
@@ -1208,13 +1236,14 @@ export default function EntityOnboarding({
                 role: "user",
                 content: userMessage,
             });
-            setCurrentMessage("");
+            setErrorMessage(null); // Clear any previous error
             setInputValue("");
-            setIsFading(false);
 
             try {
-                setIsStreaming(true);
+                // Clear first, THEN set streaming to true (clearStreamingState sets it to false)
                 clearStreamingState();
+                setIsStreaming(true);
+                setIsFading(false);
 
                 const response = await fetch(
                     `/api/chats/${onboardingChat._id}/stream`,
@@ -1249,9 +1278,8 @@ export default function EntityOnboarding({
             } catch (error) {
                 console.error("Error sending message:", error);
                 setIsStreaming(false);
-                setCurrentMessage(
-                    t("I encountered an issue. Let's try again."),
-                );
+                setIsFading(false);
+                setErrorMessage(t("I encountered an issue. Let's try again."));
             }
         },
         [
@@ -1267,9 +1295,15 @@ export default function EntityOnboarding({
     );
 
     const handleClose = useCallback(() => {
-        // Delete the onboarding chat if one was created
+        // Delete the onboarding chat (Vesper conversation) if one was created
         if (onboardingChat?._id) {
             deleteChat.mutate({ chatId: onboardingChat._id });
+        }
+
+        // Also delete the prefetched chat for the new entity if one was created
+        // This prevents orphaned chats if user cancels during "Contacting" phase
+        if (prefetchedChatId) {
+            deleteChat.mutate({ chatId: prefetchedChatId });
         }
 
         clearStreamingState();
@@ -1280,12 +1314,25 @@ export default function EntityOnboarding({
         cancelOnboarding,
         onClose,
         onboardingChat,
+        prefetchedChatId,
         deleteChat,
     ]);
 
     if (!isOpen) return null;
 
-    const displayMessage = isStreaming ? streamingContent : currentMessage;
+    // Derive the current message from persisted chat - same pattern as regular chat
+    // This ensures we show the message even if the SSE stream was interrupted on mobile
+    const lastIncomingMessage = onboardingChat?.messages
+        ?.filter((m) => m.direction === "incoming")
+        ?.slice(-1)?.[0]?.payload;
+
+    // Priority: error > streaming > persisted message
+    const displayMessage = errorMessage
+        ? errorMessage
+        : isStreaming
+          ? streamingContent
+          : lastIncomingMessage || "";
+
     const showInput =
         !isStreaming && !showContacting && displayMessage && !isLoading;
 
@@ -1366,15 +1413,22 @@ export default function EntityOnboarding({
                                 </div>
                             ) : (
                                 <>
-                                    {/* Entity message */}
+                                    {/* Entity message OR sparkle loader */}
                                     <div
                                         className={`max-w-xl mx-auto mb-10 transition-opacity duration-300 ${isFading ? "opacity-0" : "opacity-100"}`}
                                     >
-                                        <FloatingEntityMessage
-                                            content={displayMessage}
-                                            isVisible={!!displayMessage}
-                                            isStreaming={isStreaming}
-                                        />
+                                        {isStreaming && !streamingContent ? (
+                                            /* Sparkle loader while waiting for content */
+                                            <div className="flex flex-col items-center justify-center min-h-[60px]">
+                                                <Loader size="small" delay={0} />
+                                            </div>
+                                        ) : (
+                                            <FloatingEntityMessage
+                                                content={displayMessage}
+                                                isVisible={!!displayMessage}
+                                                isStreaming={isStreaming}
+                                            />
+                                        )}
                                     </div>
 
                                     {/* User input */}
@@ -1396,16 +1450,6 @@ export default function EntityOnboarding({
                                             )}
                                         />
                                     </div>
-
-                                    {/* Waiting indicator */}
-                                    {isStreaming && !streamingContent && (
-                                        <div className="flex items-center gap-2 text-slate-500 mt-6">
-                                            <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
-                                            <span className="text-sm">
-                                                {t("Thinking...")}
-                                            </span>
-                                        </div>
-                                    )}
                                 </>
                             )}
                         </div>

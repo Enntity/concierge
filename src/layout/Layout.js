@@ -13,6 +13,7 @@ import StreamingAvatarOverlay from "../components/StreamingAvatarOverlay";
 import Tos from "../components/Tos";
 import UserOptions from "../components/UserOptions";
 import { LanguageContext } from "../contexts/LanguageProvider";
+import { useOnboarding } from "../contexts/OnboardingContext";
 import { ProgressProvider } from "../contexts/ProgressContext";
 import { ThemeContext } from "../contexts/ThemeProvider";
 import Footer from "./Footer";
@@ -30,6 +31,7 @@ export default function Layout({ children }) {
     const pathname = usePathname();
     const { theme } = useContext(ThemeContext);
     const { direction } = useContext(LanguageContext);
+    const { shouldHideAppChrome } = useOnboarding();
     const contentRef = useRef(null);
 
     const handleShowOptions = () => setShowOptions(true);
@@ -61,6 +63,12 @@ export default function Layout({ children }) {
 
     if (ROUTES_WITHOUT_SIDEBAR.includes(pathname)) {
         return <>{children}</>;
+    }
+
+    // Hide all app chrome during first-run onboarding
+    // This prevents the "half-baked app" flash before Vesper appears
+    if (shouldHideAppChrome) {
+        return null;
     }
 
     return (

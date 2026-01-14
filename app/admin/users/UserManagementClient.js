@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Ban, CheckCircle } from "lucide-react";
+import { Ban, CheckCircle, Trash2, Loader2 } from "lucide-react";
 import {
     AdminTableContainer,
     AdminTable,
@@ -23,6 +23,16 @@ import {
     AdminTableEmpty,
     AdminPagination,
 } from "../components/AdminTable";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function UserManagementClient({
     initialUsers,
@@ -33,6 +43,10 @@ export default function UserManagementClient({
 }) {
     const [users, setUsers] = useState(initialUsers);
     const [search, setSearch] = useState(initialSearch || "");
+    const [purgeDialogOpen, setPurgeDialogOpen] = useState(false);
+    const [userToPurge, setUserToPurge] = useState(null);
+    const [isPurging, setIsPurging] = useState(false);
+    const [purgeResult, setPurgeResult] = useState(null); // { success: boolean, results?: object, error?: string }
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -92,6 +106,44 @@ export default function UserManagementClient({
         search ? params.set("search", search) : params.delete("search");
         params.set("page", "1");
         router.push(`/admin/users?${params.toString()}`);
+    };
+
+    const handlePurgeClick = (user) => {
+        setUserToPurge(user);
+        setPurgeResult(null);
+        setPurgeDialogOpen(true);
+    };
+
+    const handlePurgeConfirm = async () => {
+        if (!userToPurge) return;
+
+        setIsPurging(true);
+        try {
+            const response = await fetch(
+                `/api/admin/users/${userToPurge._id}/purge`,
+                { method: "DELETE" },
+            );
+
+            if (response.ok) {
+                const result = await response.json();
+                setUsers(users.filter((u) => u._id !== userToPurge._id));
+                setPurgeResult({ success: true, results: result.results });
+            } else {
+                const error = await response.json();
+                setPurgeResult({ success: false, error: error.error || "Failed to purge user" });
+            }
+        } catch (error) {
+            console.error("Error purging user:", error);
+            setPurgeResult({ success: false, error: "Failed to purge user" });
+        } finally {
+            setIsPurging(false);
+        }
+    };
+
+    const handlePurgeDialogClose = () => {
+        setPurgeDialogOpen(false);
+        setUserToPurge(null);
+        setPurgeResult(null);
     };
 
     return (
@@ -209,6 +261,21 @@ export default function UserManagementClient({
                                                     </>
                                                 )}
                                             </Button>
+                                            <Button
+                                                onClick={() =>
+                                                    handlePurgeClick(user)
+                                                }
+                                                disabled={
+                                                    user._id ===
+                                                    currentUser?._id
+                                                }
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950"
+                                                title="Permanently delete user and all data"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
                                         </div>
                                     </AdminTableCell>
                                 </AdminTableRow>
@@ -223,6 +290,118 @@ export default function UserManagementClient({
                     search={search}
                 />
             </AdminTableContainer>
+
+            {/* Purge Confirmation Dialog */}
+            <AlertDialog open={purgeDialogOpen} onOpenChange={handlePurgeDialogClose}>
+                <AlertDialogContent>
+                    {/* Purging State */}
+                    {isPurging && (
+                        <>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle className="text-gray-900 dark:text-gray-100">
+                                    Purging User...
+                                </AlertDialogTitle>
+                                <AlertDialogDescription asChild>
+                                    <div className="flex flex-col items-center py-8 gap-4">
+                                        <Loader2 className="h-12 w-12 animate-spin text-red-500" />
+                                        <div className="text-center">
+                                            Deleting all data for{" "}
+                                            <strong>{userToPurge?.name}</strong>
+                                        </div>
+                                    </div>
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                        </>
+                    )}
+
+                    {/* Result State */}
+                    {!isPurging && purgeResult && (
+                        <>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle className={purgeResult.success ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                                    {purgeResult.success ? "✓ User Purged Successfully" : "✗ Purge Failed"}
+                                </AlertDialogTitle>
+                                <AlertDialogDescription asChild>
+                                    <div className="space-y-3 text-sm text-muted-foreground">
+                                        {purgeResult.success ? (
+                                            <>
+                                                <div>
+                                                    <strong>{userToPurge?.name}</strong> ({userToPurge?.username}) has been permanently deleted.
+                                                </div>
+                                                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-1">
+                                                    <div className="font-medium text-gray-700 dark:text-gray-300 mb-2">Deleted:</div>
+                                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-gray-600 dark:text-gray-400">
+                                                        <div>{purgeResult.results.chats} chats</div>
+                                                        <div>{purgeResult.results.workspaces} workspaces</div>
+                                                        <div>{purgeResult.results.tasks} tasks</div>
+                                                        <div>{purgeResult.results.mediaItems} media items</div>
+                                                        <div>{purgeResult.results.entities} entity links</div>
+                                                        <div>{purgeResult.results.memories} memories</div>
+                                                        <div>{purgeResult.results.memberships} memberships</div>
+                                                        <div>{purgeResult.results.prompts} prompts</div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-red-600 dark:text-red-400">
+                                                {purgeResult.error}
+                                            </div>
+                                        )}
+                                    </div>
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogAction onClick={handlePurgeDialogClose}>
+                                    Done
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </>
+                    )}
+
+                    {/* Confirmation State */}
+                    {!isPurging && !purgeResult && (
+                        <>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle className="text-red-600 dark:text-red-400">
+                                    ⚠️ Permanently Delete User
+                                </AlertDialogTitle>
+                                <AlertDialogDescription asChild>
+                                    <div className="space-y-2 text-sm text-muted-foreground">
+                                        <div>
+                                            Are you sure you want to permanently delete{" "}
+                                            <strong>{userToPurge?.name}</strong> (
+                                            {userToPurge?.username})?
+                                        </div>
+                                        <div className="text-red-600 dark:text-red-400 font-medium">
+                                            This will permanently delete:
+                                        </div>
+                                        <ul className="list-disc list-inside text-sm space-y-1 text-gray-600 dark:text-gray-400">
+                                            <li>All chats and messages</li>
+                                            <li>All workspaces and applets</li>
+                                            <li>All tasks and media items</li>
+                                            <li>All entity associations</li>
+                                            <li>All continuity memories</li>
+                                            <li>User account and settings</li>
+                                        </ul>
+                                        <div className="font-bold text-red-600 dark:text-red-400 pt-2">
+                                            This action cannot be undone!
+                                        </div>
+                                    </div>
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={handlePurgeConfirm}
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                    Delete Permanently
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </>
+                    )}
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

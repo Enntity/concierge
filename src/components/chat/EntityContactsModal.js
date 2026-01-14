@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useContext, useEffect } from "react";
+import React, { useState, useMemo, useContext, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
     Search,
@@ -61,6 +61,7 @@ export default function EntityContactsModal({
     const [deletedEntityIds, setDeletedEntityIds] = useState(new Set());
     const [memoryEditorEntityId, setMemoryEditorEntityId] = useState(null);
     const [memoryEditorEntityName, setMemoryEditorEntityName] = useState(null);
+    const firstEntityRef = useRef(null);
 
     // Aggressively refetch entities when modal opens to get fresh avatars
     useEffect(() => {
@@ -116,6 +117,17 @@ export default function EntityContactsModal({
 
         return filtered;
     }, [entities, searchQuery, sortBy, deletedEntityIds]);
+
+    // Focus first entity when modal opens (better mobile UX than focusing search)
+    useEffect(() => {
+        if (isOpen && firstEntityRef.current) {
+            // Small delay to ensure dialog is fully rendered
+            const timer = setTimeout(() => {
+                firstEntityRef.current?.focus();
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
 
     // Find last chat with a specific entity
     const findLastChatWithEntity = (entityId) => {
@@ -285,12 +297,15 @@ export default function EntityContactsModal({
                     {/* Entity List */}
                     <div className="flex-1 overflow-y-auto mt-3 -mx-2 px-2 min-h-0">
                         <div className="space-y-1">
-                            {filteredEntities.map((entity) => {
+                            {filteredEntities.map((entity, index) => {
                                 const chatInfo = getLastChatInfo(entity.id);
+                                const isFirst = index === 0;
                                 return (
                                     <div
                                         key={entity.id}
-                                        className={`group w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left cursor-pointer ${
+                                        ref={isFirst ? firstEntityRef : null}
+                                        tabIndex={0}
+                                        className={`group w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${
                                             entity.id === selectedEntityId
                                                 ? "bg-cyan-50 dark:bg-cyan-900/30 border border-cyan-200 dark:border-cyan-700"
                                                 : "hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-transparent"
@@ -298,6 +313,12 @@ export default function EntityContactsModal({
                                         onClick={() =>
                                             handleEntityClick(entity.id)
                                         }
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" || e.key === " ") {
+                                                e.preventDefault();
+                                                handleEntityClick(entity.id);
+                                            }
+                                        }}
                                     >
                                         <EntityIcon
                                             entity={entity}
