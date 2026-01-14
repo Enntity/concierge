@@ -130,7 +130,10 @@ export default function UserManagementClient({
                 setPurgeResult({ success: true, results: result.results });
             } else {
                 const error = await response.json();
-                setPurgeResult({ success: false, error: error.error || "Failed to purge user" });
+                setPurgeResult({
+                    success: false,
+                    error: error.error || "Failed to purge user",
+                });
             }
         } catch (error) {
             console.error("Error purging user:", error);
@@ -292,7 +295,10 @@ export default function UserManagementClient({
             </AdminTableContainer>
 
             {/* Purge Confirmation Dialog */}
-            <AlertDialog open={purgeDialogOpen} onOpenChange={handlePurgeDialogClose}>
+            <AlertDialog
+                open={purgeDialogOpen}
+                onOpenChange={handlePurgeDialogClose}
+            >
                 <AlertDialogContent>
                     {/* Purging State */}
                     {isPurging && (
@@ -318,27 +324,98 @@ export default function UserManagementClient({
                     {!isPurging && purgeResult && (
                         <>
                             <AlertDialogHeader>
-                                <AlertDialogTitle className={purgeResult.success ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                                    {purgeResult.success ? "✓ User Purged Successfully" : "✗ Purge Failed"}
+                                <AlertDialogTitle
+                                    className={
+                                        purgeResult.success
+                                            ? "text-green-600 dark:text-green-400"
+                                            : "text-red-600 dark:text-red-400"
+                                    }
+                                >
+                                    {purgeResult.success
+                                        ? "✓ User Purged Successfully"
+                                        : "✗ Purge Failed"}
                                 </AlertDialogTitle>
                                 <AlertDialogDescription asChild>
                                     <div className="space-y-3 text-sm text-muted-foreground">
                                         {purgeResult.success ? (
                                             <>
                                                 <div>
-                                                    <strong>{userToPurge?.name}</strong> ({userToPurge?.username}) has been permanently deleted.
+                                                    <strong>
+                                                        {userToPurge?.name}
+                                                    </strong>{" "}
+                                                    ({userToPurge?.username})
+                                                    has been permanently
+                                                    deleted.
                                                 </div>
                                                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-1">
-                                                    <div className="font-medium text-gray-700 dark:text-gray-300 mb-2">Deleted:</div>
+                                                    <div className="font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        Deleted:
+                                                    </div>
                                                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-gray-600 dark:text-gray-400">
-                                                        <div>{purgeResult.results.chats} chats</div>
-                                                        <div>{purgeResult.results.workspaces} workspaces</div>
-                                                        <div>{purgeResult.results.tasks} tasks</div>
-                                                        <div>{purgeResult.results.mediaItems} media items</div>
-                                                        <div>{purgeResult.results.entities} entity links</div>
-                                                        <div>{purgeResult.results.memories} memories</div>
-                                                        <div>{purgeResult.results.memberships} memberships</div>
-                                                        <div>{purgeResult.results.prompts} prompts</div>
+                                                        <div>
+                                                            {
+                                                                purgeResult
+                                                                    .results
+                                                                    .chats
+                                                            }{" "}
+                                                            chats
+                                                        </div>
+                                                        <div>
+                                                            {
+                                                                purgeResult
+                                                                    .results
+                                                                    .workspaces
+                                                            }{" "}
+                                                            workspaces
+                                                        </div>
+                                                        <div>
+                                                            {
+                                                                purgeResult
+                                                                    .results
+                                                                    .tasks
+                                                            }{" "}
+                                                            tasks
+                                                        </div>
+                                                        <div>
+                                                            {
+                                                                purgeResult
+                                                                    .results
+                                                                    .mediaItems
+                                                            }{" "}
+                                                            media items
+                                                        </div>
+                                                        <div>
+                                                            {
+                                                                purgeResult
+                                                                    .results
+                                                                    .entities
+                                                            }{" "}
+                                                            entity links
+                                                        </div>
+                                                        <div>
+                                                            {
+                                                                purgeResult
+                                                                    .results
+                                                                    .memories
+                                                            }{" "}
+                                                            memories
+                                                        </div>
+                                                        <div>
+                                                            {
+                                                                purgeResult
+                                                                    .results
+                                                                    .memberships
+                                                            }{" "}
+                                                            memberships
+                                                        </div>
+                                                        <div>
+                                                            {
+                                                                purgeResult
+                                                                    .results
+                                                                    .prompts
+                                                            }{" "}
+                                                            prompts
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </>
@@ -351,7 +428,9 @@ export default function UserManagementClient({
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogAction onClick={handlePurgeDialogClose}>
+                                <AlertDialogAction
+                                    onClick={handlePurgeDialogClose}
+                                >
                                     Done
                                 </AlertDialogAction>
                             </AlertDialogFooter>
@@ -368,9 +447,10 @@ export default function UserManagementClient({
                                 <AlertDialogDescription asChild>
                                     <div className="space-y-2 text-sm text-muted-foreground">
                                         <div>
-                                            Are you sure you want to permanently delete{" "}
-                                            <strong>{userToPurge?.name}</strong> (
-                                            {userToPurge?.username})?
+                                            Are you sure you want to permanently
+                                            delete{" "}
+                                            <strong>{userToPurge?.name}</strong>{" "}
+                                            ({userToPurge?.username})?
                                         </div>
                                         <div className="text-red-600 dark:text-red-400 font-medium">
                                             This will permanently delete:

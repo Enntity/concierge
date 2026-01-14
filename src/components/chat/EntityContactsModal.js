@@ -314,7 +314,10 @@ export default function EntityContactsModal({
                                             handleEntityClick(entity.id)
                                         }
                                         onKeyDown={(e) => {
-                                            if (e.key === "Enter" || e.key === " ") {
+                                            if (
+                                                e.key === "Enter" ||
+                                                e.key === " "
+                                            ) {
                                                 e.preventDefault();
                                                 handleEntityClick(entity.id);
                                             }

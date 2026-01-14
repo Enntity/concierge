@@ -683,8 +683,7 @@ export default function EntityOnboarding({
 
     // Monitor onboarding chat for messages - same pattern as regular chat
     // This ensures we get persisted messages even if SSE stream is interrupted
-    const { data: onboardingChat, refetch: refetchOnboardingChat } =
-        useGetChatById(onboardingChatId);
+    const { data: onboardingChat } = useGetChatById(onboardingChatId);
 
     // Monitor prefetched chat for messages and streaming state
     const { data: prefetchedChat, refetch: refetchPrefetchedChat } =
@@ -1420,7 +1419,10 @@ export default function EntityOnboarding({
                                         {isStreaming && !streamingContent ? (
                                             /* Sparkle loader while waiting for content */
                                             <div className="flex flex-col items-center justify-center min-h-[60px]">
-                                                <Loader size="small" delay={0} />
+                                                <Loader
+                                                    size="small"
+                                                    delay={0}
+                                                />
                                             </div>
                                         ) : (
                                             <FloatingEntityMessage

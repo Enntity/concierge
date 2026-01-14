@@ -10,12 +10,12 @@ export const AGENT_MODEL_OPTIONS = [
     { displayName: "O3", modelId: "oai-o3", provider: "openai" },
     {
         displayName: "Claude 4.5 Sonnet",
-        modelId: "claude-45-sonnet-vertex",
+        modelId: "claude-45-sonnet",
         provider: "anthropic",
     },
     {
-        displayName: "Claude 4.1 Opus",
-        modelId: "claude-41-opus-vertex",
+        displayName: "Claude 4.5 Opus",
+        modelId: "claude-45-opus",
         provider: "anthropic",
     },
     {

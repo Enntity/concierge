@@ -7,16 +7,17 @@ const taxonomySets = [
 ];
 
 const LLM_IDENTIFIERS = {
-    gpt35turbo: "gpt35turbo",
     gpt4o: "gpt4o",
     gpt4omini: "gpt4omini",
-    gpt4: "gpt4",
-    gpt432k: "gpt432k",
-    claude3haiku: "claude3haiku",
-    claude35sonnet: "claude35sonnet",
-    claude3opus: "claude3opus",
-    o1: "o1",
+    gpt51: "gpt51",
+    gpt52: "gpt52",
+    claude45sonnet: "claude45sonnet",
+    claude45opus: "claude45opus",
     o3mini: "o3mini",
+    gemini25flash: "gemini25flash",
+    gemini25pro: "gemini25pro",
+    gemini30flash: "gemini30flash",
+    gemini30pro: "gemini30pro",
 };
 
 const config = {
@@ -41,18 +42,10 @@ const config = {
                 isDefault: true,
             },
             {
-                name: "GPT-3.5 Turbo",
-                cortexModelName: "azure-turbo-chat",
+                identifier: LLM_IDENTIFIERS.gpt4omini,
+                name: "GPT 4o Mini",
                 cortexPathwayName: "run_workspace_prompt",
-                identifier: LLM_IDENTIFIERS.gpt35turbo,
-                isDefault: false,
-            },
-            {
-                name: "GPT-4",
-                cortexModelName: "azure-gpt4",
-                cortexPathwayName: "run_workspace_prompt",
-                identifier: LLM_IDENTIFIERS.gpt4,
-                isDefault: false,
+                cortexModelName: "oai-gpt4o-mini",
             },
         ],
     },

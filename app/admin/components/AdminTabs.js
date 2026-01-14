@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Layers, UserPlus } from "lucide-react";
+import { Users, Layers, UserPlus, Package } from "lucide-react";
 
 const TABS = [
     { value: "queues", label: "Queues", icon: Layers, path: "/admin/queues" },
@@ -12,6 +12,12 @@ const TABS = [
         label: "Signups",
         icon: UserPlus,
         path: "/admin/signup-requests",
+    },
+    {
+        value: "entities",
+        label: "Entities",
+        icon: Package,
+        path: "/admin/entities",
     },
 ];
 

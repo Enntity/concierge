@@ -168,7 +168,10 @@ export async function DELETE(req, { params }) {
         await User.findByIdAndDelete(userId);
         results.user = userToPurge.username;
 
-        console.log(`[Admin] Purge complete for user ${userToPurge.username}:`, results);
+        console.log(
+            `[Admin] Purge complete for user ${userToPurge.username}:`,
+            results,
+        );
 
         return NextResponse.json({
             success: true,
