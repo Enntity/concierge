@@ -270,6 +270,32 @@ const InlineEmotionDisplay = ({ emotion, children }) => {
         };
     }, []);
 
+    // Close bubble on tap anywhere else (mobile only)
+    useEffect(() => {
+        if (!showBubble || !isTouchDevice.current) return;
+
+        const handleDocumentTouch = (e) => {
+            // Check if the tap was outside this emotion span
+            if (textRef.current && !textRef.current.contains(e.target)) {
+                setShowBubble(false);
+                setIsUnderlined(false);
+                if (autoDismissRef.current) {
+                    clearTimeout(autoDismissRef.current);
+                }
+            }
+        };
+
+        // Use a small delay to prevent immediate closing from the same tap that opened it
+        const timeoutId = setTimeout(() => {
+            document.addEventListener("touchstart", handleDocumentTouch);
+        }, 10);
+
+        return () => {
+            clearTimeout(timeoutId);
+            document.removeEventListener("touchstart", handleDocumentTouch);
+        };
+    }, [showBubble]);
+
     useEffect(() => {
         if (showBubble && textRef.current && bubbleRef.current) {
             const textRect = textRef.current.getBoundingClientRect();

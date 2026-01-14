@@ -20,11 +20,14 @@ function getFallbackGreeting(user) {
     return `Good ${timeOfDay}, ${userName}! It's ${dateStr}.`;
 }
 
-export async function GET(req) {
+export async function POST(req) {
     let user;
 
     try {
         user = await getCurrentUser();
+        const body = await req.json();
+        const { userInfo } = body;
+
         console.log(
             "[Greeting] User:",
             user?._id,
@@ -87,12 +90,30 @@ export async function GET(req) {
 
         const client = await getClient();
 
-        // Get current time info for the greeting
-        const now = new Date();
-        const hour = now.getHours();
-        const timeOfDay =
-            hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
-        const dayOfWeek = now.toLocaleDateString("en-US", { weekday: "long" });
+        // Parse userInfo to get time of day info, fallback to server time if not provided
+        let timeOfDay = "day";
+        let dayOfWeek = "today";
+        if (userInfo) {
+            try {
+                const parsed = JSON.parse(userInfo);
+                timeOfDay = parsed?.datetime?.timeOfDay || "day";
+                dayOfWeek = parsed?.datetime?.dayOfWeek || "today";
+            } catch (e) {
+                // Use server time as fallback
+                const now = new Date();
+                const hour = now.getHours();
+                timeOfDay =
+                    hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+                dayOfWeek = now.toLocaleDateString("en-US", { weekday: "long" });
+            }
+        } else {
+            // Use server time as fallback
+            const now = new Date();
+            const hour = now.getHours();
+            timeOfDay =
+                hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+            dayOfWeek = now.toLocaleDateString("en-US", { weekday: "long" });
+        }
 
         const userName = user.name?.split(" ")[0] || "friend";
         const prompt = `Generate a warm, friendly greeting (1-2 sentences) for ${userName}'s home dashboard. It's ${timeOfDay} on ${dayOfWeek}. 
@@ -125,6 +146,7 @@ Be casual, warm, and natural. Vary your style. Keep it brief. Just output the gr
                 contextId: user.contextId,
                 entityId: entityId,
                 stream: false,
+                userInfo,
             },
         });
 

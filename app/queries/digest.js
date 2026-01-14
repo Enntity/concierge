@@ -1,11 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "../utils/axios-client";
+import { composeUserDateTimeInfo } from "../../src/utils/datetimeUtils";
 
 export function useHomeGreeting() {
     const query = useQuery({
         queryKey: ["homeGreeting"],
         queryFn: async () => {
-            const { data } = await axios.get(`/api/users/me/greeting`);
+            const userInfo = composeUserDateTimeInfo();
+            const { data } = await axios.post(`/api/users/me/greeting`, {
+                userInfo,
+            });
             return data?.greeting || null;
         },
         staleTime: 5 * 60 * 1000, // 5 minutes
