@@ -9,6 +9,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { AuthContext } from "../App";
 import ChatBox from "../components/chat/ChatBox";
 import NotificationButton from "../components/notifications/NotificationButton";
+import StreamingAvatarOverlay from "../components/StreamingAvatarOverlay";
 import Tos from "../components/Tos";
 import UserOptions from "../components/UserOptions";
 import { LanguageContext } from "../contexts/LanguageProvider";
@@ -236,6 +237,8 @@ export default function Layout({ children }) {
                                     theme={theme === "dark" ? "dark" : "light"}
                                     transition={Flip}
                                 />
+                                {/* Streaming Avatar Overlay - floats over content on both desktop and mobile */}
+                                <StreamingAvatarOverlay />
                             </main>
                         </ProgressProvider>
                         <Footer />

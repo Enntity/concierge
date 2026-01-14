@@ -104,7 +104,9 @@ export async function POST(req) {
                 const hour = now.getHours();
                 timeOfDay =
                     hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
-                dayOfWeek = now.toLocaleDateString("en-US", { weekday: "long" });
+                dayOfWeek = now.toLocaleDateString("en-US", {
+                    weekday: "long",
+                });
             }
         } else {
             // Use server time as fallback
