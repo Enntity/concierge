@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import SortableHeaderButton from "@/src/components/common/SortableHeaderButton";
 import {
     Pagination,
     PaginationContent,
@@ -40,11 +41,35 @@ export function AdminTableBody({ children }) {
     );
 }
 
-export function AdminTableHeaderCell({ children }) {
+export function AdminTableHeaderCell({ children, className = "" }) {
     return (
-        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <th
+            className={`px-3 py-2 sm:px-6 sm:py-3 text-left text-[11px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${className}`}
+        >
             {children}
         </th>
+    );
+}
+
+export function AdminSortableHeader({
+    children,
+    sortKey,
+    currentSort,
+    currentDirection,
+    onSort,
+    className = "",
+}) {
+    return (
+        <AdminTableHeaderCell className={className}>
+            <SortableHeaderButton
+                sortKey={sortKey}
+                currentSort={currentSort}
+                currentDirection={currentDirection}
+                onSort={onSort}
+            >
+                {children}
+            </SortableHeaderButton>
+        </AdminTableHeaderCell>
     );
 }
 
@@ -58,7 +83,9 @@ export function AdminTableRow({ children }) {
 
 export function AdminTableCell({ children, className = "" }) {
     return (
-        <td className={`px-6 py-4 whitespace-nowrap text-sm ${className}`}>
+        <td
+            className={`px-3 py-2 sm:px-6 sm:py-3 whitespace-normal sm:whitespace-nowrap align-top text-xs sm:text-sm ${className}`}
+        >
             {children}
         </td>
     );
@@ -69,7 +96,7 @@ export function AdminTableEmpty({ colSpan, message = "No data found" }) {
         <tr>
             <td
                 colSpan={colSpan}
-                className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
+                className="px-3 py-6 sm:px-6 sm:py-8 text-center text-sm text-gray-500 dark:text-gray-400"
             >
                 {message}
             </td>
@@ -91,7 +118,7 @@ export function AdminPagination({ currentPage, totalPages, basePath, search }) {
     );
 
     return (
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="px-3 py-3 sm:px-6 sm:py-4 border-t border-gray-200 dark:border-gray-700">
             <Pagination>
                 <PaginationContent>
                     <PaginationItem>

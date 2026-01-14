@@ -43,6 +43,9 @@ export default async function UsersPage({ searchParams }) {
         role: user.role || "user",
         blocked: user.blocked === true,
         createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
+        lastActiveAt: user.lastActiveAt
+            ? user.lastActiveAt.toISOString()
+            : null,
     }));
 
     return (

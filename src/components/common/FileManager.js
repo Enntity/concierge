@@ -4,16 +4,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import i18next from "i18next";
-import {
-    Check,
-    ArrowUpDown,
-    ChevronUp,
-    ChevronDown,
-    Download,
-    FileText,
-    Loader2,
-    Upload,
-} from "lucide-react";
+import { Check, Download, FileText, Loader2, Upload } from "lucide-react";
 import { getFileIcon } from "@/src/utils/mediaUtils";
 import {
     useFilePreview,
@@ -59,6 +50,7 @@ import { useItemSelection } from "@/src/components/images/hooks/useItemSelection
 import BulkActionsBar from "@/src/components/common/BulkActionsBar";
 import FilterInput from "@/src/components/common/FilterInput";
 import EmptyState from "@/src/components/common/EmptyState";
+import SortableHeaderButton from "@/src/components/common/SortableHeaderButton";
 import { Spinner } from "@/components/ui/spinner";
 
 // ============================================================================
@@ -149,42 +141,6 @@ export function createFileId(file) {
 // ============================================================================
 // Sub-components
 // ============================================================================
-
-/**
- * Sortable column header component
- */
-function SortableHeader({
-    children,
-    sortKey,
-    currentSort,
-    currentDirection,
-    onSort,
-    className = "",
-}) {
-    const isRtl = i18next.language === "ar";
-    const isActive = currentSort === sortKey;
-    const Icon = isActive
-        ? currentDirection === "asc"
-            ? ChevronUp
-            : ChevronDown
-        : ArrowUpDown;
-
-    return (
-        <TableHead
-            className={`h-9 px-2 sm:px-3 ${isRtl ? "text-right" : "text-left"} ${className}`}
-        >
-            <button
-                onClick={() => onSort(sortKey)}
-                className={`flex items-center gap-1.5 hover:text-gray-900 dark:hover:text-gray-100 transition-colors text-gray-600 dark:text-gray-400 ${isRtl ? "flex-row-reverse" : ""}`}
-            >
-                {children}
-                <Icon
-                    className={`h-3.5 w-3.5 ${isActive ? "text-sky-600 dark:text-sky-400" : ""}`}
-                />
-            </button>
-        </TableHead>
-    );
-}
 
 /**
  * Hover preview component
@@ -1089,14 +1045,18 @@ export default function FileManager({
                                     )}
                                     <TableHead className="h-9 w-8 sm:w-10 px-1 sm:px-2"></TableHead>
                                     {enableSort ? (
-                                        <SortableHeader
-                                            sortKey="filename"
-                                            currentSort={sortKey}
-                                            currentDirection={sortDirection}
-                                            onSort={handleSort}
+                                        <TableHead
+                                            className={`h-9 px-2 sm:px-3 ${isRtl ? "text-right" : "text-left"}`}
                                         >
-                                            {t("Filename")}
-                                        </SortableHeader>
+                                            <SortableHeaderButton
+                                                sortKey="filename"
+                                                currentSort={sortKey}
+                                                currentDirection={sortDirection}
+                                                onSort={handleSort}
+                                            >
+                                                {t("Filename")}
+                                            </SortableHeaderButton>
+                                        </TableHead>
                                     ) : (
                                         <TableHead
                                             className={`h-9 px-2 sm:px-3 ${isRtl ? "text-right" : "text-left"}`}
@@ -1106,15 +1066,20 @@ export default function FileManager({
                                     )}
                                     {showDateColumn &&
                                         (enableSort ? (
-                                            <SortableHeader
-                                                sortKey="date"
-                                                currentSort={sortKey}
-                                                currentDirection={sortDirection}
-                                                onSort={handleSort}
-                                                className="hidden sm:table-cell"
+                                            <TableHead
+                                                className={`h-9 px-2 sm:px-3 hidden sm:table-cell ${isRtl ? "text-right" : "text-left"}`}
                                             >
-                                                {t("Date")}
-                                            </SortableHeader>
+                                                <SortableHeaderButton
+                                                    sortKey="date"
+                                                    currentSort={sortKey}
+                                                    currentDirection={
+                                                        sortDirection
+                                                    }
+                                                    onSort={handleSort}
+                                                >
+                                                    {t("Date")}
+                                                </SortableHeaderButton>
+                                            </TableHead>
                                         ) : (
                                             <TableHead
                                                 className={`h-9 px-2 sm:px-3 hidden sm:table-cell ${isRtl ? "text-right" : "text-left"}`}
@@ -1123,15 +1088,16 @@ export default function FileManager({
                                             </TableHead>
                                         ))}
                                     {showPermanentColumn && (
-                                        <SortableHeader
-                                            sortKey="permanent"
-                                            currentSort={sortKey}
-                                            currentDirection={sortDirection}
-                                            onSort={handleSort}
-                                            className="h-9 w-10 sm:w-12 px-1 sm:px-2"
-                                        >
-                                            {t("Keep")}
-                                        </SortableHeader>
+                                        <TableHead className="h-9 w-10 sm:w-12 px-1 sm:px-2">
+                                            <SortableHeaderButton
+                                                sortKey="permanent"
+                                                currentSort={sortKey}
+                                                currentDirection={sortDirection}
+                                                onSort={handleSort}
+                                            >
+                                                {t("Keep")}
+                                            </SortableHeaderButton>
+                                        </TableHead>
                                     )}
                                     {rowActions && (
                                         <TableHead className="h-9 w-10 px-1 sm:px-2"></TableHead>

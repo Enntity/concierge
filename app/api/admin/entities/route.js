@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../utils/auth";
 import { getEntitiesCollection } from "../../entities/_lib";
 import { getContinuityMemoriesCollection } from "../../entities/[entityId]/memory/_lib";
+import User from "../../models/user";
 
 /**
  * GET /api/admin/entities
@@ -27,6 +28,29 @@ export async function GET(req) {
                 await getContinuityMemoriesCollection();
 
             const entities = await collection.find({}).toArray();
+            const assocUserIds = Array.from(
+                new Set(
+                    entities.flatMap((entity) =>
+                        Array.isArray(entity.assocUserIds)
+                            ? entity.assocUserIds
+                            : [],
+                    ),
+                ),
+            );
+
+            const assocUserMap = new Map();
+            if (assocUserIds.length > 0) {
+                const users = await User.find(
+                    { contextId: { $in: assocUserIds } },
+                    "contextId username name",
+                ).lean();
+                users.forEach((user) => {
+                    assocUserMap.set(
+                        user.contextId,
+                        user.username || user.name || user.contextId,
+                    );
+                });
+            }
 
             const entitiesData = await Promise.all(
                 entities.map(async (e) => {
@@ -39,6 +63,9 @@ export async function GET(req) {
                     return {
                         ...entityData,
                         assocUserIds: entityData.assocUserIds || [],
+                        assocUserLogins: (entityData.assocUserIds || []).map(
+                            (id) => assocUserMap.get(id) || id,
+                        ),
                         memoryCount,
                         name: entityData.name || "Unnamed",
                     };

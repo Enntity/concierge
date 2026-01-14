@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
     Select,
@@ -10,14 +10,23 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Ban, CheckCircle, Trash2, Loader2 } from "lucide-react";
+import { Toggle } from "@/components/ui/toggle";
+import FilterInput from "@/src/components/common/FilterInput";
+import {
+    Ban,
+    CheckCircle,
+    Trash2,
+    Loader2,
+    Clock,
+    ShieldCheck,
+} from "lucide-react";
 import {
     AdminTableContainer,
     AdminTable,
     AdminTableHead,
     AdminTableBody,
     AdminTableHeaderCell,
+    AdminSortableHeader,
     AdminTableRow,
     AdminTableCell,
     AdminTableEmpty,
@@ -47,6 +56,10 @@ export default function UserManagementClient({
     const [userToPurge, setUserToPurge] = useState(null);
     const [isPurging, setIsPurging] = useState(false);
     const [purgeResult, setPurgeResult] = useState(null); // { success: boolean, results?: object, error?: string }
+    const [roleFilter, setRoleFilter] = useState("all");
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [sortBy, setSortBy] = useState("lastActiveAt");
+    const [sortDir, setSortDir] = useState("desc");
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -108,6 +121,14 @@ export default function UserManagementClient({
         router.push(`/admin/users?${params.toString()}`);
     };
 
+    const handleClearSearch = () => {
+        setSearch("");
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("search");
+        params.set("page", "1");
+        router.push(`/admin/users?${params.toString()}`);
+    };
+
     const handlePurgeClick = (user) => {
         setUserToPurge(user);
         setPurgeResult(null);
@@ -149,53 +170,206 @@ export default function UserManagementClient({
         setPurgeResult(null);
     };
 
+    const formatLastLogin = (dateString) => {
+        if (!dateString) return "Never";
+        const date = new Date(dateString);
+        return date.toLocaleString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+    const handleSort = (key) => {
+        if (key === sortBy) {
+            setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+            return;
+        }
+        setSortBy(key);
+        setSortDir(key === "lastActiveAt" ? "desc" : "asc");
+    };
+
+    const visibleUsers = useMemo(() => {
+        const filtered = users.filter((user) => {
+            const roleMatch =
+                roleFilter === "all" || (user.role || "user") === roleFilter;
+            const statusMatch =
+                statusFilter === "all" ||
+                (statusFilter === "blocked" && user.blocked) ||
+                (statusFilter === "active" && !user.blocked);
+            return roleMatch && statusMatch;
+        });
+
+        const sorted = [...filtered].sort((a, b) => {
+            const direction = sortDir === "desc" ? -1 : 1;
+            if (sortBy === "name") {
+                return (
+                    a.name.localeCompare(b.name, "en", {
+                        sensitivity: "base",
+                    }) * direction
+                );
+            }
+            if (sortBy === "username") {
+                return (
+                    a.username.localeCompare(b.username, "en", {
+                        sensitivity: "base",
+                    }) * direction
+                );
+            }
+            const aLast = a.lastActiveAt
+                ? new Date(a.lastActiveAt).getTime()
+                : 0;
+            const bLast = b.lastActiveAt
+                ? new Date(b.lastActiveAt).getTime()
+                : 0;
+            return (aLast - bLast) * direction;
+        });
+
+        return sorted;
+    }, [users, roleFilter, statusFilter, sortBy, sortDir]);
+
     return (
         <div className="space-y-6">
-            <form onSubmit={handleSearch} className="flex gap-2">
-                <Input
-                    type="text"
+            <form
+                onSubmit={handleSearch}
+                className="flex flex-col gap-2 sm:flex-row"
+            >
+                <FilterInput
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={setSearch}
+                    onClear={handleClearSearch}
                     placeholder="Search by name or username..."
                     className="flex-grow"
                 />
-                <Button type="submit">Search</Button>
+                <Button type="submit" className="sm:w-auto w-full">
+                    Search
+                </Button>
             </form>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger className="w-full sm:w-[160px]">
+                        <SelectValue placeholder="Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All roles</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="user">User</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-[160px]">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="blocked">Blocked</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="lastActiveAt">Last login</SelectItem>
+                        <SelectItem value="name">Name</SelectItem>
+                        <SelectItem value="username">Username</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Select value={sortDir} onValueChange={setSortDir}>
+                    <SelectTrigger className="w-full sm:w-[150px]">
+                        <SelectValue placeholder="Order" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="desc">Descending</SelectItem>
+                        <SelectItem value="asc">Ascending</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
 
             <AdminTableContainer>
                 <AdminTable>
                     <AdminTableHead>
                         <tr>
-                            <AdminTableHeaderCell>Name</AdminTableHeaderCell>
-                            <AdminTableHeaderCell>
+                            <AdminSortableHeader
+                                sortKey="name"
+                                currentSort={sortBy}
+                                currentDirection={sortDir}
+                                onSort={handleSort}
+                            >
+                                Name
+                            </AdminSortableHeader>
+                            <AdminSortableHeader
+                                sortKey="username"
+                                currentSort={sortBy}
+                                currentDirection={sortDir}
+                                onSort={handleSort}
+                                className="hidden sm:table-cell"
+                            >
                                 Username
+                            </AdminSortableHeader>
+                            <AdminTableHeaderCell className="hidden md:table-cell">
+                                Role
                             </AdminTableHeaderCell>
-                            <AdminTableHeaderCell>Role</AdminTableHeaderCell>
-                            <AdminTableHeaderCell>Status</AdminTableHeaderCell>
+                            <AdminTableHeaderCell className="hidden md:table-cell">
+                                Status
+                            </AdminTableHeaderCell>
+                            <AdminSortableHeader
+                                sortKey="lastActiveAt"
+                                currentSort={sortBy}
+                                currentDirection={sortDir}
+                                onSort={handleSort}
+                                className="hidden lg:table-cell"
+                            >
+                                Last Login
+                            </AdminSortableHeader>
                             <AdminTableHeaderCell>Actions</AdminTableHeaderCell>
                         </tr>
                     </AdminTableHead>
                     <AdminTableBody>
-                        {users.length === 0 ? (
+                        {visibleUsers.length === 0 ? (
                             <AdminTableEmpty
-                                colSpan={5}
+                                colSpan={6}
                                 message="No users found"
                             />
                         ) : (
-                            users.map((user) => (
+                            visibleUsers.map((user) => (
                                 <AdminTableRow key={user._id}>
                                     <AdminTableCell className="font-medium text-gray-900 dark:text-gray-100">
-                                        {user.name}
+                                        <div className="space-y-1">
+                                            <div>{user.name}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 sm:hidden">
+                                                <div>{user.username}</div>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-800 dark:bg-sky-900 dark:text-sky-200">
+                                                        {user.role || "user"}
+                                                    </span>
+                                                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                                        {user.blocked
+                                                            ? "Blocked"
+                                                            : "Active"}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                                                        <Clock className="h-3 w-3" />
+                                                        {formatLastLogin(
+                                                            user.lastActiveAt,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </AdminTableCell>
-                                    <AdminTableCell className="text-gray-500 dark:text-gray-400">
+                                    <AdminTableCell className="hidden sm:table-cell text-gray-500 dark:text-gray-400">
                                         {user.username}
                                     </AdminTableCell>
-                                    <AdminTableCell>
+                                    <AdminTableCell className="hidden md:table-cell">
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200">
                                             {user.role || "user"}
                                         </span>
                                     </AdminTableCell>
-                                    <AdminTableCell>
+                                    <AdminTableCell className="hidden md:table-cell">
                                         {user.blocked ? (
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
                                                 Blocked
@@ -206,33 +380,42 @@ export default function UserManagementClient({
                                             </span>
                                         )}
                                     </AdminTableCell>
+                                    <AdminTableCell className="hidden lg:table-cell text-gray-500 dark:text-gray-400">
+                                        <span
+                                            title={formatLastLogin(
+                                                user.lastActiveAt,
+                                            )}
+                                        >
+                                            {formatLastLogin(user.lastActiveAt)}
+                                        </span>
+                                    </AdminTableCell>
                                     <AdminTableCell>
-                                        <div className="flex gap-2">
-                                            <Select
-                                                value={user.role || "user"}
-                                                onValueChange={(v) =>
+                                        <div className="flex flex-wrap gap-2">
+                                            <Toggle
+                                                pressed={
+                                                    (user.role || "user") ===
+                                                    "admin"
+                                                }
+                                                onPressedChange={(pressed) =>
                                                     handleRoleChange(
                                                         user._id,
-                                                        v,
+                                                        pressed
+                                                            ? "admin"
+                                                            : "user",
                                                     )
                                                 }
                                                 disabled={
                                                     user._id ===
                                                     currentUser?._id
                                                 }
+                                                size="sm"
+                                                variant="outline"
+                                                className="w-9 px-0"
+                                                title="Toggle admin role"
+                                                aria-label="Toggle admin role"
                                             >
-                                                <SelectTrigger className="w-[120px]">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="user">
-                                                        User
-                                                    </SelectItem>
-                                                    <SelectItem value="admin">
-                                                        Admin
-                                                    </SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                                <ShieldCheck className="h-4 w-4" />
+                                            </Toggle>
                                             <Button
                                                 onClick={() =>
                                                     handleBlockToggle(
@@ -249,19 +432,23 @@ export default function UserManagementClient({
                                                         ? "default"
                                                         : "destructive"
                                                 }
-                                                size="sm"
-                                                className="flex items-center gap-2"
+                                                size="icon"
+                                                className="h-9 w-9"
+                                                aria-label={
+                                                    user.blocked
+                                                        ? "Unblock user"
+                                                        : "Block user"
+                                                }
+                                                title={
+                                                    user.blocked
+                                                        ? "Unblock user"
+                                                        : "Block user"
+                                                }
                                             >
                                                 {user.blocked ? (
-                                                    <>
-                                                        <CheckCircle className="h-4 w-4" />
-                                                        Unblock
-                                                    </>
+                                                    <CheckCircle className="h-4 w-4" />
                                                 ) : (
-                                                    <>
-                                                        <Ban className="h-4 w-4" />
-                                                        Block
-                                                    </>
+                                                    <Ban className="h-4 w-4" />
                                                 )}
                                             </Button>
                                             <Button
@@ -276,6 +463,7 @@ export default function UserManagementClient({
                                                 size="sm"
                                                 className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950"
                                                 title="Permanently delete user and all data"
+                                                aria-label="Permanently delete user and all data"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>

@@ -1,15 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, Loader2 } from "lucide-react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Trash2, Loader2, Pencil, Check, X } from "lucide-react";
+import FilterInput from "@/src/components/common/FilterInput";
 import {
     AdminTableContainer,
     AdminTable,
     AdminTableHead,
     AdminTableBody,
     AdminTableHeaderCell,
+    AdminSortableHeader,
     AdminTableRow,
     AdminTableCell,
     AdminTableEmpty,
@@ -37,6 +46,9 @@ export default function EntitiesManagementClient() {
     const [purgeOrphanedResult, setPurgeOrphanedResult] = useState(null);
     const [editingEntityId, setEditingEntityId] = useState(null);
     const [editAssocUserIds, setEditAssocUserIds] = useState("");
+    const [filterText, setFilterText] = useState("");
+    const [sortBy, setSortBy] = useState("memoryCount");
+    const [sortDir, setSortDir] = useState("desc");
 
     useEffect(() => {
         fetchEntities();
@@ -163,6 +175,80 @@ export default function EntitiesManagementClient() {
         setEditAssocUserIds("");
     };
 
+    const getAssocUserDisplay = (entity) => {
+        if (
+            Array.isArray(entity.assocUserLogins) &&
+            entity.assocUserLogins.length
+        ) {
+            return entity.assocUserLogins;
+        }
+        if (Array.isArray(entity.assocUserIds) && entity.assocUserIds.length) {
+            return entity.assocUserIds;
+        }
+        return [];
+    };
+
+    const handleSort = (key) => {
+        if (key === sortBy) {
+            setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+            return;
+        }
+        setSortBy(key);
+        setSortDir(
+            key === "memoryCount" || key === "assocUsers" ? "desc" : "asc",
+        );
+    };
+
+    const visibleEntities = useMemo(() => {
+        const query = filterText.trim().toLowerCase();
+        const filtered = entities.filter((entity) => {
+            if (!query) return true;
+            const assocUsers = getAssocUserDisplay(entity).join(", ");
+            return (
+                entity.name?.toLowerCase().includes(query) ||
+                entity.id?.toLowerCase().includes(query) ||
+                assocUsers.toLowerCase().includes(query)
+            );
+        });
+
+        const sorted = [...filtered].sort((a, b) => {
+            const direction = sortDir === "desc" ? -1 : 1;
+            if (sortBy === "name") {
+                return (
+                    (a.name || "").localeCompare(b.name || "", "en", {
+                        sensitivity: "base",
+                    }) * direction
+                );
+            }
+            if (sortBy === "id") {
+                return (
+                    (a.id || "").localeCompare(b.id || "", "en", {
+                        sensitivity: "base",
+                    }) * direction
+                );
+            }
+            if (sortBy === "type") {
+                const aType = a.isSystem ? "system" : "user";
+                const bType = b.isSystem ? "system" : "user";
+                return (
+                    aType.localeCompare(bType, "en", {
+                        sensitivity: "base",
+                    }) * direction
+                );
+            }
+            if (sortBy === "assocUsers") {
+                const aCount = getAssocUserDisplay(a).length;
+                const bCount = getAssocUserDisplay(b).length;
+                return (aCount - bCount) * direction;
+            }
+            const aCount = a.memoryCount || 0;
+            const bCount = b.memoryCount || 0;
+            return (aCount - bCount) * direction;
+        });
+
+        return sorted;
+    }, [entities, filterText, sortBy, sortDir]);
+
     const orphanedCount = entities.filter(
         (e) => !e.isSystem && (!e.assocUserIds || e.assocUserIds.length === 0),
     ).length;
@@ -177,7 +263,7 @@ export default function EntitiesManagementClient() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                 <div>
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                         Entities
@@ -190,22 +276,81 @@ export default function EntitiesManagementClient() {
                     <Button
                         onClick={() => setPurgeOrphanedOpen(true)}
                         variant="destructive"
+                        className="w-full sm:w-auto"
                     >
                         Purge {orphanedCount} Orphaned
                     </Button>
                 )}
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <FilterInput
+                    value={filterText}
+                    onChange={setFilterText}
+                    onClear={() => setFilterText("")}
+                    placeholder="Filter by name, ID, or user..."
+                    className="flex-1"
+                />
+                <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                        <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="memoryCount">Memories</SelectItem>
+                        <SelectItem value="name">Name</SelectItem>
+                        <SelectItem value="id">ID</SelectItem>
+                        <SelectItem value="type">Type</SelectItem>
+                        <SelectItem value="assocUsers">Assoc users</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Select value={sortDir} onValueChange={setSortDir}>
+                    <SelectTrigger className="w-full sm:w-[150px]">
+                        <SelectValue placeholder="Order" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="desc">Descending</SelectItem>
+                        <SelectItem value="asc">Ascending</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
             <AdminTableContainer>
                 <AdminTable>
                     <AdminTableHead>
                         <tr>
-                            <AdminTableHeaderCell>Name</AdminTableHeaderCell>
-                            <AdminTableHeaderCell>ID</AdminTableHeaderCell>
-                            <AdminTableHeaderCell>Type</AdminTableHeaderCell>
-                            <AdminTableHeaderCell>
+                            <AdminSortableHeader
+                                sortKey="name"
+                                currentSort={sortBy}
+                                currentDirection={sortDir}
+                                onSort={handleSort}
+                            >
+                                Name
+                            </AdminSortableHeader>
+                            <AdminSortableHeader
+                                sortKey="id"
+                                currentSort={sortBy}
+                                currentDirection={sortDir}
+                                onSort={handleSort}
+                                className="hidden md:table-cell"
+                            >
+                                ID
+                            </AdminSortableHeader>
+                            <AdminSortableHeader
+                                sortKey="type"
+                                currentSort={sortBy}
+                                currentDirection={sortDir}
+                                onSort={handleSort}
+                            >
+                                Type
+                            </AdminSortableHeader>
+                            <AdminSortableHeader
+                                sortKey="memoryCount"
+                                currentSort={sortBy}
+                                currentDirection={sortDir}
+                                onSort={handleSort}
+                                className="hidden md:table-cell"
+                            >
                                 Memories
-                            </AdminTableHeaderCell>
+                            </AdminSortableHeader>
                             <AdminTableHeaderCell>
                                 Associated Users
                             </AdminTableHeaderCell>
@@ -213,18 +358,34 @@ export default function EntitiesManagementClient() {
                         </tr>
                     </AdminTableHead>
                     <AdminTableBody>
-                        {entities.length === 0 ? (
+                        {visibleEntities.length === 0 ? (
                             <AdminTableEmpty
                                 colSpan={6}
                                 message="No entities found"
                             />
                         ) : (
-                            entities.map((entity) => (
+                            visibleEntities.map((entity) => (
                                 <AdminTableRow key={entity.id}>
                                     <AdminTableCell className="font-medium text-gray-900 dark:text-gray-100">
-                                        {entity.name || "Unnamed"}
+                                        <div className="space-y-1">
+                                            <div>
+                                                {entity.name || "Unnamed"}
+                                            </div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 md:hidden">
+                                                <div className="font-mono break-all text-gray-700 dark:text-gray-200">
+                                                    {entity.id}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span>
+                                                        Memories:{" "}
+                                                        {entity.memoryCount ||
+                                                            0}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </AdminTableCell>
-                                    <AdminTableCell className="font-mono text-xs">
+                                    <AdminTableCell className="hidden md:table-cell font-mono text-xs text-gray-700 dark:text-gray-200">
                                         {entity.id}
                                     </AdminTableCell>
                                     <AdminTableCell>
@@ -236,12 +397,12 @@ export default function EntitiesManagementClient() {
                                             <Badge>User</Badge>
                                         )}
                                     </AdminTableCell>
-                                    <AdminTableCell className="text-gray-600 dark:text-gray-400">
+                                    <AdminTableCell className="hidden md:table-cell text-gray-600 dark:text-gray-400">
                                         {entity.memoryCount || 0}
                                     </AdminTableCell>
                                     <AdminTableCell>
                                         {editingEntityId === entity.id ? (
-                                            <div className="flex gap-2">
+                                            <div className="flex flex-col gap-2 sm:flex-row">
                                                 <Input
                                                     value={editAssocUserIds}
                                                     onChange={(e) =>
@@ -250,7 +411,7 @@ export default function EntitiesManagementClient() {
                                                         )
                                                     }
                                                     placeholder="Comma-separated user IDs"
-                                                    className="w-64"
+                                                    className="w-full sm:w-64"
                                                 />
                                                 <Button
                                                     size="sm"
@@ -259,28 +420,44 @@ export default function EntitiesManagementClient() {
                                                             entity.id,
                                                         )
                                                     }
+                                                    className="flex items-center gap-2"
                                                 >
-                                                    Save
+                                                    <Check className="h-4 w-4" />
+                                                    <span className="hidden sm:inline">
+                                                        Save
+                                                    </span>
                                                 </Button>
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
                                                     onClick={handleCancelEdit}
+                                                    className="flex items-center gap-2"
                                                 >
-                                                    Cancel
+                                                    <X className="h-4 w-4" />
+                                                    <span className="hidden sm:inline">
+                                                        Cancel
+                                                    </span>
                                                 </Button>
                                             </div>
                                         ) : (
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-gray-600 dark:text-gray-400">
-                                                    {Array.isArray(
-                                                        entity.assocUserIds,
-                                                    ) &&
-                                                    entity.assocUserIds.length >
-                                                        0
-                                                        ? entity.assocUserIds.join(
-                                                              ", ",
-                                                          )
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span
+                                                    className="text-sm text-gray-600 dark:text-gray-400"
+                                                    title={
+                                                        Array.isArray(
+                                                            entity.assocUserIds,
+                                                        )
+                                                            ? entity.assocUserIds.join(
+                                                                  ", ",
+                                                              )
+                                                            : ""
+                                                    }
+                                                >
+                                                    {getAssocUserDisplay(entity)
+                                                        .length > 0
+                                                        ? getAssocUserDisplay(
+                                                              entity,
+                                                          ).join(", ")
                                                         : entity.isSystem
                                                           ? "System"
                                                           : "None (orphaned)"}
@@ -294,8 +471,12 @@ export default function EntitiesManagementClient() {
                                                                 entity,
                                                             )
                                                         }
+                                                        className="flex items-center gap-2"
                                                     >
-                                                        Edit
+                                                        <Pencil className="h-4 w-4" />
+                                                        <span className="hidden sm:inline">
+                                                            Edit
+                                                        </span>
                                                     </Button>
                                                 )}
                                             </div>
@@ -310,6 +491,7 @@ export default function EntitiesManagementClient() {
                                                 variant="ghost"
                                                 size="sm"
                                                 className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950"
+                                                aria-label="Delete entity"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>

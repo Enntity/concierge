@@ -34,12 +34,12 @@ export default function AdminTabs({ children }) {
                 value={activeTab}
                 onValueChange={(v) => router.push(`/admin/${v}`)}
             >
-                <TabsList className="inline-flex h-10 items-center justify-start gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                <TabsList className="inline-flex h-10 w-full items-center justify-start gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg overflow-x-auto">
                     {TABS.map(({ value, label, icon: Icon }) => (
                         <TabsTrigger
                             key={value}
                             value={value}
-                            className="flex items-center gap-2 px-4"
+                            className="flex items-center gap-2 px-3 sm:px-4 shrink-0"
                         >
                             <Icon className="h-4 w-4" />
                             <span className="hidden sm:inline">{label}</span>

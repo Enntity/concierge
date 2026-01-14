@@ -16,7 +16,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import {
     Pagination,
     PaginationContent,
@@ -48,16 +47,17 @@ import {
     Filter,
     Hash,
     Loader2,
-    Search,
     User,
     XCircle,
     Hash as HashIcon,
     FileCode,
     BarChart3,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Progress } from "../../../@/components/ui/progress";
 import stringcase from "stringcase";
+import FilterInput from "@/src/components/common/FilterInput";
+import SortableHeaderButton from "@/src/components/common/SortableHeaderButton";
 
 const QUEUE_NAMES = ["task", "digest-build"];
 
@@ -300,6 +300,8 @@ export default function QueuesPage() {
     const [selectedQueue, setSelectedQueue] = useState(QUEUE_NAMES[0]);
     const [status, setStatus] = useState("all");
     const [search, setSearch] = useState("");
+    const [jobSortBy, setJobSortBy] = useState("timestamp");
+    const [jobSortDir, setJobSortDir] = useState("desc");
 
     const { data: queueStats } = useQuery({
         queryKey: [
@@ -324,6 +326,50 @@ export default function QueuesPage() {
     useEffect(() => {
         setCurrentPage(1);
     }, [status, search]);
+
+    const handleJobSort = (key) => {
+        if (key === jobSortBy) {
+            setJobSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+            return;
+        }
+        setJobSortBy(key);
+        setJobSortDir(key === "timestamp" ? "desc" : "asc");
+    };
+
+    const visibleJobs = useMemo(() => {
+        const jobs = queueStats?.jobs || [];
+        const direction = jobSortDir === "desc" ? -1 : 1;
+        return [...jobs].sort((a, b) => {
+            if (jobSortBy === "name") {
+                return (
+                    stringcase
+                        .sentencecase(a.name || "")
+                        .localeCompare(
+                            stringcase.sentencecase(b.name || ""),
+                            "en",
+                            { sensitivity: "base" },
+                        ) * direction
+                );
+            }
+            if (jobSortBy === "username") {
+                return (
+                    (a.username || "-").localeCompare(b.username || "-", "en", {
+                        sensitivity: "base",
+                    }) * direction
+                );
+            }
+            if (jobSortBy === "status") {
+                return (
+                    (a.status || "").localeCompare(b.status || "", "en", {
+                        sensitivity: "base",
+                    }) * direction
+                );
+            }
+            const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            return (aTime - bTime) * direction;
+        });
+    }, [queueStats?.jobs, jobSortBy, jobSortDir]);
 
     return (
         <div className="space-y-6">
@@ -431,18 +477,14 @@ export default function QueuesPage() {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="flex gap-4 mb-4">
-                                        <div className="relative max-w-sm">
-                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                placeholder="Search jobs..."
-                                                value={search}
-                                                onChange={(e) =>
-                                                    setSearch(e.target.value)
-                                                }
-                                                className="pl-10"
-                                            />
-                                        </div>
+                                    <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center">
+                                        <FilterInput
+                                            value={search}
+                                            onChange={setSearch}
+                                            onClear={() => setSearch("")}
+                                            placeholder="Search jobs..."
+                                            className="w-full sm:max-w-sm"
+                                        />
                                         <div className="relative">
                                             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                                             <Select
@@ -476,8 +518,30 @@ export default function QueuesPage() {
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>Job Info</TableHead>
-                                                <TableHead>Status</TableHead>
+                                                <TableHead>
+                                                    <SortableHeaderButton
+                                                        sortKey="name"
+                                                        currentSort={jobSortBy}
+                                                        currentDirection={
+                                                            jobSortDir
+                                                        }
+                                                        onSort={handleJobSort}
+                                                    >
+                                                        Job Info
+                                                    </SortableHeaderButton>
+                                                </TableHead>
+                                                <TableHead>
+                                                    <SortableHeaderButton
+                                                        sortKey="timestamp"
+                                                        currentSort={jobSortBy}
+                                                        currentDirection={
+                                                            jobSortDir
+                                                        }
+                                                        onSort={handleJobSort}
+                                                    >
+                                                        Status / Time
+                                                    </SortableHeaderButton>
+                                                </TableHead>
                                                 <TableHead>Input</TableHead>
                                                 <TableHead>
                                                     Data & Results
@@ -485,7 +549,7 @@ export default function QueuesPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {queueStats?.jobs.map((job) => (
+                                            {visibleJobs.map((job) => (
                                                 <TableRow key={job.id}>
                                                     <TableCell className="align-top">
                                                         <div className="space-y-1">
