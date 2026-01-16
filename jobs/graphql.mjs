@@ -102,23 +102,7 @@ const VISION = gql`
     }
 `;
 
-const SYS_SAVE_MEMORY = gql`
-    mutation SysSaveMemory(
-        $aiMemory: String!
-        $contextId: String!
-        $contextKey: String
-        $section: String
-    ) {
-        sys_save_memory(
-            aiMemory: $aiMemory
-            contextId: $contextId
-            contextKey: $contextKey
-            section: $section
-        ) {
-            result
-        }
-    }
-`;
+// Legacy SYS_SAVE_MEMORY removed - now using direct MongoDB access
 
 const CODE_HUMAN_INPUT = gql`
     query ($text: String, $codeRequestId: String) {
@@ -168,47 +152,7 @@ const SYS_ENTITY_AGENT = gql`
     }
 `;
 
-const COGNITIVE_INSERT = gql`
-    query CognitiveInsert(
-        $text: String
-        $file: String
-        $contextId: String
-        $docId: String
-        $chatId: String
-        $privateData: Boolean
-        $async: Boolean
-    ) {
-        cognitive_insert(
-            text: $text
-            file: $file
-            contextId: $contextId
-            docId: $docId
-            chatId: $chatId
-            privateData: $privateData
-            async: $async
-        ) {
-            result
-        }
-    }
-`;
-
-const COGNITIVE_DELETE = gql`
-    query CognitiveDelete(
-        $text: String
-        $contextId: String
-        $docId: String
-        $chatId: String
-    ) {
-        cognitive_delete(
-            text: $text
-            contextId: $contextId
-            docId: $docId
-            chatId: $chatId
-        ) {
-            result
-        }
-    }
-`;
+// Legacy COGNITIVE_INSERT and COGNITIVE_DELETE removed - no longer used
 
 const EXPAND_STORY = gql`
     query ExpandStory($text: String) {
@@ -901,8 +845,6 @@ const getWorkspaceAgentQuery = (pathwayName) => {
 
 const QUERIES = {
     AZURE_VIDEO_TRANSLATE,
-    COGNITIVE_DELETE,
-    COGNITIVE_INSERT,
     IMAGE,
     IMAGE_FLUX,
     IMAGE_GEMINI_25,
@@ -911,7 +853,6 @@ const QUERIES = {
     IMAGE_SEEDREAM4,
     VIDEO_VEO,
     VIDEO_SEEDANCE,
-    SYS_SAVE_MEMORY,
     SYS_ENTITY_AGENT,
     EXPAND_STORY,
     FORMAT_PARAGRAPH_TURBO,
@@ -958,10 +899,7 @@ const MUTATIONS = {
 export {
     AZURE_VIDEO_TRANSLATE,
     getClient,
-    COGNITIVE_INSERT,
-    COGNITIVE_DELETE,
     EXPAND_STORY,
-    SYS_SAVE_MEMORY,
     SYS_ENTITY_AGENT,
     SELECT_SERVICES,
     SUMMARY,

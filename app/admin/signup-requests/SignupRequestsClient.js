@@ -59,26 +59,37 @@ function SignupRequestRow({ request, formatDate, onApprove }) {
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-gray-400" />
-                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                        <span
+                            className="font-medium text-gray-900 dark:text-gray-100 max-w-[220px] truncate"
+                            title={request.email}
+                        >
                             {request.email}
                         </span>
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 sm:hidden">
-                        {request.name} • {request.domain} •{" "}
-                        {formatDate(request.requestedAt)}
+                        <span
+                            className="max-w-[240px] truncate block"
+                            title={`${request.name} • ${request.domain} • ${formatDate(request.requestedAt)}`}
+                        >
+                            {request.name} • {request.domain} •{" "}
+                            {formatDate(request.requestedAt)}
+                        </span>
                     </div>
                 </div>
             </AdminTableCell>
             <AdminTableCell className="hidden sm:table-cell">
                 <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-900 dark:text-gray-100">
+                    <span
+                        className="text-gray-900 dark:text-gray-100 max-w-[200px] truncate"
+                        title={request.name}
+                    >
                         {request.name}
                     </span>
                 </div>
             </AdminTableCell>
-            <AdminTableCell className="hidden md:table-cell text-gray-900 dark:text-gray-100">
-                {request.domain}
+            <AdminTableCell className="hidden md:table-cell text-gray-900 dark:text-gray-100 max-w-[200px] truncate">
+                <span title={request.domain}>{request.domain}</span>
             </AdminTableCell>
             <AdminTableCell className="hidden md:table-cell">
                 <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">

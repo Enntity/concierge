@@ -1,12 +1,16 @@
 import LLM from "../../../models/llm";
 import Prompt from "../../../models/prompt";
-import Workspace from "../../../models/workspace";
-import { getCurrentUser } from "../../../utils/auth";
+import { requireWorkspaceOwner } from "../access";
 import { republishWorkspace } from "../publish/utils";
 
 export async function POST(req, { params }) {
     const { id } = params;
-    const user = await getCurrentUser();
+
+    const ownerCheck = await requireWorkspaceOwner(id);
+    if (ownerCheck.error) {
+        return ownerCheck.error;
+    }
+    const { workspace, user } = ownerCheck;
 
     const promptParams = await req.json();
     const defaultLLM = await LLM.findOne({ isDefault: true });
@@ -17,7 +21,6 @@ export async function POST(req, { params }) {
         llm: promptParams.llm || defaultLLM._id,
     });
 
-    const workspace = await Workspace.findById(id);
     workspace.prompts.unshift(prompt._id);
     await workspace.save();
     await republishWorkspace(workspace);

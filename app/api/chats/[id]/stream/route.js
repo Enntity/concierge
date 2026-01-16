@@ -91,6 +91,23 @@ export async function POST(req, { params }) {
         // Determine entityId
         const finalEntityId = entityId || chat.selectedEntityId || "";
 
+        // Fetch entity to get preferred model if needed
+        let entityPreferredModel = null;
+        if (finalEntityId && !model && !currentUser.agentModel) {
+            try {
+                const { getEntitiesCollection } = await import(
+                    "../../../entities/_lib"
+                );
+                const { collection, client: mongoClient } =
+                    await getEntitiesCollection();
+                const entity = await collection.findOne({ id: finalEntityId });
+                entityPreferredModel = entity?.preferredModel || null;
+                await mongoClient.close().catch(() => {});
+            } catch (e) {
+                console.error("Error fetching entity for preferred model:", e);
+            }
+        }
+
         // Initialize accumulator and GraphQL client
         const accumulator = new StreamAccumulator();
         // Start thinking time tracking immediately when stream starts
@@ -122,8 +139,12 @@ export async function POST(req, { params }) {
                 stream: true,
                 entityId: finalEntityId,
                 researchMode: researchMode || chat.researchMode || false,
+                // Model priority: request > user override > entity preferred > default
                 model:
-                    model || currentUser.agentModel || "gemini-flash-3-vision",
+                    model ||
+                    currentUser.agentModel ||
+                    entityPreferredModel ||
+                    "gemini-flash-3-vision",
                 userInfo,
             },
             fetchPolicy: "network-only",

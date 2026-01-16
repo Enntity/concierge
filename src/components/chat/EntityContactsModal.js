@@ -10,7 +10,7 @@ import {
     Users,
     Trash2,
     MessageCircle,
-    Brain,
+    Settings,
 } from "lucide-react";
 import {
     Dialog,
@@ -30,6 +30,7 @@ import {
     AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import EntityIcon from "./EntityIcon";
+import EntityOptionsDialog from "./EntityOptionsDialog";
 import { useOnboarding } from "../../contexts/OnboardingContext";
 import { useGetChats, useAddChat } from "../../../app/queries/chats";
 import { useRouter } from "next/navigation";
@@ -61,6 +62,7 @@ export default function EntityContactsModal({
     const [deletedEntityIds, setDeletedEntityIds] = useState(new Set());
     const [memoryEditorEntityId, setMemoryEditorEntityId] = useState(null);
     const [memoryEditorEntityName, setMemoryEditorEntityName] = useState(null);
+    const [optionsEntity, setOptionsEntity] = useState(null);
     const firstEntityRef = useRef(null);
 
     // Aggressively refetch entities when modal opens to get fresh avatars
@@ -254,7 +256,13 @@ export default function EntityContactsModal({
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className="sm:max-w-md max-h-[80vh] flex flex-col">
+                <DialogContent
+                    className="sm:max-w-md max-h-[80vh] flex flex-col"
+                    onOpenAutoFocus={(event) => {
+                        // Prevent auto-focusing the search input to avoid mobile keyboard pop
+                        event.preventDefault();
+                    }}
+                >
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Users className="w-5 h-5" />
@@ -374,18 +382,13 @@ export default function EntityContactsModal({
                                                     e.stopPropagation();
                                                     // Close contacts modal first to avoid focus trap conflicts
                                                     onClose();
-                                                    // Then open memory editor
-                                                    setMemoryEditorEntityId(
-                                                        entity.id,
-                                                    );
-                                                    setMemoryEditorEntityName(
-                                                        entity.name,
-                                                    );
+                                                    // Then open options dialog
+                                                    setOptionsEntity(entity);
                                                 }}
                                                 className="p-1.5 rounded-md text-gray-400 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/30 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                                                title={t("Edit Memory")}
+                                                title={t("Entity Settings")}
                                             >
-                                                <Brain className="w-4 h-4" />
+                                                <Settings className="w-4 h-4" />
                                             </button>
                                             <button
                                                 onClick={(e) =>
@@ -459,6 +462,23 @@ export default function EntityContactsModal({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Entity Options Dialog */}
+            <EntityOptionsDialog
+                isOpen={!!optionsEntity}
+                onClose={() => setOptionsEntity(null)}
+                entity={optionsEntity}
+                onOpenMemoryEditor={(entityId, entityName) => {
+                    setMemoryEditorEntityId(entityId);
+                    setMemoryEditorEntityName(entityName);
+                }}
+                onEntityUpdate={(updatedEntity) => {
+                    // Refresh entities list to reflect changes
+                    if (refetchEntities) {
+                        refetchEntities();
+                    }
+                }}
+            />
 
             {/* Memory Editor */}
             <ContinuityMemoryEditor

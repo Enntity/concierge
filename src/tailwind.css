@@ -133,14 +133,7 @@
             drop-shadow(0 0 12px rgba(167, 139, 250, 0.25));
     }
 
-    /* Streaming avatar glow effect */
-    .streaming-avatar-glow {
-        box-shadow:
-            0 0 20px 3px rgba(34, 211, 238, 0.4),
-            0 0 40px 6px rgba(34, 211, 238, 0.2);
-    }
-
-    /* Streaming avatar scanline effect */
+    /* Entity overlay scanline effect */
     .streaming-avatar-scanline {
         position: absolute;
         inset: 0;

@@ -3,7 +3,7 @@ import { getEntitiesCollection } from "../_lib";
 
 /**
  * GET /api/entities/onboarding
- * Get the onboarding system entity (Enntity)
+ * Get the onboarding system entity (Vesper)
  */
 export async function GET() {
     let client;
@@ -13,9 +13,9 @@ export async function GET() {
         client = result.client;
         const { collection } = result;
 
-        // Find the Enntity system entity
+        // Find the Vesper system entity
         const entity = await collection.findOne({
-            name: { $regex: /^Enntity$/i },
+            name: { $regex: /^Vesper$/i },
             isSystem: true,
         });
 

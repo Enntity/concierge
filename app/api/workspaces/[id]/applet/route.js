@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Workspace from "@/app/api/models/workspace";
 import Applet from "@/app/api/models/applet";
 import { getWorkspace } from "../db.js";
+import { requireWorkspaceOwner } from "../access.js";
 import App, { APP_TYPES, APP_STATUS } from "@/app/api/models/app";
 // Removed unused import
 
@@ -59,8 +60,12 @@ export async function PUT(request, { params }) {
             );
         }
 
-        // Find the workspace document to access the applet reference
-        const workspaceDoc = await Workspace.findById(workspace._id);
+        const ownerCheck = await requireWorkspaceOwner(workspace._id);
+        if (ownerCheck.error) {
+            return ownerCheck.error;
+        }
+
+        const { workspace: workspaceDoc } = ownerCheck;
         if (!workspaceDoc.applet) {
             return NextResponse.json(
                 { error: "Applet not found" },

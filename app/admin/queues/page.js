@@ -395,7 +395,7 @@ export default function QueuesPage() {
                                 </CardHeader>
                                 <CardContent>
                                     {queueStats && (
-                                        <div className="grid grid-cols-4 gap-4">
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                             <div className="p-4 bg-background rounded-lg border">
                                                 <div className="flex items-center gap-2 text-sm font-medium">
                                                     <Clock className="h-4 w-4" />
@@ -553,20 +553,42 @@ export default function QueuesPage() {
                                                 <TableRow key={job.id}>
                                                     <TableCell className="align-top">
                                                         <div className="space-y-1">
-                                                            <div className="text-sm flex gap-1 font-semibold items-center">
+                                                            <div className="text-sm flex gap-1 font-semibold items-center min-w-0">
                                                                 <FileText className="h-4 w-4 mr-1" />
-                                                                {stringcase.sentencecase(
-                                                                    job.name,
-                                                                )}
+                                                                <span
+                                                                    className="truncate"
+                                                                    title={stringcase.sentencecase(
+                                                                        job.name,
+                                                                    )}
+                                                                >
+                                                                    {stringcase.sentencecase(
+                                                                        job.name,
+                                                                    )}
+                                                                </span>
                                                             </div>
-                                                            <div className="text-sm text-gray-500">
+                                                            <div className="text-sm text-gray-500 flex items-center gap-1 min-w-0">
                                                                 <User className="h-4 w-4 inline me-1" />
-                                                                {job.username ||
-                                                                    "-"}
+                                                                <span
+                                                                    className="truncate"
+                                                                    title={
+                                                                        job.username ||
+                                                                        "-"
+                                                                    }
+                                                                >
+                                                                    {job.username ||
+                                                                        "-"}
+                                                                </span>
                                                             </div>
-                                                            <div className="text-gray-500 flex items-center gap-2">
+                                                            <div className="text-gray-500 flex items-center gap-2 min-w-0">
                                                                 <Hash className="h-4 w-4" />
-                                                                {job.id}
+                                                                <span
+                                                                    className="truncate"
+                                                                    title={
+                                                                        job.id
+                                                                    }
+                                                                >
+                                                                    {job.id}
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     </TableCell>

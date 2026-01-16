@@ -6,7 +6,7 @@ import axios from "../../app/utils/axios-client";
  * Hook to manage the entity onboarding flow.
  *
  * This hook:
- * 1. Fetches the onboarding system entity (Enntity)
+ * 1. Fetches the onboarding system entity (Vesper)
  * 2. Manages onboarding state (active, completed)
  * 3. Provides handleEntityCreated callback for when CreateEntity tool completes
  */

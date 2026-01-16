@@ -39,14 +39,14 @@ function ChatTopMenu({ displayState = "full", readOnly = false }) {
 
     return (
         <>
-            <div className="flex justify-center rounded-md items-center px-0 text-xs [.docked_&]:flex gap-2">
+            <div className="flex items-center gap-1.5">
                 <button
                     onClick={toggleResearchMode}
                     disabled={readOnly}
-                    className={`flex items-center justify-center px-3 py-1.5 rounded-md transition-colors border ${
+                    className={`flex items-center justify-center p-1.5 rounded-md transition-colors border ${
                         isResearchMode
                             ? "bg-sky-500 text-white border-sky-600 hover:bg-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500 dark:hover:text-white dark:border-sky-500"
-                            : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
+                            : "bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
                     } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-700`}
                     title={
                         readOnly
@@ -60,7 +60,7 @@ function ChatTopMenu({ displayState = "full", readOnly = false }) {
                 <button
                     onClick={() => setShowFileCollectionDialog(true)}
                     disabled={readOnly}
-                    className="flex items-center justify-center px-3 py-1.5 rounded-md transition-colors border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-700"
+                    className="flex items-center justify-center p-1.5 rounded-md transition-colors border bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-700"
                     title={
                         readOnly ? t("Read-only mode") : t("View Chat Files")
                     }

@@ -127,11 +127,8 @@ const FloatingEntityMessage = React.memo(
             `}
                 style={{ transitionDuration: isVisible ? "1000ms" : "300ms" }}
             >
-                <div className="onboarding-message-content text-base sm:text-lg md:text-2xl font-light text-center leading-relaxed text-slate-200">
+                <div className="onboarding-message-content text-base sm:text-lg md:text-2xl font-light text-center leading-relaxed text-slate-200 select-none">
                     {convertMessageToMarkdown({ payload: textContent })}
-                    {isStreaming && (
-                        <span className="inline-block w-0.5 h-5 ml-1 bg-cyan-400 animate-pulse align-middle" />
-                    )}
                 </div>
             </div>
         );
@@ -776,37 +773,31 @@ export default function EntityOnboarding({
     const pendingEntityRef = useRef(null); // Store entity details from start message
     const transitionStartedRef = useRef(false); // Prevent multiple transitions
 
-    const handleToolMessage = useCallback(
-        (toolMessage) => {
-            // Check both toolName and tool fields (Cortex may use either)
-            const toolNameLower = (
-                toolMessage?.toolName ||
-                toolMessage?.tool ||
-                ""
-            ).toLowerCase();
-            const isCreateEntity = toolNameLower === "createentity";
-            if (!isCreateEntity) return;
+    // Handle app commands from the streaming messages
+    const handleAppCommand = useCallback(
+        (command) => {
+            if (!command?.type) return;
 
-            if (toolMessage.type === "start" && toolMessage.params) {
+            // Only handle createEntity commands in onboarding
+            if (command.type !== "createEntity") return;
+
+            if (command.status === "start") {
                 // Build avatar prompt from avatarText (physical description) + identity
-                // avatarText is the primary description, identity adds personality context
                 const avatarParts = [];
-                if (toolMessage.params.avatarText) {
-                    avatarParts.push(toolMessage.params.avatarText);
+                if (command.avatarText) {
+                    avatarParts.push(command.avatarText);
                 }
-                if (toolMessage.params.identity) {
-                    avatarParts.push(
-                        `Personality: ${toolMessage.params.identity}`,
-                    );
+                if (command.identity) {
+                    avatarParts.push(`Personality: ${command.identity}`);
                 }
                 const avatarDescription =
-                    avatarParts.join("\n\n") || toolMessage.params.name;
+                    avatarParts.join("\n\n") || command.name;
 
                 // Store entity details from start message
                 pendingEntityRef.current = {
-                    name: toolMessage.params.name,
+                    name: command.name,
                     avatarText: avatarDescription,
-                    avatarIcon: toolMessage.params.avatarIcon,
+                    avatarIcon: command.avatarIcon,
                 };
                 // Show the contacting screen immediately
                 setShowContacting(true);
@@ -843,16 +834,16 @@ export default function EntityOnboarding({
                             );
                         });
                 }
-            } else if (toolMessage.type === "finish") {
+            } else if (command.status === "complete") {
                 entityCreatedRef.current = true;
 
                 // Trigger entity created handler
                 handleEntityCreated({
-                    entityId: "pending",
+                    entityId: command.entityId || "pending",
                     name:
                         pendingEntityRef.current?.name || "Your new companion",
                     avatarText: pendingEntityRef.current?.avatarText,
-                    success: toolMessage.success !== false,
+                    success: command.success !== false,
                 });
             }
         },
@@ -877,7 +868,7 @@ export default function EntityOnboarding({
         chat: onboardingChat,
         updateChatHook: updateChat,
         currentEntityId: onboardingEntity?.id,
-        onToolMessage: handleToolMessage,
+        onAppCommand: handleAppCommand,
         onStreamComplete: handleStreamComplete,
     });
 
@@ -1012,7 +1003,11 @@ export default function EntityOnboarding({
                             title: "Entity Onboarding",
                             entityId: onboardingEntity.id,
                             researchMode: false,
-                            model: user.agentModel || "gemini-flash-3-vision",
+                            // Model priority: user override > entity preferred > default
+                            model:
+                                user.agentModel ||
+                                onboardingEntity.preferredModel ||
+                                "gemini-flash-3-vision",
                             userInfo: composeUserDateTimeInfo(),
                         }),
                     },
@@ -1115,8 +1110,11 @@ export default function EntityOnboarding({
                                 title: createdEntity.name,
                                 entityId,
                                 researchMode: false,
+                                // Model priority: user override > entity preferred > default
                                 model:
-                                    user.agentModel || "gemini-flash-3-vision",
+                                    user.agentModel ||
+                                    createdEntity.preferredModel ||
+                                    "gemini-flash-3-vision",
                                 userInfo: composeUserDateTimeInfo(),
                             }),
                         }).catch(console.error);
@@ -1265,7 +1263,11 @@ export default function EntityOnboarding({
                             title: "Entity Onboarding",
                             entityId: onboardingEntity.id,
                             researchMode: false,
-                            model: user.agentModel || "gemini-flash-3-vision",
+                            // Model priority: user override > entity preferred > default
+                            model:
+                                user.agentModel ||
+                                onboardingEntity.preferredModel ||
+                                "gemini-flash-3-vision",
                             userInfo: composeUserDateTimeInfo(),
                         }),
                     },
@@ -1418,10 +1420,11 @@ export default function EntityOnboarding({
                                     >
                                         {isStreaming && !streamingContent ? (
                                             /* Sparkle loader while waiting for content */
-                                            <div className="flex flex-col items-center justify-center min-h-[60px]">
+                                            <div className="flex flex-col items-center justify-center min-h-[120px]">
                                                 <Loader
-                                                    size="small"
+                                                    size="default"
                                                     delay={0}
+                                                    wander
                                                 />
                                             </div>
                                         ) : (

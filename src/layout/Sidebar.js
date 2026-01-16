@@ -457,15 +457,18 @@ export default React.forwardRef(function Sidebar({ isMobile }, ref) {
                                                         {t(item.name)}
                                                     </span>
                                                 </div>
-                                                {item.name === "Chat" && (
-                                                    <Plus
-                                                        className="h-6 w-6 ml-auto p-1 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-800 hover:text-sky-800 dark:hover:text-sky-300 cursor-pointer inline"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleNewChat();
-                                                        }}
-                                                    />
-                                                )}
+                                                {item.name === "Chat" &&
+                                                    (addChat.isPending ? (
+                                                        <Loader2 className="h-6 w-6 ml-auto p-1 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 animate-spin" />
+                                                    ) : (
+                                                        <Plus
+                                                            className="h-6 w-6 ml-auto p-1 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-800 hover:text-sky-800 dark:hover:text-sky-300 cursor-pointer inline"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleNewChat();
+                                                            }}
+                                                        />
+                                                    ))}
                                                 {item.type === "applet" &&
                                                     item.workspaceId && (
                                                         <AppletEditButton

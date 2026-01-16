@@ -25,7 +25,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRunTask } from "../../../app/queries/notifications";
 import { useParams } from "next/navigation";
 import { composeUserDateTimeInfo } from "../../utils/datetimeUtils";
-import { useStreamingAvatar } from "../../contexts/StreamingAvatarContext";
+import { useEntityOverlay } from "../../contexts/EntityOverlayContext";
 import { useEntities } from "../../hooks/useEntities";
 
 const contextMessageCount = 50;
@@ -232,27 +232,32 @@ function ChatContent({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [memoizedMessages, chatId, viewingReadOnlyChat, t, updateChatHook]);
 
-    const { setStreamingAvatar, clearStreamingAvatar } = useStreamingAvatar();
+    const { showOverlay, hideOverlay } = useEntityOverlay();
 
-    // Clear streaming avatar when entity changes
+    // Clear overlay when entity changes
     useEffect(() => {
-        clearStreamingAvatar();
-    }, [selectedEntityIdFromProp, clearStreamingAvatar]);
+        hideOverlay();
+    }, [selectedEntityIdFromProp, hideOverlay]);
 
-    const handleAvatarMessage = useCallback(
-        (avatarMessage) => {
-            if (avatarMessage?.type === "avatarImage") {
-                // Support both old format (url) and new format (files array)
-                if (avatarMessage.files && Array.isArray(avatarMessage.files)) {
-                    // New format: pass the full avatarMessage with files array
-                    setStreamingAvatar(avatarMessage);
-                } else if (avatarMessage.url) {
-                    // Old format: backward compatibility
-                    setStreamingAvatar({ url: avatarMessage.url });
-                }
+    // Handle app commands from the streaming messages
+    const handleAppCommand = useCallback(
+        (command) => {
+            if (!command?.type) return;
+
+            switch (command.type) {
+                case "showOverlay":
+                    showOverlay({
+                        ...command,
+                        entityId: selectedEntityIdFromProp || command.entityId,
+                    });
+                    break;
+                // Other command types (createEntity, navigate, etc.) can be added here
+                // They would dispatch to their respective handlers
+                default:
+                    console.log("Unhandled app command:", command.type);
             }
         },
-        [setStreamingAvatar],
+        [showOverlay, selectedEntityIdFromProp],
     );
 
     const {
@@ -270,7 +275,7 @@ function ChatContent({
         chat,
         updateChatHook,
         currentEntityId: selectedEntityIdFromProp,
-        onAvatarMessage: handleAvatarMessage,
+        onAppCommand: handleAppCommand,
     });
 
     const handleError = useCallback((error) => {
@@ -418,6 +423,11 @@ function ChatContent({
                 // Call agent via Next.js proxy (SSE streaming)
                 setIsStreaming(true);
 
+                // Get the current entity for preferred model fallback
+                const currentEntity = entities?.find(
+                    (e) => e.id === currentSelectedEntityId,
+                );
+
                 // POST to stream endpoint with conversation data
                 const response = await fetch(`/api/chats/${chatId}/stream`, {
                     method: "POST",
@@ -427,15 +437,17 @@ function ChatContent({
                     body: JSON.stringify({
                         conversation,
                         agentContext,
-                        aiName:
-                            entities?.find(
-                                (e) => e.id === currentSelectedEntityId,
-                            )?.name || aiName,
+                        aiName: currentEntity?.name || aiName,
                         aiMemorySelfModify,
                         title: chat?.title,
                         entityId: currentSelectedEntityId,
                         researchMode: chat?.researchMode ? true : false,
-                        model: agentModel || "gemini-flash-3-vision",
+                        // Model priority: user override > entity preferred > default
+                        // (entity modelOverride is handled server-side in cortex)
+                        model:
+                            agentModel ||
+                            currentEntity?.preferredModel ||
+                            "gemini-flash-3-vision",
                         userInfo,
                     }),
                 });

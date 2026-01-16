@@ -132,9 +132,9 @@ jest.mock("../contexts/OnboardingContext", () => ({
     })),
 }));
 
-jest.mock("../contexts/StreamingAvatarContext", () => ({
-    StreamingAvatarProvider: ({ children }) => (
-        <div data-testid="streaming-avatar-provider">{children}</div>
+jest.mock("../contexts/EntityOverlayContext", () => ({
+    EntityOverlayProvider: ({ children }) => (
+        <div data-testid="entity-overlay-provider">{children}</div>
     ),
 }));
 
