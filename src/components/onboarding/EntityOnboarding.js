@@ -127,11 +127,8 @@ const FloatingEntityMessage = React.memo(
             `}
                 style={{ transitionDuration: isVisible ? "1000ms" : "300ms" }}
             >
-                <div className="onboarding-message-content text-base sm:text-lg md:text-2xl font-light text-center leading-relaxed text-slate-200">
+                <div className="onboarding-message-content text-base sm:text-lg md:text-2xl font-light text-center leading-relaxed text-slate-200 select-none">
                     {convertMessageToMarkdown({ payload: textContent })}
-                    {isStreaming && (
-                        <span className="inline-block w-0.5 h-5 ml-1 bg-cyan-400 animate-pulse align-middle" />
-                    )}
                 </div>
             </div>
         );
@@ -1412,10 +1409,11 @@ export default function EntityOnboarding({
                                     >
                                         {isStreaming && !streamingContent ? (
                                             /* Sparkle loader while waiting for content */
-                                            <div className="flex flex-col items-center justify-center min-h-[60px]">
+                                            <div className="flex flex-col items-center justify-center min-h-[120px]">
                                                 <Loader
-                                                    size="small"
+                                                    size="default"
                                                     delay={0}
+                                                    wander
                                                 />
                                             </div>
                                         ) : (

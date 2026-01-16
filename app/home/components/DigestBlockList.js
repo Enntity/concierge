@@ -47,8 +47,37 @@ import { useCurrentUser } from "../../queries/users";
 import classNames from "../../utils/class-names";
 import DigestBlock from "./DigestBlock";
 
-// Header with live AI greeting and edit toggle
-function HomeHeader({
+// Greeting component - standalone line
+function HomeGreeting() {
+    const { data: greeting, isLoading: greetingLoading } = useHomeGreeting();
+
+    if (greetingLoading) {
+        return (
+            <div className="mb-6 flex items-center gap-3">
+                <Loader delay={0} />
+            </div>
+        );
+    }
+
+    if (!greeting) return null;
+
+    return (
+        <div className="mb-6">
+            <div className="relative group">
+                {/* Glow effect behind text */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20 rounded-lg blur-xl opacity-70 group-hover:opacity-100 transition-opacity animate-pulse-slow" />
+
+                {/* Main greeting text */}
+                <p className="relative text-lg sm:text-xl font-medium leading-relaxed bg-gradient-to-r from-cyan-600 via-purple-500 to-cyan-600 dark:from-cyan-400 dark:via-purple-400 dark:to-cyan-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift">
+                    {greeting}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+// Controls bar - compact, close to content
+function HomeControls({
     editing,
     onToggleEdit,
     onSave,
@@ -57,90 +86,65 @@ function HomeHeader({
     onLayoutChange,
 }) {
     const { t } = useTranslation();
-    const { data: greeting, isLoading: greetingLoading } = useHomeGreeting();
 
     return (
-        <div className="mb-8">
-            <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-h-[2.5rem]">
-                    {/* Live AI greeting */}
-                    {greetingLoading ? (
-                        <div className="flex items-center gap-3">
-                            <Loader delay={0} />
-                        </div>
-                    ) : greeting ? (
-                        <div className="relative max-w-2xl group">
-                            {/* Glow effect behind text */}
-                            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20 rounded-lg blur-xl opacity-70 group-hover:opacity-100 transition-opacity animate-pulse-slow" />
+        <div className="flex items-center justify-end gap-1.5 mb-3">
+            {/* Edit mode indicator */}
+            {editing && (
+                <span className="text-xs text-cyan-600 dark:text-cyan-400 mr-1 hidden sm:inline">
+                    {t("Editing...")}
+                </span>
+            )}
 
-                            {/* Main greeting text */}
-                            <p className="relative text-lg sm:text-xl font-medium leading-relaxed bg-gradient-to-r from-cyan-600 via-purple-500 to-cyan-600 dark:from-cyan-400 dark:via-purple-400 dark:to-cyan-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift">
-                                {greeting}
-                            </p>
-                        </div>
-                    ) : null}
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex items-center gap-2">
-                    {/* Edit mode indicator */}
-                    {editing && (
-                        <span className="text-sm text-cyan-600 dark:text-cyan-400 mr-2 hidden sm:inline">
-                            {t("Editing...")}
-                        </span>
-                    )}
-
-                    {/* Layout toggle (only when not editing) */}
-                    {!editing && (
-                        <button
-                            onClick={() =>
-                                onLayoutChange(
-                                    layout === "single" ? "double" : "single",
-                                )
-                            }
-                            className="p-2.5 rounded-xl bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 hover:border-cyan-300/50 dark:hover:border-cyan-500/30 shadow-sm hover:shadow-md transition-all duration-200 group hidden sm:flex"
-                            title={
-                                layout === "single"
-                                    ? t("Switch to two-column layout")
-                                    : t("Switch to single-column layout")
-                            }
-                        >
-                            {layout === "single" ? (
-                                <LayoutGrid className="h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors" />
-                            ) : (
-                                <Square className="h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors" />
-                            )}
-                        </button>
-                    )}
-
-                    {editing ? (
-                        <>
-                            <button
-                                onClick={onCancel}
-                                className="p-2.5 rounded-xl bg-white/50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200/50 dark:border-gray-700/50 transition-all duration-200"
-                                title={t("Cancel")}
-                            >
-                                <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                            </button>
-                            <button
-                                onClick={onSave}
-                                className="p-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-200"
-                                title={t("Save changes")}
-                            >
-                                <Check className="h-5 w-5 text-white" />
-                            </button>
-                        </>
+            {/* Layout toggle (only when not editing) */}
+            {!editing && (
+                <button
+                    onClick={() =>
+                        onLayoutChange(
+                            layout === "single" ? "double" : "single",
+                        )
+                    }
+                    className="p-1.5 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 hover:border-cyan-300/50 dark:hover:border-cyan-500/30 transition-all duration-200 group hidden sm:flex"
+                    title={
+                        layout === "single"
+                            ? t("Switch to two-column layout")
+                            : t("Switch to single-column layout")
+                    }
+                >
+                    {layout === "single" ? (
+                        <LayoutGrid className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors" />
                     ) : (
-                        <button
-                            onClick={onToggleEdit}
-                            className="p-2.5 rounded-xl bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 hover:border-cyan-300/50 dark:hover:border-cyan-500/30 shadow-sm hover:shadow-md transition-all duration-200 group"
-                            title={t("Edit dashboard")}
-                        >
-                            <Pencil className="h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors" />
-                        </button>
+                        <Square className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors" />
                     )}
-                </div>
-            </div>
+                </button>
+            )}
+
+            {editing ? (
+                <>
+                    <button
+                        onClick={onCancel}
+                        className="p-1.5 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200/50 dark:border-gray-700/50 transition-all duration-200"
+                        title={t("Cancel")}
+                    >
+                        <X className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
+                    </button>
+                    <button
+                        onClick={onSave}
+                        className="p-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 shadow-sm shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-200"
+                        title={t("Save changes")}
+                    >
+                        <Check className="h-3.5 w-3.5 text-white" />
+                    </button>
+                </>
+            ) : (
+                <button
+                    onClick={onToggleEdit}
+                    className="p-1.5 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 hover:border-cyan-300/50 dark:hover:border-cyan-500/30 transition-all duration-200 group"
+                    title={t("Edit dashboard")}
+                >
+                    <Pencil className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors" />
+                </button>
+            )}
         </div>
     );
 }
@@ -349,7 +353,8 @@ export default function DigestBlockList() {
     if (!digest.blocks?.length && !editing) {
         return (
             <>
-                <HomeHeader
+                <HomeGreeting />
+                <HomeControls
                     editing={false}
                     onToggleEdit={handleStartEdit}
                     layout={layout}
@@ -375,7 +380,8 @@ export default function DigestBlockList() {
 
     return (
         <>
-            <HomeHeader
+            <HomeGreeting layout={layout} />
+            <HomeControls
                 editing={editing}
                 onToggleEdit={handleStartEdit}
                 onSave={handleSaveEdit}
@@ -399,7 +405,7 @@ export default function DigestBlockList() {
                             className={classNames(
                                 "grid gap-4 sm:gap-6",
                                 editedBlocks.length === 1
-                                    ? "grid-cols-1 max-w-3xl"
+                                    ? "grid-cols-1"
                                     : "grid-cols-1 md:grid-cols-2",
                             )}
                         >
@@ -460,7 +466,7 @@ export default function DigestBlockList() {
                         // Mobile is always single column, infinite scroll
                         // Desktop respects layout preference
                         layout === "single"
-                            ? "grid-cols-1 max-w-3xl"
+                            ? "grid-cols-1"
                             : "grid-cols-1 md:grid-cols-2",
                     )}
                 >

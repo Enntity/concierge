@@ -688,7 +688,6 @@ function MediaPage() {
                 <ImageTile
                     key={`image-${key}`}
                     image={image}
-                    quality={quality}
                     selectedImages={selectedImages}
                     setSelectedImages={setSelectedImages}
                     selectedImagesObjects={selectedImagesObjects}

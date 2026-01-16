@@ -102,18 +102,20 @@ export function useStreamingMessages({
     }, [chat, updateChatHook, clearStreamingState]);
 
     // Track tool calls for UI display
+    // Supports both old format (type: 'start'/'finish') and new format (status: 'start'/'complete')
     const updateToolCalls = useCallback((toolInfo) => {
         if (!toolInfo?.callId) return;
 
-        const { status, callId, icon, userMessage, success, error } = toolInfo;
+        const { type, status, callId, icon, userMessage, success, error } = toolInfo;
+        const actionType = status || type; // Support both formats
 
-        if (status === "start") {
+        if (actionType === "start") {
             toolCallsMapRef.current.set(callId, {
                 icon: icon || "🛠️",
                 userMessage: userMessage || "Running tool...",
                 status: "thinking",
             });
-        } else if (status === "complete") {
+        } else if (actionType === "complete" || actionType === "finish") {
             const existing = toolCallsMapRef.current.get(callId);
             if (existing) {
                 toolCallsMapRef.current.set(callId, {
@@ -205,6 +207,11 @@ export function useStreamingMessages({
                             : { ...info };
 
                     isEphemeral = !!parsedInfo.ephemeral;
+
+                    // Handle structured tool messages (for UI status display)
+                    if (parsedInfo.toolMessage) {
+                        updateToolCalls(parsedInfo.toolMessage);
+                    }
 
                     // Handle app commands - the clean, formalized structure
                     if (

@@ -4,18 +4,16 @@ import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import i18next from "i18next";
-import { Check, Download, FileText, Loader2, Upload } from "lucide-react";
+import { Check, FileText, Loader2, Upload } from "lucide-react";
 import { getFileIcon } from "@/src/utils/mediaUtils";
-import {
-    useFilePreview,
-    renderFilePreview,
-} from "@/src/components/chat/useFilePreview";
+import { useFilePreview } from "@/src/components/chat/useFilePreview";
 import {
     isYoutubeUrl,
     getYoutubeEmbedUrl,
     extractYoutubeVideoId,
     getYoutubeThumbnailUrl,
 } from "@/src/utils/urlUtils";
+import { MediaPreview, MediaZoomDialog } from "./media";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -26,12 +24,6 @@ import {
     AlertDialogAction,
     AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import {
-    Dialog,
-    DialogContent,
-    DialogTitle,
-    DialogDescription,
-} from "@/components/ui/dialog";
 import {
     Table,
     TableBody,
@@ -143,7 +135,7 @@ export function createFileId(file) {
 // ============================================================================
 
 /**
- * Hover preview component
+ * Hover preview component - Uses shared MediaPreview
  * Exported for use in other components
  */
 export function HoverPreview({ file }) {
@@ -154,61 +146,33 @@ export function HoverPreview({ file }) {
     const mimeType = file?.mimeType;
 
     const isYouTube = url ? isYoutubeUrl(url) : false;
-    const youtubeVideoId = isYouTube && url ? extractYoutubeVideoId(url) : null;
-    const youtubeThumbnail = youtubeVideoId
-        ? getYoutubeThumbnailUrl(youtubeVideoId, "maxresdefault")
-        : null;
-
     const fileType = useFilePreview(url, filename, mimeType);
 
     if (!file || !url) return null;
 
-    let preview = null;
-    if (isYouTube && youtubeThumbnail) {
-        preview = (
-            <div className="relative w-full h-full">
-                <img
-                    src={youtubeThumbnail}
-                    alt={filename || t("YouTube video")}
-                    className="w-full h-full object-cover rounded"
-                    onError={(e) => {
-                        if (youtubeVideoId) {
-                            e.target.src = getYoutubeThumbnailUrl(
-                                youtubeVideoId,
-                                "hqdefault",
-                            );
-                        }
-                    }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded">
-                    <svg
-                        className="w-12 h-12 text-white opacity-90"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path d="M8 5v14l11-7z" />
-                    </svg>
-                </div>
-            </div>
-        );
-    } else {
-        preview = renderFilePreview({
-            src: url,
-            filename,
-            fileType,
-            className:
-                fileType.isPdf || fileType.isDoc
-                    ? "w-full h-full rounded border-none"
-                    : "max-w-full max-h-full object-contain rounded",
-            autoPlay: fileType.isVideo,
-            t,
-            compact: true,
-        });
-    }
+    // Create media item for shared component
+    const mediaItem = {
+        type: isYouTube ? "youtube" : "file",
+        url,
+        label: filename,
+        mimeType,
+        youtubeEmbedUrl: isYouTube ? getYoutubeEmbedUrl(url) : null,
+    };
+
+    const hasPreview = isYouTube || fileType.isPreviewable;
 
     return (
         <div className="hidden sm:flex fixed z-[100] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden items-center justify-center p-2">
-            {preview || (
+            {hasPreview ? (
+                <MediaPreview
+                    item={mediaItem}
+                    className="w-full h-full"
+                    mediaClassName="rounded"
+                    autoPlay={fileType.isVideo}
+                    objectFit="contain"
+                    t={t}
+                />
+            ) : (
                 <div
                     className={`text-gray-500 dark:text-gray-400 text-center p-4 ${isRtl ? "text-right" : ""}`}
                 >
@@ -220,111 +184,37 @@ export function HoverPreview({ file }) {
 }
 
 /**
- * File Preview Dialog Component
+ * File Preview Dialog Component - Uses shared MediaZoomDialog
  */
 export function FilePreviewDialog({ file, onClose, onDownload, t }) {
-    const isRtl = i18next.language === "ar";
     const url = file ? getFileUrl(file) : null;
     const filename = file ? getFilename(file) : null;
     const mimeType = file?.mimeType;
 
     const isYouTube = url ? isYoutubeUrl(url) : false;
-    const youtubeEmbedUrl = isYouTube && url ? getYoutubeEmbedUrl(url) : null;
 
-    const fileType = useFilePreview(url, filename, mimeType);
-
-    const preview = url ? (
-        isYouTube && youtubeEmbedUrl ? (
-            <iframe
-                src={youtubeEmbedUrl}
-                className="w-full rounded-lg"
-                style={{
-                    width: "100%",
-                    maxWidth: "900px",
-                    aspectRatio: "16/9",
-                    backgroundColor: "transparent",
-                }}
-                allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                title={t("YouTube video player")}
-            />
-        ) : (
-            renderFilePreview({
-                src: url,
-                filename,
-                fileType,
-                className:
-                    fileType.isPdf || fileType.isDoc
-                        ? "w-full max-h-[80vh] rounded border-none"
-                        : "max-w-full max-h-[80vh] object-contain rounded",
-                t,
-            })
-        )
-    ) : null;
-
-    const hasPreview = preview !== null;
+    // Create media item for shared component
+    const mediaItem = url
+        ? {
+              type: isYouTube ? "youtube" : "file",
+              url,
+              label: filename,
+              mimeType,
+              youtubeEmbedUrl: isYouTube ? getYoutubeEmbedUrl(url) : null,
+          }
+        : null;
 
     return (
-        <Dialog open={!!file} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent
-                className={`max-w-[95vw] max-h-[95vh] p-4 sm:p-6 flex items-center justify-center ${isRtl ? "text-right" : ""}`}
-                aria-describedby="file-preview-description"
-            >
-                <DialogTitle className="sr-only">
-                    {isYouTube ? t("YouTube video player") : t("File preview")}
-                </DialogTitle>
-                <DialogDescription
-                    id="file-preview-description"
-                    className="sr-only"
-                >
-                    {filename
-                        ? t("Viewing {{filename}} in full screen", { filename })
-                        : isYouTube
-                          ? t("View YouTube video in full screen")
-                          : t("View file in full screen")}
-                </DialogDescription>
-                <div className="w-full flex items-center justify-center relative">
-                    {hasPreview ? (
-                        preview
-                    ) : (
-                        <div
-                            className={`text-gray-500 dark:text-gray-400 text-center p-8 ${isRtl ? "text-right" : ""}`}
-                        >
-                            <div className="mb-4">
-                                {filename ? (
-                                    <p className="text-lg font-medium">
-                                        {filename}
-                                    </p>
-                                ) : (
-                                    <p className="text-lg font-medium">
-                                        {t("No preview available")}
-                                    </p>
-                                )}
-                            </div>
-                            <p className="text-sm">
-                                {t(
-                                    "Preview is not available for this file type",
-                                )}
-                            </p>
-                        </div>
-                    )}
-                    {url && (
-                        <button
-                            onClick={(e) => onDownload(file, e)}
-                            className={`absolute bottom-4 ${isRtl ? "left-4" : "right-4"} bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 p-2 rounded-lg shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors z-10`}
-                            title={
-                                isYouTube ? t("Open in YouTube") : t("Download")
-                            }
-                            aria-label={
-                                isYouTube ? t("Open in YouTube") : t("Download")
-                            }
-                        >
-                            <Download className="w-5 h-5" />
-                        </button>
-                    )}
-                </div>
-            </DialogContent>
-        </Dialog>
+        <MediaZoomDialog
+            open={!!file}
+            onOpenChange={(open) => !open && onClose()}
+            item={mediaItem}
+            items={mediaItem ? [mediaItem] : []}
+            currentIndex={0}
+            showDownload={!!url}
+            onDownload={() => onDownload(file)}
+            t={t}
+        />
     );
 }
 

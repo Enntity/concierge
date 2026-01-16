@@ -1,7 +1,7 @@
 "use client";
 import { Dialog, Transition } from "@headlessui/react";
 import { Menu, Layers, X } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
     Fragment,
     useContext,
@@ -9,6 +9,7 @@ import {
     useMemo,
     useRef,
     useState,
+    useCallback,
 } from "react";
 import { useSelector } from "react-redux";
 import { Flip, ToastContainer } from "react-toastify";
@@ -16,6 +17,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { AuthContext } from "../App";
 import ChatBox from "../components/chat/ChatBox";
 import EntityIcon from "../components/chat/EntityIcon";
+import EntityContactsModal from "../components/chat/EntityContactsModal";
 import NotificationButton from "../components/notifications/NotificationButton";
 import EntityOverlay from "../components/EntityOverlay";
 import Tos from "../components/Tos";
@@ -25,7 +27,7 @@ import { useOnboarding } from "../contexts/OnboardingContext";
 import { ProgressProvider } from "../contexts/ProgressContext";
 import { useEntityOverlay } from "../contexts/EntityOverlayContext";
 import { ThemeContext } from "../contexts/ThemeProvider";
-import { useGetActiveChat } from "../../app/queries/chats";
+import { useGetActiveChat, useUpdateActiveChat } from "../../app/queries/chats";
 import { useEntities } from "../hooks/useEntities";
 import Footer from "./Footer";
 import ProfileDropdown from "./ProfileDropdown";
@@ -37,9 +39,11 @@ export default function Layout({ children }) {
     const [showOptions, setShowOptions] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [showTos, setShowTos] = useState(false);
+    const [showContactsModal, setShowContactsModal] = useState(false);
     const statePosition = useSelector((state) => state.chat?.chatBox?.position);
     const { user } = useContext(AuthContext);
     const pathname = usePathname();
+    const router = useRouter();
     const { theme } = useContext(ThemeContext);
     const { direction } = useContext(LanguageContext);
     const { shouldHideAppChrome } = useOnboarding();
@@ -50,13 +54,49 @@ export default function Layout({ children }) {
         visible: overlayVisible,
     } = useEntityOverlay();
     const { data: activeChat } = useGetActiveChat();
-    const { entities } = useEntities(user?.contextId);
+    const updateActiveChat = useUpdateActiveChat();
+    const { entities, refetch: refetchEntities } = useEntities(user?.contextId);
 
     const currentEntityId =
         activeChat?.selectedEntityId || user?.defaultEntityId || "";
     const currentEntity = useMemo(
         () => entities?.find((entity) => entity.id === currentEntityId),
         [entities, currentEntityId],
+    );
+
+    // Global entity contacts modal event listener (only when not on chat page)
+    useEffect(() => {
+        const handleOpenContacts = () => {
+            // Chat.js has its own handler, so skip on chat pages
+            if (pathname?.startsWith("/chat")) return;
+            setShowContactsModal(true);
+        };
+        window.addEventListener("open-entity-contacts", handleOpenContacts);
+        return () => {
+            window.removeEventListener("open-entity-contacts", handleOpenContacts);
+        };
+    }, [pathname]);
+
+    // Handle entity selection from global modal
+    const handleGlobalEntitySelect = useCallback(
+        (entityId) => {
+            const selectedEntity = entities?.find((e) => e.id === entityId);
+            const newEntityName = selectedEntity?.name || "";
+
+            // If we're on a chat page with an active chat, update that chat
+            if (pathname?.startsWith("/chat") && activeChat?.id) {
+                updateActiveChat.mutate({
+                    chatId: activeChat.id,
+                    selectedEntityId: entityId,
+                    selectedEntityName: newEntityName,
+                });
+            } else {
+                // Navigate to chat with this entity
+                router.push(`/chat?entityId=${entityId}`);
+            }
+            setShowContactsModal(false);
+        },
+        [entities, pathname, activeChat?.id, updateActiveChat, router],
     );
 
     const handleShowOptions = () => setShowOptions(true);
@@ -216,17 +256,18 @@ export default function Layout({ children }) {
                                                 );
                                             }
                                         }}
-                                        className={`flex items-center justify-center rounded-full p-1 transition-all ${
+                                        className={`flex items-center justify-center rounded-full transition-all ${
                                             overlayVisible
                                                 ? "ring-2 ring-cyan-300/90 shadow-[0_0_24px_rgba(34,211,238,0.6),0_0_40px_rgba(59,130,246,0.35)]"
                                                 : "ring-1 ring-gray-200/60 dark:ring-gray-700/60 hover:ring-gray-300 dark:hover:ring-gray-600"
                                         }`}
                                         aria-label="Open entity contacts"
+                                        title={currentEntity.name}
                                     >
                                         <div className="rounded-full bg-white/70 dark:bg-gray-900/70 p-0.5">
                                             <EntityIcon
                                                 entity={currentEntity}
-                                                size="md"
+                                                size="lg"
                                             />
                                         </div>
                                     </button>
@@ -249,13 +290,10 @@ export default function Layout({ children }) {
                                     )}
                                 </div>
                             )}
-                            <div className="flex gap-3">
-                                {/* Chat icon hidden for now - sidebar chat mode not yet available */}
+                            <div className="flex items-center gap-4">
                                 <div className="flex items-center h-9">
                                     <NotificationButton />
                                 </div>
-                            </div>
-                            <div className="flex items-center mt-1">
                                 <ProfileDropdown
                                     user={user}
                                     handleShowOptions={handleShowOptions}
@@ -319,6 +357,16 @@ export default function Layout({ children }) {
                                 />
                                 {/* Entity Overlay - floats over content on both desktop and mobile */}
                                 <EntityOverlay />
+
+                                {/* Global Entity Contacts Modal */}
+                                <EntityContactsModal
+                                    isOpen={showContactsModal}
+                                    onClose={() => setShowContactsModal(false)}
+                                    entities={entities}
+                                    selectedEntityId={currentEntityId}
+                                    onEntitySelect={handleGlobalEntitySelect}
+                                    refetchEntities={refetchEntities}
+                                />
                             </main>
                         </ProgressProvider>
                         <Footer />
