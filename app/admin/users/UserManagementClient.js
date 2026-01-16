@@ -339,10 +339,20 @@ export default function UserManagementClient({
                                 <AdminTableRow key={user._id}>
                                     <AdminTableCell className="font-medium text-gray-900 dark:text-gray-100">
                                         <div className="space-y-1">
-                                            <div>{user.name}</div>
+                                            <div
+                                                className="max-w-[180px] sm:max-w-[240px] truncate"
+                                                title={user.name}
+                                            >
+                                                {user.name}
+                                            </div>
                                             <div className="text-xs text-gray-500 dark:text-gray-400 sm:hidden">
-                                                <div>{user.username}</div>
-                                                <div className="flex flex-wrap items-center gap-2">
+                                                <div
+                                                    className="max-w-[220px] truncate"
+                                                    title={user.username}
+                                                >
+                                                    {user.username}
+                                                </div>
+                                                <div className="flex flex-nowrap items-center gap-2 min-w-0">
                                                     <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-800 dark:bg-sky-900 dark:text-sky-200">
                                                         {user.role || "user"}
                                                     </span>
@@ -361,8 +371,10 @@ export default function UserManagementClient({
                                             </div>
                                         </div>
                                     </AdminTableCell>
-                                    <AdminTableCell className="hidden sm:table-cell text-gray-500 dark:text-gray-400">
-                                        {user.username}
+                                    <AdminTableCell className="hidden sm:table-cell text-gray-500 dark:text-gray-400 max-w-[220px] truncate">
+                                        <span title={user.username}>
+                                            {user.username}
+                                        </span>
                                     </AdminTableCell>
                                     <AdminTableCell className="hidden md:table-cell">
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200">
@@ -390,7 +402,7 @@ export default function UserManagementClient({
                                         </span>
                                     </AdminTableCell>
                                     <AdminTableCell>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-nowrap gap-2">
                                             <Toggle
                                                 pressed={
                                                     (user.role || "user") ===

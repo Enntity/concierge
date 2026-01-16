@@ -84,7 +84,7 @@ export function AdminTableRow({ children }) {
 export function AdminTableCell({ children, className = "" }) {
     return (
         <td
-            className={`px-3 py-2 sm:px-6 sm:py-3 whitespace-normal sm:whitespace-nowrap align-middle text-xs sm:text-sm [&_svg]:align-middle ${className}`}
+            className={`px-3 py-2 sm:px-6 sm:py-3 whitespace-nowrap align-middle text-xs sm:text-sm [&_svg]:align-middle ${className}`}
         >
             {children}
         </td>

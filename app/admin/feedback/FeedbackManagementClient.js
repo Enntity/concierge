@@ -234,19 +234,35 @@ export default function FeedbackManagementClient({
                                                 {formatDate(entry.createdAt)}
                                             </div>
                                             <div className="text-xs text-gray-500 dark:text-gray-400 md:hidden">
-                                                <div>{entry.name}</div>
-                                                <div>{entry.username}</div>
+                                                <div
+                                                    className="max-w-[220px] truncate"
+                                                    title={entry.name}
+                                                >
+                                                    {entry.name}
+                                                </div>
+                                                <div
+                                                    className="max-w-[220px] truncate"
+                                                    title={entry.username}
+                                                >
+                                                    {entry.username}
+                                                </div>
                                             </div>
                                         </div>
                                     </AdminTableCell>
-                                    <AdminTableCell className="hidden md:table-cell text-gray-600 dark:text-gray-300">
-                                        {entry.name}
+                                    <AdminTableCell className="hidden md:table-cell text-gray-600 dark:text-gray-300 max-w-[200px] truncate">
+                                        <span title={entry.name}>
+                                            {entry.name}
+                                        </span>
                                     </AdminTableCell>
-                                    <AdminTableCell className="hidden md:table-cell text-gray-500 dark:text-gray-400">
-                                        {entry.username}
+                                    <AdminTableCell className="hidden md:table-cell text-gray-500 dark:text-gray-400 max-w-[220px] truncate">
+                                        <span title={entry.username}>
+                                            {entry.username}
+                                        </span>
                                     </AdminTableCell>
-                                    <AdminTableCell className="max-w-xs sm:max-w-md text-gray-700 dark:text-gray-200 whitespace-normal">
-                                        {entry.message}
+                                    <AdminTableCell className="max-w-xs sm:max-w-md text-gray-700 dark:text-gray-200 whitespace-normal line-clamp-3 break-words">
+                                        <span title={entry.message}>
+                                            {entry.message}
+                                        </span>
                                     </AdminTableCell>
                                     <AdminTableCell className="hidden sm:table-cell">
                                         {entry.screenshot ? (

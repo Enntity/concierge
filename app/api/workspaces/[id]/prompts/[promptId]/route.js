@@ -1,25 +1,20 @@
 import Prompt from "../../../../models/prompt";
-import Workspace from "../../../../models/workspace";
-import { getCurrentUser } from "../../../../utils/auth";
+import { requireWorkspaceOwner } from "../../access";
 import { republishWorkspace } from "../../publish/utils";
 
 export async function DELETE(req, { params }) {
     const { id, promptId } = params;
-    const user = await getCurrentUser();
-    const prompt = await Prompt.findById(promptId);
-    if (prompt?.owner && prompt?.owner?.toString() !== user._id.toString()) {
-        return Response.json(
-            { error: "You do not have permission to delete this prompt" },
-            {
-                status: 403,
-            },
-        );
+
+    const ownerCheck = await requireWorkspaceOwner(id);
+    if (ownerCheck.error) {
+        return ownerCheck.error;
     }
+    const { workspace } = ownerCheck;
+
     await Prompt.findByIdAndDelete(promptId);
 
     try {
         // remove from workspace
-        const workspace = await Workspace.findById(id);
         workspace.prompts = workspace.prompts.filter(
             (p) => p?.toString() !== promptId,
         );
@@ -41,25 +36,13 @@ export async function DELETE(req, { params }) {
 export async function PUT(req, { params }) {
     const { id, promptId } = params;
     const attrs = await req.json();
-    const user = await getCurrentUser();
 
     try {
-        const workspace = await Workspace.findById(id);
-        if (!workspace.owner.equals(user._id)) {
-            return Response.json(
-                { error: "You are not the owner of this workspace" },
-                { status: 403 },
-            );
+        const ownerCheck = await requireWorkspaceOwner(id);
+        if (ownerCheck.error) {
+            return ownerCheck.error;
         }
-
-        const prompt = await Prompt.findById(promptId);
-
-        if (!prompt.owner.equals(user._id)) {
-            return Response.json(
-                { error: "You are not the owner of this prompt" },
-                { status: 403 },
-            );
-        }
+        const { workspace } = ownerCheck;
 
         const updatedPrompt = await Prompt.findByIdAndUpdate(promptId, attrs, {
             new: true,

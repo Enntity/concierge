@@ -372,7 +372,7 @@ export default function EntitiesManagementClient() {
                                                 {entity.name || "Unnamed"}
                                             </div>
                                             <div className="text-xs text-gray-500 dark:text-gray-400 md:hidden">
-                                                <div className="font-mono break-all text-gray-700 dark:text-gray-200">
+                                                <div className="font-mono text-gray-700 dark:text-gray-200 truncate max-w-[220px]">
                                                     {entity.id}
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -385,8 +385,8 @@ export default function EntitiesManagementClient() {
                                             </div>
                                         </div>
                                     </AdminTableCell>
-                                    <AdminTableCell className="hidden md:table-cell font-mono text-xs text-gray-700 dark:text-gray-200">
-                                        {entity.id}
+                                    <AdminTableCell className="hidden md:table-cell font-mono text-xs text-gray-700 dark:text-gray-200 max-w-[260px] truncate">
+                                        <span title={entity.id}>{entity.id}</span>
                                     </AdminTableCell>
                                     <AdminTableCell>
                                         {entity.isSystem ? (
@@ -440,9 +440,9 @@ export default function EntitiesManagementClient() {
                                                 </Button>
                                             </div>
                                         ) : (
-                                            <div className="flex flex-wrap items-center gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
                                                 <span
-                                                    className="text-sm text-gray-600 dark:text-gray-400"
+                                                    className="text-sm text-gray-600 dark:text-gray-400 truncate whitespace-nowrap min-w-0 max-w-[220px] sm:max-w-[320px] lg:max-w-[420px]"
                                                     title={
                                                         Array.isArray(
                                                             entity.assocUserIds,
@@ -471,12 +471,10 @@ export default function EntitiesManagementClient() {
                                                                 entity,
                                                             )
                                                         }
-                                                        className="flex items-center gap-2"
+                                                        className="flex items-center gap-2 shrink-0"
+                                                        aria-label="Edit associated users"
                                                     >
                                                         <Pencil className="h-4 w-4" />
-                                                        <span className="hidden sm:inline">
-                                                            Edit
-                                                        </span>
                                                     </Button>
                                                 )}
                                             </div>

@@ -254,7 +254,13 @@ export default function EntityContactsModal({
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className="sm:max-w-md max-h-[80vh] flex flex-col">
+                <DialogContent
+                    className="sm:max-w-md max-h-[80vh] flex flex-col"
+                    onOpenAutoFocus={(event) => {
+                        // Prevent auto-focusing the search input to avoid mobile keyboard pop
+                        event.preventDefault();
+                    }}
+                >
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Users className="w-5 h-5" />
