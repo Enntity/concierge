@@ -13,7 +13,6 @@ import {
 import { useContext, useState, useEffect, useRef, useMemo } from "react";
 import { AuthContext } from "../../App";
 import { useParams, useRouter } from "next/navigation";
-import EntityIcon from "./EntityIcon";
 import EntityContactsModal from "./EntityContactsModal";
 import { Trash2, Check, Download, Users, Copy, Info } from "lucide-react";
 import { useEntities } from "../../hooks/useEntities";
@@ -294,6 +293,20 @@ function Chat({ viewingChat = null }) {
         }
     };
 
+    useEffect(() => {
+        const handleOpenContacts = () => {
+            if (readOnly || publicChatOwner) return;
+            setShowContactsModal(true);
+        };
+        window.addEventListener("open-entity-contacts", handleOpenContacts);
+        return () => {
+            window.removeEventListener(
+                "open-entity-contacts",
+                handleOpenContacts,
+            );
+        };
+    }, [readOnly, publicChatOwner]);
+
     return (
         <div className="flex flex-col gap-3 h-full">
             <div className="flex justify-between items-center flex-wrap gap-2">
@@ -322,60 +335,38 @@ function Chat({ viewingChat = null }) {
                             )}
                         </button>
                     ) : (
-                        <button
-                            onClick={() => setShowContactsModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-xs"
-                            aria-label={t("Select entity")}
-                        >
-                            <Users className="w-3.5 h-3.5" />
-                            <div className="flex items-center gap-2">
-                                {selectedEntityId ? (
-                                    <>
-                                        {(() => {
-                                            const selectedEntity =
-                                                entities.find(
-                                                    (e) =>
-                                                        e.id ===
-                                                        selectedEntityId,
-                                                );
-                                            // Use stored name from state if entity not in list
-                                            const entityName =
-                                                selectedEntity?.name ||
-                                                selectedEntityName ||
-                                                "Unknown";
-                                            return (
-                                                <>
-                                                    <span className="hidden sm:inline">
-                                                        {t("Chatting with")}{" "}
-                                                        {t(entityName)}
-                                                        {isEntityUnavailable && (
-                                                            <span className="text-amber-500 ml-1">
-                                                                (
-                                                                {t(
-                                                                    "unavailable",
-                                                                )}
-                                                                )
-                                                            </span>
-                                                        )}
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 text-xs">
+                            {selectedEntityId ? (
+                                (() => {
+                                    const selectedEntity = entities.find(
+                                        (e) => e.id === selectedEntityId,
+                                    );
+                                    const entityName =
+                                        selectedEntity?.name ||
+                                        selectedEntityName ||
+                                        "Unknown";
+                                    return (
+                                        <>
+                                            <span className="hidden sm:inline">
+                                                {t("Chatting with")}{" "}
+                                                {t(entityName)}
+                                                {isEntityUnavailable && (
+                                                    <span className="text-amber-500 ml-1">
+                                                        ({t("unavailable")})
                                                     </span>
-                                                    <span className="sm:hidden">
-                                                        {t(entityName)}
-                                                        {isEntityUnavailable &&
-                                                            " ⚠️"}
-                                                    </span>
-                                                    <EntityIcon
-                                                        entity={selectedEntity}
-                                                        size="xs"
-                                                    />
-                                                </>
-                                            );
-                                        })()}
-                                    </>
-                                ) : (
-                                    <span>{t("Select entity")}</span>
-                                )}
-                            </div>
-                        </button>
+                                                )}
+                                            </span>
+                                            <span className="sm:hidden">
+                                                {t(entityName)}
+                                                {isEntityUnavailable && " ⚠️"}
+                                            </span>
+                                        </>
+                                    );
+                                })()
+                            ) : (
+                                <span>{t("Select entity")}</span>
+                            )}
+                        </div>
                     )}
                     <ChatTopMenuDynamic
                         readOnly={readOnly || !!publicChatOwner}

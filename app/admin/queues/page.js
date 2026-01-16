@@ -583,7 +583,9 @@ export default function QueuesPage() {
                                                                 <Hash className="h-4 w-4" />
                                                                 <span
                                                                     className="truncate"
-                                                                    title={job.id}
+                                                                    title={
+                                                                        job.id
+                                                                    }
                                                                 >
                                                                     {job.id}
                                                                 </span>

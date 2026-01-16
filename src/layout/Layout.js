@@ -1,21 +1,32 @@
 "use client";
 import { Dialog, Transition } from "@headlessui/react";
-import { Menu, X } from "lucide-react";
+import { Menu, Layers, X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Fragment, useContext, useEffect, useRef, useState } from "react";
+import {
+    Fragment,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { useSelector } from "react-redux";
 import { Flip, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthContext } from "../App";
 import ChatBox from "../components/chat/ChatBox";
+import EntityIcon from "../components/chat/EntityIcon";
 import NotificationButton from "../components/notifications/NotificationButton";
-import StreamingAvatarOverlay from "../components/StreamingAvatarOverlay";
+import EntityOverlay from "../components/EntityOverlay";
 import Tos from "../components/Tos";
 import UserOptions from "../components/UserOptions";
 import { LanguageContext } from "../contexts/LanguageProvider";
 import { useOnboarding } from "../contexts/OnboardingContext";
 import { ProgressProvider } from "../contexts/ProgressContext";
+import { useEntityOverlay } from "../contexts/EntityOverlayContext";
 import { ThemeContext } from "../contexts/ThemeProvider";
+import { useGetActiveChat } from "../../app/queries/chats";
+import { useEntities } from "../hooks/useEntities";
 import Footer from "./Footer";
 import ProfileDropdown from "./ProfileDropdown";
 import Sidebar from "./Sidebar";
@@ -33,6 +44,20 @@ export default function Layout({ children }) {
     const { direction } = useContext(LanguageContext);
     const { shouldHideAppChrome } = useOnboarding();
     const contentRef = useRef(null);
+    const {
+        replayLast,
+        hasLastOverlay,
+        visible: overlayVisible,
+    } = useEntityOverlay();
+    const { data: activeChat } = useGetActiveChat();
+    const { entities } = useEntities(user?.contextId);
+
+    const currentEntityId =
+        activeChat?.selectedEntityId || user?.defaultEntityId || "";
+    const currentEntity = useMemo(
+        () => entities?.find((entity) => entity.id === currentEntityId),
+        [entities, currentEntityId],
+    );
 
     const handleShowOptions = () => setShowOptions(true);
     const handleCloseOptions = () => setShowOptions(false);
@@ -176,7 +201,54 @@ export default function Layout({ children }) {
                             aria-hidden="true"
                         />
 
-                        <div className="flex flex-1 items-center gap-x-3 justify-end ">
+                        <div className="relative flex flex-1 items-center justify-end">
+                            {currentEntity && (
+                                <div className="absolute left-0 flex items-center gap-2">
+                                    {/* Avatar button - opens contacts list */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (typeof window !== "undefined") {
+                                                window.dispatchEvent(
+                                                    new CustomEvent(
+                                                        "open-entity-contacts",
+                                                    ),
+                                                );
+                                            }
+                                        }}
+                                        className={`flex items-center justify-center rounded-full p-1 transition-all ${
+                                            overlayVisible
+                                                ? "ring-2 ring-cyan-300/90 shadow-[0_0_24px_rgba(34,211,238,0.6),0_0_40px_rgba(59,130,246,0.35)]"
+                                                : "ring-1 ring-gray-200/60 dark:ring-gray-700/60 hover:ring-gray-300 dark:hover:ring-gray-600"
+                                        }`}
+                                        aria-label="Open entity contacts"
+                                    >
+                                        <div className="rounded-full bg-white/70 dark:bg-gray-900/70 p-0.5">
+                                            <EntityIcon
+                                                entity={currentEntity}
+                                                size="md"
+                                            />
+                                        </div>
+                                    </button>
+                                    {/* Overlay button - replays last overlay */}
+                                    {hasLastOverlay(currentEntity.id) && (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                replayLast(currentEntity.id)
+                                            }
+                                            className={`flex items-center justify-center rounded-full p-2 transition-all ${
+                                                overlayVisible
+                                                    ? "ring-2 ring-cyan-400/80 bg-cyan-500/20 text-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.5)]"
+                                                    : "border border-cyan-400/50 bg-white/70 dark:bg-gray-900/70 text-cyan-500 dark:text-cyan-400 hover:bg-cyan-50/80 dark:hover:bg-cyan-900/30"
+                                            }`}
+                                            aria-label="Show entity overlay"
+                                        >
+                                            <Layers className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                             <div className="flex gap-3">
                                 {/* Chat icon hidden for now - sidebar chat mode not yet available */}
                                 <div className="flex items-center h-9">
@@ -245,8 +317,8 @@ export default function Layout({ children }) {
                                     theme={theme === "dark" ? "dark" : "light"}
                                     transition={Flip}
                                 />
-                                {/* Streaming Avatar Overlay - floats over content on both desktop and mobile */}
-                                <StreamingAvatarOverlay />
+                                {/* Entity Overlay - floats over content on both desktop and mobile */}
+                                <EntityOverlay />
                             </main>
                         </ProgressProvider>
                         <Footer />

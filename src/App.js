@@ -20,7 +20,7 @@ import { LanguageContext, LanguageProvider } from "./contexts/LanguageProvider";
 import { ThemeProvider } from "./contexts/ThemeProvider";
 import { AutoTranscribeProvider } from "./contexts/AutoTranscribeContext";
 import { OnboardingProvider } from "./contexts/OnboardingContext";
-import { StreamingAvatarProvider } from "./contexts/StreamingAvatarContext";
+import { EntityOverlayProvider } from "./contexts/EntityOverlayContext";
 import Layout from "./layout/Layout";
 import "./tailwind.css";
 
@@ -149,11 +149,11 @@ const App = ({
                                 <ThemeProvider savedTheme={theme}>
                                     <LanguageProvider savedLanguage={language}>
                                         <OnboardingProvider>
-                                            <StreamingAvatarProvider>
+                                            <EntityOverlayProvider>
                                                 <Layout>
                                                     <Body>{children}</Body>
                                                 </Layout>
-                                            </StreamingAvatarProvider>
+                                            </EntityOverlayProvider>
                                         </OnboardingProvider>
                                     </LanguageProvider>
                                 </ThemeProvider>

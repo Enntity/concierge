@@ -25,7 +25,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRunTask } from "../../../app/queries/notifications";
 import { useParams } from "next/navigation";
 import { composeUserDateTimeInfo } from "../../utils/datetimeUtils";
-import { useStreamingAvatar } from "../../contexts/StreamingAvatarContext";
+import { useEntityOverlay } from "../../contexts/EntityOverlayContext";
 import { useEntities } from "../../hooks/useEntities";
 
 const contextMessageCount = 50;
@@ -232,27 +232,32 @@ function ChatContent({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [memoizedMessages, chatId, viewingReadOnlyChat, t, updateChatHook]);
 
-    const { setStreamingAvatar, clearStreamingAvatar } = useStreamingAvatar();
+    const { showOverlay, hideOverlay } = useEntityOverlay();
 
-    // Clear streaming avatar when entity changes
+    // Clear overlay when entity changes
     useEffect(() => {
-        clearStreamingAvatar();
-    }, [selectedEntityIdFromProp, clearStreamingAvatar]);
+        hideOverlay();
+    }, [selectedEntityIdFromProp, hideOverlay]);
 
-    const handleAvatarMessage = useCallback(
-        (avatarMessage) => {
-            if (avatarMessage?.type === "avatarImage") {
-                // Support both old format (url) and new format (files array)
-                if (avatarMessage.files && Array.isArray(avatarMessage.files)) {
-                    // New format: pass the full avatarMessage with files array
-                    setStreamingAvatar(avatarMessage);
-                } else if (avatarMessage.url) {
-                    // Old format: backward compatibility
-                    setStreamingAvatar({ url: avatarMessage.url });
-                }
+    // Handle app commands from the streaming messages
+    const handleAppCommand = useCallback(
+        (command) => {
+            if (!command?.type) return;
+
+            switch (command.type) {
+                case "showOverlay":
+                    showOverlay({
+                        ...command,
+                        entityId: selectedEntityIdFromProp || command.entityId,
+                    });
+                    break;
+                // Other command types (createEntity, navigate, etc.) can be added here
+                // They would dispatch to their respective handlers
+                default:
+                    console.log("Unhandled app command:", command.type);
             }
         },
-        [setStreamingAvatar],
+        [showOverlay, selectedEntityIdFromProp],
     );
 
     const {
@@ -270,7 +275,7 @@ function ChatContent({
         chat,
         updateChatHook,
         currentEntityId: selectedEntityIdFromProp,
-        onAvatarMessage: handleAvatarMessage,
+        onAppCommand: handleAppCommand,
     });
 
     const handleError = useCallback((error) => {

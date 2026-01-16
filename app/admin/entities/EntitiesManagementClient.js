@@ -386,7 +386,9 @@ export default function EntitiesManagementClient() {
                                         </div>
                                     </AdminTableCell>
                                     <AdminTableCell className="hidden md:table-cell font-mono text-xs text-gray-700 dark:text-gray-200 max-w-[260px] truncate">
-                                        <span title={entity.id}>{entity.id}</span>
+                                        <span title={entity.id}>
+                                            {entity.id}
+                                        </span>
                                     </AdminTableCell>
                                     <AdminTableCell>
                                         {entity.isSystem ? (
