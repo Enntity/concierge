@@ -106,7 +106,8 @@ export function useStreamingMessages({
     const updateToolCalls = useCallback((toolInfo) => {
         if (!toolInfo?.callId) return;
 
-        const { type, status, callId, icon, userMessage, success, error } = toolInfo;
+        const { type, status, callId, icon, userMessage, success, error } =
+            toolInfo;
         const actionType = status || type; // Support both formats
 
         if (actionType === "start") {

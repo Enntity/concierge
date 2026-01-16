@@ -14,7 +14,16 @@ import { useContext, useState, useEffect, useRef, useMemo } from "react";
 import { AuthContext } from "../../App";
 import { useParams, useRouter } from "next/navigation";
 import EntityContactsModal from "./EntityContactsModal";
-import { Trash2, Check, Download, Users, Copy, Info, MoreVertical, Plus, Loader2 } from "lucide-react";
+import {
+    Trash2,
+    Download,
+    Users,
+    Copy,
+    Info,
+    MoreVertical,
+    Plus,
+    Loader2,
+} from "lucide-react";
 import { useEntities } from "../../hooks/useEntities";
 import { useOnboarding } from "../../contexts/OnboardingContext";
 import {
@@ -153,7 +162,6 @@ function Chat({ viewingChat = null }) {
     const [showUnshareConfirm, setShowUnshareConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showSharedByDialog, setShowSharedByDialog] = useState(false);
-    const [copyStatus, setCopyStatus] = useState(false);
     const [showContactsModal, setShowContactsModal] = useState(false);
 
     const { entities, refetch: refetchEntities } = useEntities(user?.contextId);
@@ -184,8 +192,6 @@ function Chat({ viewingChat = null }) {
         const shareUrl = `${window.location.origin}/chat/${chat._id}`;
         try {
             await navigator.clipboard.writeText(shareUrl);
-            setCopyStatus(true);
-            setTimeout(() => setCopyStatus(false), 2000);
         } catch (error) {
             console.error("Error copying URL:", error);
         }
@@ -219,8 +225,6 @@ function Chat({ viewingChat = null }) {
             await updateActiveChat.mutateAsync({ isPublic: true });
             document.body.focus();
             await navigator.clipboard.writeText(shareUrl);
-            setCopyStatus(true);
-            setTimeout(() => setCopyStatus(false), 2000);
         } catch (error) {
             console.error("Error making chat public:", error);
         }
@@ -324,8 +328,8 @@ function Chat({ viewingChat = null }) {
     return (
         <div className="flex flex-col gap-3 h-full">
             <div className="flex justify-between items-center gap-2">
-                {/* Left: Entity name + New chat */}
-                <div className="flex items-center gap-2 min-w-0 flex-1">
+                {/* Left: Read-only badge or Research/Files */}
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
                     {readOnly ? (
                         <button
                             onClick={
@@ -350,63 +354,37 @@ function Chat({ viewingChat = null }) {
                             )}
                         </button>
                     ) : (
-                        <>
-                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-md border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 text-xs min-w-0">
-                                <span className="hidden sm:inline flex-shrink-0">{t("Chatting with")}</span>
-                                <span className="truncate max-w-[120px] sm:max-w-[200px]">
-                                    {selectedEntityId ? (
-                                        (() => {
-                                            const selectedEntity = entities.find(
-                                                (e) => e.id === selectedEntityId,
-                                            );
-                                            const entityName =
-                                                selectedEntity?.name ||
-                                                selectedEntityName ||
-                                                "Unknown";
-                                            return (
-                                                <>
-                                                    {t(entityName)}
-                                                    {isEntityUnavailable && (
-                                                        <span className="text-amber-500 ml-1">⚠️</span>
-                                                    )}
-                                                </>
-                                            );
-                                        })()
-                                    ) : (
-                                        t("Select entity")
-                                    )}
-                                </span>
-                            </div>
-                            {/* New chat button */}
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <button
-                                            onClick={handleNewChat}
-                                            disabled={addChat.isPending}
-                                            className="flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-800 hover:text-sky-800 dark:hover:text-sky-300 transition-colors flex-shrink-0 disabled:opacity-70"
-                                            title={t("New chat")}
-                                        >
-                                            {addChat.isPending ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                            ) : (
-                                                <Plus className="w-4 h-4" />
-                                            )}
-                                        </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>{t("New chat")}</TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        </>
+                        <ChatTopMenuDynamic
+                            readOnly={readOnly || !!publicChatOwner}
+                        />
                     )}
                 </div>
 
-                {/* Right: Research, Files, Menu */}
+                {/* Right: New chat + Menu */}
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <ChatTopMenuDynamic
-                        readOnly={readOnly || !!publicChatOwner}
-                    />
-                    
+                    {/* New chat button */}
+                    {!readOnly && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={handleNewChat}
+                                        disabled={addChat.isPending}
+                                        className="flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-800 hover:text-sky-800 dark:hover:text-sky-300 transition-colors flex-shrink-0 disabled:opacity-70"
+                                        title={t("New chat")}
+                                    >
+                                        {addChat.isPending ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <Plus className="w-4 h-4" />
+                                        )}
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>{t("New chat")}</TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+
                     {/* Hamburger menu for Export/Share/Clear */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -426,7 +404,7 @@ function Chat({ viewingChat = null }) {
                                 <Download className="w-4 h-4" />
                                 <span>{t("Export")}</span>
                             </DropdownMenuItem>
-                            
+
                             {isChatOwner && !readOnly && (
                                 <>
                                     <DropdownMenuSeparator />
@@ -437,10 +415,14 @@ function Chat({ viewingChat = null }) {
                                                 className="flex items-center gap-2"
                                             >
                                                 <Copy className="w-4 h-4" />
-                                                <span>{t("Copy Share URL")}</span>
+                                                <span>
+                                                    {t("Copy Share URL")}
+                                                </span>
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
-                                                onClick={() => setShowUnshareConfirm(true)}
+                                                onClick={() =>
+                                                    setShowUnshareConfirm(true)
+                                                }
                                                 className="flex items-center gap-2 text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
                                             >
                                                 <Users className="w-4 h-4" />
@@ -458,12 +440,14 @@ function Chat({ viewingChat = null }) {
                                     )}
                                 </>
                             )}
-                            
+
                             {!readOnly && !publicChatOwner && (
                                 <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
-                                        onClick={() => setShowDeleteConfirm(true)}
+                                        onClick={() =>
+                                            setShowDeleteConfirm(true)
+                                        }
                                         className="flex items-center gap-2 text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
                                     >
                                         <Trash2 className="w-4 h-4" />

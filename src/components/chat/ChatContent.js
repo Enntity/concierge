@@ -423,6 +423,11 @@ function ChatContent({
                 // Call agent via Next.js proxy (SSE streaming)
                 setIsStreaming(true);
 
+                // Get the current entity for preferred model fallback
+                const currentEntity = entities?.find(
+                    (e) => e.id === currentSelectedEntityId,
+                );
+
                 // POST to stream endpoint with conversation data
                 const response = await fetch(`/api/chats/${chatId}/stream`, {
                     method: "POST",
@@ -432,15 +437,17 @@ function ChatContent({
                     body: JSON.stringify({
                         conversation,
                         agentContext,
-                        aiName:
-                            entities?.find(
-                                (e) => e.id === currentSelectedEntityId,
-                            )?.name || aiName,
+                        aiName: currentEntity?.name || aiName,
                         aiMemorySelfModify,
                         title: chat?.title,
                         entityId: currentSelectedEntityId,
                         researchMode: chat?.researchMode ? true : false,
-                        model: agentModel || "gemini-flash-3-vision",
+                        // Model priority: user override > entity preferred > default
+                        // (entity modelOverride is handled server-side in cortex)
+                        model:
+                            agentModel ||
+                            currentEntity?.preferredModel ||
+                            "gemini-flash-3-vision",
                         userInfo,
                     }),
                 });

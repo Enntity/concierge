@@ -1,7 +1,6 @@
 "use client";
 
 import * as amplitude from "@amplitude/analytics-browser";
-import { useApolloClient } from "@apollo/client";
 import React, {
     useCallback,
     useContext,
@@ -11,10 +10,8 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 import "react-quill/dist/quill.snow.css";
-import { useDispatch } from "react-redux";
 import classNames from "../../../app/utils/class-names";
 import { AuthContext } from "../../App";
-import { indexMainPaneText } from "../../utils/indexMainPaneText";
 import AIModal from "../AIModal";
 import actions from "../editor/AIEditorActions";
 import HeadlineEditor from "../editor/headline/HeadlineEditor";
@@ -23,15 +20,11 @@ import Sidebar from "./Sidebar";
 import Toolbar from "./Toolbar";
 
 function Write() {
-    const { user, userState, debouncedUpdateUserState } =
-        useContext(AuthContext);
-    const contextId = user?.contextId;
+    const { userState, debouncedUpdateUserState } = useContext(AuthContext);
     const [selection, setSelection] = useState(null);
-    const dispatch = useDispatch();
     const [headline, setHeadline] = useState("");
     const [subhead, setSubhead] = useState("");
     const [inputText, setInputText] = useState("");
-    const client = useApolloClient();
     const [open, setOpen] = useState(false);
 
     // The action is the AI action that the user has selected.
@@ -84,15 +77,11 @@ function Write() {
                     text: getUpdatedText(t),
                 },
             });
-            indexMainPaneText(getUpdatedText(t), contextId, dispatch, client);
         },
         [
-            dispatch,
             action,
             inputText,
             selection,
-            contextId,
-            client,
             debouncedUpdateUserState,
             headline,
             subhead,
@@ -116,16 +105,8 @@ function Write() {
                     text,
                 },
             });
-            indexMainPaneText(text, contextId, dispatch, client);
         },
-        [
-            dispatch,
-            contextId,
-            client,
-            debouncedUpdateUserState,
-            headline,
-            subhead,
-        ],
+        [debouncedUpdateUserState, headline, subhead],
     );
 
     const editorPane = useMemo(() => {

@@ -11,7 +11,6 @@ export const useModelSelection = ({
     selectedModel,
     setSelectedModel,
     setOutputType,
-    setQuality,
     getModelSettings,
 }) => {
     // Get available models based on current input conditions
@@ -60,7 +59,6 @@ export const useModelSelection = ({
                 const newModelSettings = getModelSettings(settings, newModel);
                 if (newModelSettings.type === "image") {
                     setOutputType("image");
-                    setQuality(newModelSettings.quality || "draft");
                 } else {
                     setOutputType("video");
                 }
@@ -74,7 +72,6 @@ export const useModelSelection = ({
         getAvailableModels,
         setSelectedModel,
         setOutputType,
-        setQuality,
         getModelSettings,
     ]);
 

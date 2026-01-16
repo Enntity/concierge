@@ -94,7 +94,6 @@ function MediaPage() {
     const apolloClient = useApolloClient();
     const [prompt, setPrompt] = useState("");
     const [generationPrompt, setGenerationPrompt] = useState("");
-    const [quality, setQuality] = useState("draft");
     const [outputType, setOutputType] = useState("image"); // "image" or "video"
     const [selectedModel, setSelectedModel] = useState(
         "gemini-25-flash-image-preview",
@@ -421,7 +420,6 @@ function MediaPage() {
         selectedModel,
         setSelectedModel,
         setOutputType,
-        setQuality,
         getModelSettings,
     });
 
@@ -768,7 +766,6 @@ function MediaPage() {
         sortedImages,
         generationPrompt,
         generateMedia,
-        quality,
         selectedImages,
         selectedImagesObjects,
         setSelectedImagesObjects,
@@ -1005,10 +1002,6 @@ function MediaPage() {
                                                         "image"
                                                     ) {
                                                         setOutputType("image");
-                                                        setQuality(
-                                                            modelSettings.quality ||
-                                                                "draft",
-                                                        );
                                                     } else {
                                                         setOutputType("video");
                                                     }

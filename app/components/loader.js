@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 
-export default function Loader({ size = "default", delay = 500, wander = false }) {
+export default function Loader({
+    size = "default",
+    delay = 500,
+    wander = false,
+}) {
     const [showLoader, setShowLoader] = useState(false);
     const [sparkles, setSparkles] = useState([]);
     const [wanderPos, setWanderPos] = useState({ x: 0, y: 0, scale: 1 });
@@ -60,7 +64,10 @@ export default function Loader({ size = "default", delay = 500, wander = false }
             targetRef.current = {
                 x: (Math.random() - 0.5) * 2 * wanderRange.x,
                 y: (Math.random() - 0.5) * 2 * wanderRange.y,
-                scale: wanderRange.scaleMin + Math.random() * (wanderRange.scaleMax - wanderRange.scaleMin),
+                scale:
+                    wanderRange.scaleMin +
+                    Math.random() *
+                        (wanderRange.scaleMax - wanderRange.scaleMin),
             };
         };
 
@@ -68,9 +75,12 @@ export default function Loader({ size = "default", delay = 500, wander = false }
         pickNewTarget();
 
         // Change target every 1-4 seconds
-        const targetInterval = setInterval(() => {
-            pickNewTarget();
-        }, 1000 + Math.random() * 3000);
+        const targetInterval = setInterval(
+            () => {
+                pickNewTarget();
+            },
+            1000 + Math.random() * 3000,
+        );
 
         // Smooth animation loop
         const animate = () => {

@@ -242,47 +242,7 @@ const SYS_STORE_CONTINUITY_MEMORY = gql`
     }
 `;
 
-const COGNITIVE_INSERT = gql`
-    query CognitiveInsert(
-        $text: String
-        $file: String
-        $contextId: String
-        $docId: String
-        $chatId: String
-        $privateData: Boolean
-        $async: Boolean
-    ) {
-        cognitive_insert(
-            text: $text
-            file: $file
-            contextId: $contextId
-            docId: $docId
-            chatId: $chatId
-            privateData: $privateData
-            async: $async
-        ) {
-            result
-        }
-    }
-`;
-
-const COGNITIVE_DELETE = gql`
-    query CognitiveDelete(
-        $text: String
-        $contextId: String
-        $docId: String
-        $chatId: String
-    ) {
-        cognitive_delete(
-            text: $text
-            contextId: $contextId
-            docId: $docId
-            chatId: $chatId
-        ) {
-            result
-        }
-    }
-`;
+// Legacy COGNITIVE_INSERT and COGNITIVE_DELETE removed - no longer used
 
 const EXPAND_STORY = gql`
     query ExpandStory($text: String) {
@@ -997,29 +957,7 @@ const AZURE_VIDEO_TRANSLATE = gql`
     }
 `;
 
-const SYS_GET_ENTITIES = gql`
-    query Sys_get_entities($contextId: String!, $includeSystem: Boolean) {
-        sys_get_entities(contextId: $contextId, includeSystem: $includeSystem) {
-            result
-        }
-    }
-`;
-
-const SYS_GET_ONBOARDING_ENTITY = gql`
-    query Sys_get_onboarding_entity {
-        sys_get_onboarding_entity {
-            result
-        }
-    }
-`;
-
-const SYS_DISASSOCIATE_ENTITY = gql`
-    mutation Sys_disassociate_entity($entityId: String!, $contextId: String!) {
-        sys_disassociate_entity(entityId: $entityId, contextId: $contextId) {
-            result
-        }
-    }
-`;
+// Legacy entity queries removed - now using direct MongoDB access via /api/entities
 
 const SYS_TOOL_MERMAID = gql`
     query Sys_tool_mermaid($chatHistory: [MultiMessage], $async: Boolean) {
@@ -1060,8 +998,6 @@ const QUERIES = {
     AZURE_VIDEO_TRANSLATE,
     CHAT_TITLE,
     CODE_HUMAN_INPUT,
-    COGNITIVE_DELETE,
-    COGNITIVE_INSERT,
     IMAGE,
     IMAGE_FLUX,
     IMAGE_GEMINI_25,
@@ -1071,8 +1007,6 @@ const QUERIES = {
     SYS_READ_FILE_COLLECTION,
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,
-    SYS_GET_ENTITIES,
-    SYS_GET_ONBOARDING_ENTITY,
     SYS_TOOL_MERMAID,
     EXPAND_STORY,
     FORMAT_PARAGRAPH_TURBO,
@@ -1152,7 +1086,6 @@ const MUTATIONS = {
     CANCEL_REQUEST,
     PUT_PATHWAY,
     DELETE_PATHWAY,
-    SYS_DISASSOCIATE_ENTITY,
     SYS_STORE_CONTINUITY_MEMORY,
 };
 
@@ -1160,14 +1093,10 @@ export {
     getClient,
     AZURE_VIDEO_TRANSLATE,
     CODE_HUMAN_INPUT,
-    COGNITIVE_INSERT,
-    COGNITIVE_DELETE,
     EXPAND_STORY,
     SYS_READ_FILE_COLLECTION,
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,
-    SYS_GET_ENTITIES,
-    SYS_GET_ONBOARDING_ENTITY,
     SYS_TOOL_MERMAID,
     SELECT_SERVICES,
     SUMMARY,

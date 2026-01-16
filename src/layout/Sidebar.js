@@ -457,8 +457,8 @@ export default React.forwardRef(function Sidebar({ isMobile }, ref) {
                                                         {t(item.name)}
                                                     </span>
                                                 </div>
-                                                {item.name === "Chat" && (
-                                                    addChat.isPending ? (
+                                                {item.name === "Chat" &&
+                                                    (addChat.isPending ? (
                                                         <Loader2 className="h-6 w-6 ml-auto p-1 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-400 animate-spin" />
                                                     ) : (
                                                         <Plus
@@ -468,8 +468,7 @@ export default React.forwardRef(function Sidebar({ isMobile }, ref) {
                                                                 handleNewChat();
                                                             }}
                                                         />
-                                                    )
-                                                )}
+                                                    ))}
                                                 {item.type === "applet" &&
                                                     item.workspaceId && (
                                                         <AppletEditButton

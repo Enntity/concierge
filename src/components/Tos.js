@@ -9,10 +9,12 @@ import {
     AlertDialog,
     AlertDialogContent,
     AlertDialogHeader,
+    AlertDialogTitle,
     AlertDialogDescription,
     AlertDialogFooter,
     AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { useOnboarding } from "../contexts/OnboardingContext";
 
 const Tos = ({ showTos, setShowTos }) => {
@@ -92,6 +94,9 @@ const Tos = ({ showTos, setShowTos }) => {
         <AlertDialog open={showTos} onOpenChange={setShowTos}>
             <AlertDialogContent className="max-h-[90vh] flex flex-col w-[90%] max-w-4xl z-50 bg-white dark:bg-gray-800 p-0">
                 <AlertDialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
+                    <VisuallyHidden.Root>
+                        <AlertDialogTitle>Terms of Service</AlertDialogTitle>
+                    </VisuallyHidden.Root>
                     <div className="flex flex-col items-center gap-4">
                         <div className="flex-shrink-0">
                             <AnimatedLogo size={100} animate={true} />

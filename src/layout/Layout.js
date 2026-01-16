@@ -1,6 +1,6 @@
 "use client";
 import { Dialog, Transition } from "@headlessui/react";
-import { Menu, Layers, X } from "lucide-react";
+import { Menu, Layers, X, Users } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import {
     Fragment,
@@ -63,6 +63,10 @@ export default function Layout({ children }) {
         () => entities?.find((entity) => entity.id === currentEntityId),
         [entities, currentEntityId],
     );
+    // Entity is unavailable if we have an ID but can't find the entity
+    const isEntityUnavailable = currentEntityId && !currentEntity;
+    const entityDisplayName =
+        currentEntity?.name || activeChat?.selectedEntityName || "";
 
     // Global entity contacts modal event listener (only when not on chat page)
     useEffect(() => {
@@ -73,7 +77,10 @@ export default function Layout({ children }) {
         };
         window.addEventListener("open-entity-contacts", handleOpenContacts);
         return () => {
-            window.removeEventListener("open-entity-contacts", handleOpenContacts);
+            window.removeEventListener(
+                "open-entity-contacts",
+                handleOpenContacts,
+            );
         };
     }, [pathname]);
 
@@ -242,37 +249,65 @@ export default function Layout({ children }) {
                         />
 
                         <div className="relative flex flex-1 items-center justify-end">
-                            {currentEntity && (
-                                <div className="absolute left-0 flex items-center gap-2">
-                                    {/* Avatar button - opens contacts list */}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (typeof window !== "undefined") {
-                                                window.dispatchEvent(
-                                                    new CustomEvent(
-                                                        "open-entity-contacts",
-                                                    ),
-                                                );
-                                            }
-                                        }}
-                                        className={`flex items-center justify-center rounded-full transition-all ${
-                                            overlayVisible
-                                                ? "ring-2 ring-cyan-300/90 shadow-[0_0_24px_rgba(34,211,238,0.6),0_0_40px_rgba(59,130,246,0.35)]"
-                                                : "ring-1 ring-gray-200/60 dark:ring-gray-700/60 hover:ring-gray-300 dark:hover:ring-gray-600"
-                                        }`}
-                                        aria-label="Open entity contacts"
-                                        title={currentEntity.name}
-                                    >
-                                        <div className="rounded-full bg-white/70 dark:bg-gray-900/70 p-0.5">
+                            <div className="absolute left-0 flex items-center gap-2">
+                                {/* Avatar button - opens contacts list */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (typeof window !== "undefined") {
+                                            window.dispatchEvent(
+                                                new CustomEvent(
+                                                    "open-entity-contacts",
+                                                ),
+                                            );
+                                        }
+                                    }}
+                                    className={`flex items-center justify-center rounded-full transition-all ${
+                                        overlayVisible
+                                            ? "ring-2 ring-cyan-300/90 shadow-[0_0_24px_rgba(34,211,238,0.6),0_0_40px_rgba(59,130,246,0.35)]"
+                                            : "ring-1 ring-gray-200/60 dark:ring-gray-700/60 hover:ring-gray-300 dark:hover:ring-gray-600"
+                                    }`}
+                                    aria-label="Open entity contacts"
+                                    title={
+                                        currentEntity?.name || "Select entity"
+                                    }
+                                >
+                                    <div className="rounded-full bg-white/70 dark:bg-gray-900/70 p-0.5">
+                                        {currentEntity ? (
                                             <EntityIcon
                                                 entity={currentEntity}
                                                 size="lg"
                                             />
-                                        </div>
-                                    </button>
-                                    {/* Overlay button - replays last overlay */}
-                                    {hasLastOverlay(currentEntity.id) && (
+                                        ) : (
+                                            <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                                <Users className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </button>
+                                {/* Entity name */}
+                                {entityDisplayName && (
+                                    <span className="text-sm text-gray-500 dark:text-gray-400 font-light tracking-wide">
+                                        {pathname?.startsWith("/chat") && (
+                                            <span className="hidden sm:inline">
+                                                Chatting with{" "}
+                                            </span>
+                                        )}
+                                        <span
+                                            className={`font-medium ${isEntityUnavailable ? "text-gray-400 dark:text-gray-500 italic" : "text-gray-700 dark:text-gray-200"}`}
+                                        >
+                                            {entityDisplayName}
+                                            {isEntityUnavailable && (
+                                                <span className="text-amber-500 ml-1 text-xs">
+                                                    (offline)
+                                                </span>
+                                            )}
+                                        </span>
+                                    </span>
+                                )}
+                                {/* Overlay button - replays last overlay */}
+                                {currentEntity &&
+                                    hasLastOverlay(currentEntity.id) && (
                                         <button
                                             type="button"
                                             onClick={() =>
@@ -288,8 +323,7 @@ export default function Layout({ children }) {
                                             <Layers className="h-4 w-4" />
                                         </button>
                                     )}
-                                </div>
-                            )}
+                            </div>
                             <div className="flex items-center gap-4">
                                 <div className="flex items-center h-9">
                                     <NotificationButton />

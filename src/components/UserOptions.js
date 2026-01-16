@@ -9,10 +9,7 @@ import { LanguageContext } from "../contexts/LanguageProvider";
 import { useOnboarding } from "../contexts/OnboardingContext";
 import { useEntities } from "../hooks/useEntities";
 import axios from "../../app/utils/axios-client";
-import {
-    AGENT_MODEL_OPTIONS,
-    DEFAULT_AGENT_MODEL,
-} from "../../app/utils/agent-model-mapping";
+import { AGENT_MODEL_OPTIONS } from "../../app/utils/agent-model-mapping";
 
 const UserOptions = ({ show, handleClose }) => {
     const { t } = useTranslation();
@@ -33,9 +30,7 @@ const UserOptions = ({ show, handleClose }) => {
     const [selectedDefaultEntityId, setSelectedDefaultEntityId] = useState(
         user?.defaultEntityId || "",
     );
-    const [agentModel, setAgentModel] = useState(
-        user.agentModel || DEFAULT_AGENT_MODEL,
-    );
+    const [agentModel, setAgentModel] = useState(user.agentModel || "");
     const [aiMemorySelfModify, setAiMemorySelfModify] = useState(
         user.aiMemorySelfModify || false,
     );
@@ -58,7 +53,7 @@ const UserOptions = ({ show, handleClose }) => {
         if (show && user) {
             setProfilePicture(user.profilePicture || null);
             setSelectedDefaultEntityId(user.defaultEntityId || "");
-            setAgentModel(user.agentModel || DEFAULT_AGENT_MODEL);
+            setAgentModel(user.agentModel || "");
             setAiMemorySelfModify(user.aiMemorySelfModify || false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -373,7 +368,7 @@ const UserOptions = ({ show, handleClose }) => {
                                     className={`block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 ${isRTL ? "text-right" : "text-left"}`}
                                     htmlFor="agentModel"
                                 >
-                                    {t("Model")}
+                                    {t("Model Override")}
                                 </label>
                                 <select
                                     id="agentModel"
@@ -387,6 +382,9 @@ const UserOptions = ({ show, handleClose }) => {
                                     className="lb-input w-full text-sm"
                                     dir={direction}
                                 >
+                                    <option value="">
+                                        {t("Use entity preferred model")}
+                                    </option>
                                     {AGENT_MODEL_OPTIONS.map((option) => (
                                         <option
                                             key={option.modelId}

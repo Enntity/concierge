@@ -3,6 +3,208 @@ import { getCurrentUser } from "../../utils/auth";
 import { getEntitiesCollection, isValidEntityId } from "../_lib";
 
 /**
+ * GET /api/entities/[entityId]
+ * Get a single entity by ID
+ */
+export async function GET(req, { params }) {
+    try {
+        const user = await getCurrentUser();
+        if (!user?.contextId) {
+            return NextResponse.json(
+                { error: "Unauthorized" },
+                { status: 401 },
+            );
+        }
+
+        const { entityId } = params;
+        if (!entityId || !isValidEntityId(entityId)) {
+            return NextResponse.json(
+                { error: "Invalid entity ID" },
+                { status: 400 },
+            );
+        }
+
+        let client;
+        try {
+            const result = await getEntitiesCollection();
+            client = result.client;
+            const { collection } = result;
+
+            const entity = await collection.findOne({ id: entityId });
+            if (!entity) {
+                return NextResponse.json(
+                    { error: "Entity not found" },
+                    { status: 404 },
+                );
+            }
+
+            // Check access - must be system entity or associated with user
+            if (
+                !entity.isSystem &&
+                (!entity.assocUserIds ||
+                    !entity.assocUserIds.includes(user.contextId))
+            ) {
+                return NextResponse.json(
+                    { error: "Unauthorized" },
+                    { status: 403 },
+                );
+            }
+
+            const { _id, ...entityData } = entity;
+            return NextResponse.json(entityData);
+        } finally {
+            if (client) {
+                await client.close().catch(console.error);
+            }
+        }
+    } catch (error) {
+        console.error("Error fetching entity:", error);
+        return NextResponse.json(
+            { error: error.message || "Failed to fetch entity" },
+            { status: 500 },
+        );
+    }
+}
+
+/**
+ * PATCH /api/entities/[entityId]
+ * Update entity settings (preferredModel, modelOverride, reasoningEffort)
+ * - preferredModel: Default model for this entity (can be overridden by user preferences)
+ * - modelOverride: Forced model that always takes precedence over user preferences
+ * - reasoningEffort: How much thinking time (low, medium, high)
+ */
+export async function PATCH(req, { params }) {
+    try {
+        const user = await getCurrentUser();
+        if (!user?.contextId) {
+            return NextResponse.json(
+                { error: "Unauthorized" },
+                { status: 401 },
+            );
+        }
+
+        const { entityId } = params;
+        if (!entityId || !isValidEntityId(entityId)) {
+            return NextResponse.json(
+                { error: "Invalid entity ID" },
+                { status: 400 },
+            );
+        }
+
+        const body = await req.json();
+        const { preferredModel, modelOverride, reasoningEffort } = body;
+
+        // Validate reasoningEffort if provided
+        const validReasoningEfforts = ["low", "medium", "high"];
+        if (
+            reasoningEffort &&
+            !validReasoningEfforts.includes(reasoningEffort)
+        ) {
+            return NextResponse.json(
+                {
+                    error: "Invalid reasoning effort. Must be: low, medium, or high",
+                },
+                { status: 400 },
+            );
+        }
+
+        let client;
+        try {
+            const result = await getEntitiesCollection();
+            client = result.client;
+            const { collection } = result;
+
+            // Verify entity exists and user has access
+            const entity = await collection.findOne({ id: entityId });
+            if (!entity) {
+                return NextResponse.json(
+                    { error: "Entity not found" },
+                    { status: 404 },
+                );
+            }
+
+            // Check access - must be associated with user (not system entities)
+            if (
+                entity.isSystem ||
+                !entity.assocUserIds ||
+                !entity.assocUserIds.includes(user.contextId)
+            ) {
+                return NextResponse.json(
+                    { error: "Unauthorized to modify this entity" },
+                    { status: 403 },
+                );
+            }
+
+            // Build update object - separate $set and $unset operations
+            const updateFields = { updatedAt: new Date() };
+            const unsetFields = {};
+
+            // Handle preferredModel - null means clear it
+            if (preferredModel !== undefined) {
+                if (preferredModel === null) {
+                    unsetFields.preferredModel = "";
+                } else {
+                    updateFields.preferredModel = preferredModel;
+                }
+            }
+
+            // Handle modelOverride - null means clear it
+            if (modelOverride !== undefined) {
+                if (modelOverride === null) {
+                    unsetFields.modelOverride = "";
+                } else {
+                    updateFields.modelOverride = modelOverride;
+                }
+            }
+
+            if (reasoningEffort !== undefined) {
+                updateFields.reasoningEffort = reasoningEffort;
+            }
+
+            // Build the update operation
+            const updateOp = { $set: updateFields };
+            if (Object.keys(unsetFields).length > 0) {
+                updateOp.$unset = unsetFields;
+            }
+
+            const updateResult = await collection.updateOne(
+                { id: entityId },
+                updateOp,
+            );
+
+            if (
+                updateResult.modifiedCount === 0 &&
+                updateResult.matchedCount === 0
+            ) {
+                return NextResponse.json(
+                    { error: "Failed to update entity" },
+                    { status: 500 },
+                );
+            }
+
+            // Return updated entity
+            const updatedEntity = await collection.findOne({ id: entityId });
+            const { _id, ...entityData } = updatedEntity;
+
+            return NextResponse.json({
+                success: true,
+                entity: entityData,
+            });
+        } finally {
+            if (client) {
+                await client.close().catch(console.error);
+            }
+        }
+    } catch (error) {
+        console.error("Error updating entity:", error);
+        return NextResponse.json(
+            { error: error.message || "Failed to update entity" },
+            { status: 500 },
+        );
+    }
+}
+
+/**
  * DELETE /api/entities/[entityId]
  * Disassociate the current user from an entity
  */

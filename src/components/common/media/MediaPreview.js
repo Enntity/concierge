@@ -121,7 +121,9 @@ function MediaPreview({
                     src={url}
                     className={cn(
                         "w-full h-full",
-                        objectFit === "cover" ? "object-cover" : "object-contain",
+                        objectFit === "cover"
+                            ? "object-cover"
+                            : "object-contain",
                         mediaClassName,
                     )}
                     preload="metadata"
@@ -166,7 +168,9 @@ function MediaPreview({
                         alt={label || "YouTube thumbnail"}
                         className={cn(
                             "w-full h-full media-card-image",
-                            objectFit === "cover" ? "object-cover" : "object-contain",
+                            objectFit === "cover"
+                                ? "object-cover"
+                                : "object-contain",
                             mediaClassName,
                         )}
                         onLoad={onLoad}

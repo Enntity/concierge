@@ -1003,7 +1003,11 @@ export default function EntityOnboarding({
                             title: "Entity Onboarding",
                             entityId: onboardingEntity.id,
                             researchMode: false,
-                            model: user.agentModel || "gemini-flash-3-vision",
+                            // Model priority: user override > entity preferred > default
+                            model:
+                                user.agentModel ||
+                                onboardingEntity.preferredModel ||
+                                "gemini-flash-3-vision",
                             userInfo: composeUserDateTimeInfo(),
                         }),
                     },
@@ -1106,8 +1110,11 @@ export default function EntityOnboarding({
                                 title: createdEntity.name,
                                 entityId,
                                 researchMode: false,
+                                // Model priority: user override > entity preferred > default
                                 model:
-                                    user.agentModel || "gemini-flash-3-vision",
+                                    user.agentModel ||
+                                    createdEntity.preferredModel ||
+                                    "gemini-flash-3-vision",
                                 userInfo: composeUserDateTimeInfo(),
                             }),
                         }).catch(console.error);
@@ -1256,7 +1263,11 @@ export default function EntityOnboarding({
                             title: "Entity Onboarding",
                             entityId: onboardingEntity.id,
                             researchMode: false,
-                            model: user.agentModel || "gemini-flash-3-vision",
+                            // Model priority: user override > entity preferred > default
+                            model:
+                                user.agentModel ||
+                                onboardingEntity.preferredModel ||
+                                "gemini-flash-3-vision",
                             userInfo: composeUserDateTimeInfo(),
                         }),
                     },
