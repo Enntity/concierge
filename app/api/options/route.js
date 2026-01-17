@@ -5,14 +5,7 @@ export async function POST(req) {
     try {
         const body = await req.json();
 
-        const {
-            userId,
-            contextId,
-            aiMemorySelfModify,
-            aiName,
-            agentModel,
-            defaultEntityId,
-        } = body;
+        const { userId, contextId, aiName, agentModel, defaultEntityId } = body;
 
         if (!mongoose.connection.readyState) {
             throw new Error("Database is not connected");
@@ -21,9 +14,6 @@ export async function POST(req) {
         let user = await User.findOne({ userId: userId });
 
         if (user) {
-            if (aiMemorySelfModify !== undefined) {
-                user.aiMemorySelfModify = aiMemorySelfModify;
-            }
             if (contextId !== undefined) {
                 user.contextId = contextId;
             }

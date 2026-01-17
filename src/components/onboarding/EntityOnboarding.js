@@ -999,7 +999,6 @@ export default function EntityOnboarding({
                                   ]
                                 : [],
                             aiName: onboardingEntity.name,
-                            aiMemorySelfModify: false,
                             title: "Entity Onboarding",
                             entityId: onboardingEntity.id,
                             researchMode: false,
@@ -1106,7 +1105,6 @@ export default function EntityOnboarding({
                                       ]
                                     : [],
                                 aiName: createdEntity.name,
-                                aiMemorySelfModify: true,
                                 title: createdEntity.name,
                                 entityId,
                                 researchMode: false,
@@ -1259,7 +1257,6 @@ export default function EntityOnboarding({
                                   ]
                                 : [],
                             aiName: onboardingEntity.name,
-                            aiMemorySelfModify: false,
                             title: "Entity Onboarding",
                             entityId: onboardingEntity.id,
                             researchMode: false,

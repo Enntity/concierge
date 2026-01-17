@@ -52,7 +52,6 @@ export const getCurrentUser = async (convertToJsonObj = true) => {
                 name,
                 contextId,
                 contextKey,
-                aiMemorySelfModify: true,
                 aiName: "Enntity",
                 agentModel: "gemini-flash-3-vision",
             });

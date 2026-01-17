@@ -118,7 +118,6 @@ const SYS_ENTITY_AGENT = gql`
         $agentContext: [AgentContextInput]
         $text: String
         $aiName: String
-        $aiMemorySelfModify: Boolean
         $title: String
         $codeRequestId: String
         $stream: Boolean
@@ -133,7 +132,6 @@ const SYS_ENTITY_AGENT = gql`
             agentContext: $agentContext
             text: $text
             aiName: $aiName
-            aiMemorySelfModify: $aiMemorySelfModify
             title: $title
             codeRequestId: $codeRequestId
             stream: $stream

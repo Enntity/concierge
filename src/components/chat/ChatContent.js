@@ -428,11 +428,6 @@ function ChatContent({
                     (e) => e.id === currentSelectedEntityId,
                 );
 
-                // aiMemorySelfModify should always be true for normal entities
-                // Can be false for system/onboarding entities
-                const finalAiMemorySelfModify =
-                    currentEntity?.isSystem === true ? false : true;
-
                 // POST to stream endpoint with conversation data
                 const response = await fetch(`/api/chats/${chatId}/stream`, {
                     method: "POST",
@@ -443,7 +438,6 @@ function ChatContent({
                         conversation,
                         agentContext,
                         aiName: currentEntity?.name || aiName,
-                        aiMemorySelfModify: finalAiMemorySelfModify,
                         title: chat?.title,
                         entityId: currentSelectedEntityId,
                         researchMode: chat?.researchMode ? true : false,

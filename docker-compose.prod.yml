@@ -49,14 +49,27 @@ services:
         dns:
             - 8.8.8.8
             - 8.8.4.4
+        ports:
+            # Expose on private VNet for Cortex to access directly (bypasses Traefik)
+            - "10.0.0.3:3000:3000"
         networks:
             - web
         labels:
             - "traefik.enable=true"
-            # Accept primary domain + root domain + www (middleware handles redirect)
+            # Middleware: Allow only internal VNet for /api/enntity/*
+            - "traefik.http.middlewares.internal-only.ipallowlist.sourcerange=10.0.0.0/16,127.0.0.1/32"
+            # Router for internal API (VNet only)
+            - "traefik.http.routers.app-internal.rule=(Host(`${DOMAIN}`) || Host(`enntity.com`) || Host(`www.enntity.com`)) && PathPrefix(`/api/enntity`)"
+            - "traefik.http.routers.app-internal.entrypoints=websecure"
+            - "traefik.http.routers.app-internal.tls.certresolver=letsencrypt"
+            - "traefik.http.routers.app-internal.middlewares=internal-only"
+            - "traefik.http.routers.app-internal.service=app"
+            - "traefik.http.routers.app-internal.priority=100"
+            # Router for public traffic (everything else)
             - "traefik.http.routers.app.rule=Host(`${DOMAIN}`) || Host(`enntity.com`) || Host(`www.enntity.com`)"
             - "traefik.http.routers.app.entrypoints=websecure"
             - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+            - "traefik.http.routers.app.priority=1"
             # Request SSL certs for all domains
             - "traefik.http.routers.app.tls.domains[0].main=${DOMAIN}"
             - "traefik.http.routers.app.tls.domains[1].main=enntity.com"

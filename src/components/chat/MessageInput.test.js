@@ -218,7 +218,6 @@ describe("MessageInput", () => {
         contextId: "test-context-id",
         aiName: "Test AI",
         agentModel: "oai-gpt51",
-        aiMemorySelfModify: false,
     };
 
     // Create a mock store

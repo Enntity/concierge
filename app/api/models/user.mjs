@@ -22,11 +22,6 @@ const userSchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
-        aiMemorySelfModify: {
-            type: Boolean,
-            required: true,
-            default: true,
-        },
         contextId: {
             type: String,
             required: true,
@@ -119,6 +114,26 @@ const userSchema = new mongoose.Schema(
             required: false,
             default: false,
         },
+        pushSubscriptions: {
+            type: [
+                new mongoose.Schema(
+                    {
+                        endpoint: { type: String, required: true },
+                        keys: {
+                            p256dh: { type: String, required: true },
+                            auth: { type: String, required: true },
+                        },
+                        expirationTime: { type: Number, required: false },
+                        userAgent: { type: String, required: false },
+                        createdAt: { type: Date, default: Date.now },
+                        updatedAt: { type: Date, default: Date.now },
+                    },
+                    { _id: false },
+                ),
+            ],
+            required: false,
+            default: [],
+        },
     },
     {
         timestamps: true,
@@ -135,9 +150,10 @@ userSchema.virtual("initials").get(function () {
         .join("");
 });
 
-// index for createdAt descending
+// Indexes
 userSchema.index({ createdAt: -1 });
 userSchema.index({ "apps.appId": 1 });
+userSchema.index({ contextId: 1 });
 
 // Create the User model from the schema
 const User = mongoose.models?.User || mongoose.model("User", userSchema);

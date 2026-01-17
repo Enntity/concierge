@@ -102,6 +102,7 @@
         "tailwindcss-animate": "^1.0.7",
         "unist-util-visit": "^5.0.0",
         "uuid": "^9.0.0",
+        "web-push": "^3.6.7",
         "web-vitals": "^2.1.4",
         "xxhash-wasm": "^1.1.0"
     },

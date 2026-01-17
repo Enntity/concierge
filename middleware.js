@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
     "/auth/login",
     "/auth/error",
     "/api/auth",
+    "/api/enntity/push",
     "/privacy",
     "/published",
 ];

@@ -35,6 +35,8 @@ export default async function RootLayout({ children }) {
     const cookieStore = cookies();
     const language = cookieStore.get("i18next")?.value || "en";
     const theme = cookieStore.get("theme")?.value || "dark";
+    const themeColor = theme === "dark" ? "#0f172a" : "#ffffff";
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
     // QueryClient for hydration - user data is fetched client-side
     // to ensure apps are properly populated via /api/users/me
@@ -69,6 +71,20 @@ export default async function RootLayout({ children }) {
                             : getLogo(language)
                     }
                 />
+                <link
+                    rel="manifest"
+                    href={`${basePath}/manifest.webmanifest`}
+                />
+                <link
+                    rel="apple-touch-icon"
+                    href={`${basePath}/app/assets/enntity_logo_180.png`}
+                />
+                <meta name="mobile-web-app-capable" content="yes" />
+                <meta
+                    name="apple-mobile-web-app-status-bar-style"
+                    content="black-translucent"
+                />
+                <meta name="theme-color" content={themeColor} />
             </head>
             <body
                 id="enntity-root"

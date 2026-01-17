@@ -22,6 +22,7 @@ import { AutoTranscribeProvider } from "./contexts/AutoTranscribeContext";
 import { OnboardingProvider } from "./contexts/OnboardingContext";
 import { EntityOverlayProvider } from "./contexts/EntityOverlayContext";
 import Layout from "./layout/Layout";
+import usePushNotifications from "./hooks/usePushNotifications";
 import "./tailwind.css";
 
 // Routes that don't require authentication
@@ -68,6 +69,7 @@ const App = ({
     const { data: serverUserState, refetch: refetchServerUserState } =
         useUserState();
     const updateUserState = useUpdateUserState();
+    usePushNotifications({ enabled: !!currentUser && !isPublicRoute });
 
     const [userState, setUserState] = useState(null);
     const debouncedUserState = useDebounce(userState, STATE_DEBOUNCE_TIME);

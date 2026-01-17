@@ -8,7 +8,6 @@ export function useUpdateAiOptions() {
         mutationFn: async ({
             userId,
             contextId,
-            aiMemorySelfModify,
             aiName,
             agentModel,
             defaultEntityId,
@@ -17,7 +16,6 @@ export function useUpdateAiOptions() {
             const response = await axios.post(`/api/options`, {
                 userId,
                 contextId,
-                aiMemorySelfModify,
                 aiName,
                 agentModel,
                 defaultEntityId,
@@ -27,7 +25,6 @@ export function useUpdateAiOptions() {
         onMutate: async ({
             userId,
             contextId,
-            aiMemorySelfModify,
             aiName,
             agentModel,
             defaultEntityId,
@@ -42,7 +39,6 @@ export function useUpdateAiOptions() {
                 return {
                     ...old,
                     contextId,
-                    aiMemorySelfModify,
                     aiName,
                     agentModel,
                     defaultEntityId,
