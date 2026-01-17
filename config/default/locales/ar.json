@@ -665,7 +665,7 @@
     "Are you sure you want to cancel this request? This action cannot be undone.": "هل أنت متأكد أنك تريد إلغاء هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.",
     "No": "لا",
     "Yes, Cancel Request": "نعم، إلغاء الطلب",
-    "This will make this chat visible to anyone with the link. This action cannot be undone.": "سيجعل هذا الدردشة مرئية لأي شخص لديه الرابط. لا يمكن التراجع عن هذا الإجراء.",
+    "This will make this chat visible to anyone with the link.": "سيجعل هذا الدردشة مرئية لأي شخص لديه الرابط.",
     "Make Public": "جعلها عامة",
     "Clear Chat?": "مسح الدردشة؟",
     "Are you sure you want to clear this chat? This action cannot be undone.": "هل أنت متأكد أنك تريد مسح هذه الدردشة؟ لا يمكن التراجع عن هذا الإجراء.",

@@ -368,7 +368,7 @@ function ChatContent({
                     content: optimisticUserMessage.payload,
                 });
 
-                const { aiMemorySelfModify, aiName, agentModel } = user;
+                const { aiName, agentModel } = user;
 
                 // Build agentContext for user chat (single user context as default)
                 const agentContext = user.contextId
@@ -428,6 +428,11 @@ function ChatContent({
                     (e) => e.id === currentSelectedEntityId,
                 );
 
+                // aiMemorySelfModify should always be true for normal entities
+                // Can be false for system/onboarding entities
+                const finalAiMemorySelfModify =
+                    currentEntity?.isSystem === true ? false : true;
+
                 // POST to stream endpoint with conversation data
                 const response = await fetch(`/api/chats/${chatId}/stream`, {
                     method: "POST",
@@ -438,7 +443,7 @@ function ChatContent({
                         conversation,
                         agentContext,
                         aiName: currentEntity?.name || aiName,
-                        aiMemorySelfModify,
+                        aiMemorySelfModify: finalAiMemorySelfModify,
                         title: chat?.title,
                         entityId: currentSelectedEntityId,
                         researchMode: chat?.researchMode ? true : false,

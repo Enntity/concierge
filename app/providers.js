@@ -3,6 +3,7 @@
 import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NotificationProvider } from "../src/contexts/NotificationContext";
+import { ChatEntityProvider } from "../src/contexts/ChatEntityContext";
 import { PrefetchOnMount } from "../src/hooks/usePrefetch";
 
 function makeQueryClient() {
@@ -47,7 +48,9 @@ export default function Providers({ children }) {
         <SessionProvider>
             <QueryClientProvider client={queryClient}>
                 <NotificationProvider>
-                    <PrefetchOnMount>{children}</PrefetchOnMount>
+                    <ChatEntityProvider>
+                        <PrefetchOnMount>{children}</PrefetchOnMount>
+                    </ChatEntityProvider>
                 </NotificationProvider>
             </QueryClientProvider>
         </SessionProvider>

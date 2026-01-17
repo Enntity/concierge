@@ -31,9 +31,6 @@ const UserOptions = ({ show, handleClose }) => {
         user?.defaultEntityId || "",
     );
     const [agentModel, setAgentModel] = useState(user.agentModel || "");
-    const [aiMemorySelfModify, setAiMemorySelfModify] = useState(
-        user.aiMemorySelfModify || false,
-    );
     const [uploadingProfilePicture, setUploadingProfilePicture] =
         useState(false);
     const [error, setError] = useState("");
@@ -54,7 +51,6 @@ const UserOptions = ({ show, handleClose }) => {
             setProfilePicture(user.profilePicture || null);
             setSelectedDefaultEntityId(user.defaultEntityId || "");
             setAgentModel(user.agentModel || "");
-            setAiMemorySelfModify(user.aiMemorySelfModify || false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [show]);
@@ -153,8 +149,6 @@ const UserOptions = ({ show, handleClose }) => {
             await updateAiOptionsMutation.mutateAsync({
                 userId: user.userId,
                 contextId: user.contextId,
-                aiMemorySelfModify:
-                    updates.aiMemorySelfModify ?? aiMemorySelfModify,
                 aiName: updates.aiName ?? aiName,
                 agentModel: updates.agentModel ?? agentModel,
                 defaultEntityId:
@@ -409,36 +403,6 @@ const UserOptions = ({ show, handleClose }) => {
                             <Sparkles className="w-4 h-4" />
                             {t("Meet a New AI")}
                         </button>
-                    </section>
-
-                    {/* Separator */}
-                    <hr className="border-gray-200 dark:border-gray-700" />
-
-                    {/* Memory Section */}
-                    <section className="space-y-4">
-                        <div
-                            className={`flex gap-2 items-center ${isRTL ? "flex-row-reverse justify-end" : ""}`}
-                        >
-                            <input
-                                type="checkbox"
-                                id="aiMemorySelfModify"
-                                className={`accent-sky-500 ${isRTL ? "order-2" : ""}`}
-                                checked={aiMemorySelfModify}
-                                onChange={(e) => {
-                                    setAiMemorySelfModify(e.target.checked);
-                                    saveOptions({
-                                        aiMemorySelfModify: e.target.checked,
-                                    });
-                                }}
-                            />
-                            <label
-                                htmlFor="aiMemorySelfModify"
-                                className={`text-sm text-gray-900 dark:text-gray-100 cursor-pointer ${isRTL ? "order-1" : ""}`}
-                                dir={direction}
-                            >
-                                {t("Allow the AI to modify its own memory")}
-                            </label>
-                        </div>
                     </section>
 
                     {/* Footer */}

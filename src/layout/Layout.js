@@ -29,6 +29,7 @@ import { useEntityOverlay } from "../contexts/EntityOverlayContext";
 import { ThemeContext } from "../contexts/ThemeProvider";
 import { useGetActiveChat, useUpdateActiveChat } from "../../app/queries/chats";
 import { useEntities } from "../hooks/useEntities";
+import { useChatEntity } from "../contexts/ChatEntityContext";
 import Footer from "./Footer";
 import ProfileDropdown from "./ProfileDropdown";
 import Sidebar from "./Sidebar";
@@ -56,17 +57,37 @@ export default function Layout({ children }) {
     const { data: activeChat } = useGetActiveChat();
     const updateActiveChat = useUpdateActiveChat();
     const { entities, refetch: refetchEntities } = useEntities(user?.contextId);
+    const {
+        entityId: chatEntityId,
+        entityName: chatEntityName,
+        entity: chatEntity,
+        isEntityUnavailable: chatEntityUnavailable,
+    } = useChatEntity();
 
-    const currentEntityId =
-        activeChat?.selectedEntityId || user?.defaultEntityId || "";
-    const currentEntity = useMemo(
-        () => entities?.find((entity) => entity.id === currentEntityId),
-        [entities, currentEntityId],
-    );
-    // Entity is unavailable if we have an ID but can't find the entity
-    const isEntityUnavailable = currentEntityId && !currentEntity;
+    // Use entity from chat context if on chat page, otherwise fall back to active chat or default
+    const currentEntityId = useMemo(() => {
+        if (chatEntityId) return chatEntityId;
+        if (activeChat?.selectedEntityId) return activeChat.selectedEntityId;
+        return user?.defaultEntityId || "";
+    }, [chatEntityId, activeChat?.selectedEntityId, user?.defaultEntityId]);
+
+    const currentEntity = useMemo(() => {
+        // Prefer entity from chat context (has full entity object for read-only chats)
+        if (chatEntity) return chatEntity;
+        // Otherwise find in user's entities
+        return entities?.find((entity) => entity.id === currentEntityId);
+    }, [chatEntity, entities, currentEntityId]);
+
+    // Entity is unavailable if chat says so, or if we have an ID but can't find the entity
+    const isEntityUnavailable =
+        chatEntityUnavailable ||
+        (currentEntityId && !chatEntity && !currentEntity);
+
     const entityDisplayName =
-        currentEntity?.name || activeChat?.selectedEntityName || "";
+        currentEntity?.name ||
+        chatEntityName ||
+        activeChat?.selectedEntityName ||
+        "";
 
     // Global entity contacts modal event listener (only when not on chat page)
     useEffect(() => {
@@ -269,7 +290,9 @@ export default function Layout({ children }) {
                                     }`}
                                     aria-label="Open entity contacts"
                                     title={
-                                        currentEntity?.name || "Select entity"
+                                        entityDisplayName ||
+                                        currentEntity?.name ||
+                                        "Select entity"
                                     }
                                 >
                                     <div className="rounded-full bg-white/70 dark:bg-gray-900/70 p-0.5">

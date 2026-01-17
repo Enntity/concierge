@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useEntities } from "../../hooks/useEntities";
 import { useOnboarding } from "../../contexts/OnboardingContext";
+import { useChatEntity } from "../../contexts/ChatEntityContext";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -183,6 +184,45 @@ function Chat({ viewingChat = null }) {
     // Check if the selected entity is available (in the user's entity list)
     const isEntityUnavailable =
         selectedEntityId && !entities.some((e) => e.id === selectedEntityId);
+    const currentEntity = entities.find((e) => e.id === selectedEntityId);
+    const { setChatEntity } = useChatEntity();
+
+    // Update the header with entity information
+    useEffect(() => {
+        if (chat) {
+            setChatEntity({
+                entityId: selectedEntityId,
+                entityName: selectedEntityName,
+                entity: currentEntity,
+                isEntityUnavailable: isEntityUnavailable,
+            });
+        } else {
+            // Clear entity info when not on a chat page
+            setChatEntity({
+                entityId: null,
+                entityName: null,
+                entity: null,
+                isEntityUnavailable: false,
+            });
+        }
+
+        // Cleanup: clear entity info when component unmounts
+        return () => {
+            setChatEntity({
+                entityId: null,
+                entityName: null,
+                entity: null,
+                isEntityUnavailable: false,
+            });
+        };
+    }, [
+        chat,
+        selectedEntityId,
+        selectedEntityName,
+        currentEntity,
+        isEntityUnavailable,
+        setChatEntity,
+    ]);
 
     const handleShare = () => {
         setShowPublicConfirm(true);
@@ -236,8 +276,8 @@ function Chat({ viewingChat = null }) {
                 selectedEntityId,
                 selectedEntityName,
             });
-            if (result?.chatId) {
-                router.push(`/chat/${result.chatId}`);
+            if (result?._id) {
+                router.push(`/chat/${result._id}`);
             }
         } catch (error) {
             console.error("Error creating new chat:", error);
@@ -481,7 +521,7 @@ function Chat({ viewingChat = null }) {
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                             {t(
-                                "This will make this chat visible to anyone with the link. This action cannot be undone.",
+                                "This will make this chat visible to anyone with the link.",
                             )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
