@@ -19,10 +19,18 @@ const urlBase64ToUint8Array = (base64String) => {
 };
 
 export default function usePushNotifications({ enabled }) {
-    const initializedRef = useRef(false);
+    const autoInitializedRef = useRef(false);
 
-    const registerForPush = useCallback(async () => {
-        if (initializedRef.current) {
+    /**
+     * Register for push notifications
+     * @param {Object} options
+     * @param {boolean} options.userGesture - True if called from a user gesture (button tap).
+     *   When true, always prompts for permission (required for iOS).
+     *   When false, only prompts once automatically.
+     */
+    const registerForPush = useCallback(async ({ userGesture = false } = {}) => {
+        // For auto-init, only run once
+        if (!userGesture && autoInitializedRef.current) {
             return;
         }
 
@@ -39,7 +47,10 @@ export default function usePushNotifications({ enabled }) {
             return;
         }
 
-        initializedRef.current = true;
+        if (!userGesture) {
+            autoInitializedRef.current = true;
+        }
+
         const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
         const swUrl = `${basePath}/sw.js`;
         const scope = `${basePath}/`;
@@ -55,11 +66,18 @@ export default function usePushNotifications({ enabled }) {
 
             let subscription = await registration.pushManager.getSubscription();
             if (!subscription) {
+                // Request permission
+                // For user gesture: always prompt (required for iOS)
+                // For auto: only prompt once (check localStorage)
                 if (Notification.permission === "default") {
-                    const promptedKey = "pwa_push_prompted";
-                    if (!localStorage.getItem(promptedKey)) {
-                        localStorage.setItem(promptedKey, "true");
+                    if (userGesture) {
                         await Notification.requestPermission();
+                    } else {
+                        const promptedKey = "pwa_push_prompted";
+                        if (!localStorage.getItem(promptedKey)) {
+                            localStorage.setItem(promptedKey, "true");
+                            await Notification.requestPermission();
+                        }
                     }
                 }
 
@@ -80,12 +98,13 @@ export default function usePushNotifications({ enabled }) {
             });
         } catch (error) {
             console.warn("Push registration failed:", error);
+            throw error; // Re-throw so caller knows it failed
         }
     }, []);
 
     useEffect(() => {
         if (enabled) {
-            registerForPush();
+            registerForPush({ userGesture: false });
         }
     }, [enabled, registerForPush]);
 

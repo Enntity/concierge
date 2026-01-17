@@ -1,7 +1,7 @@
 import { Modal } from "@/components/ui/modal";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { User, X, Sparkles } from "lucide-react";
+import { User, X, Sparkles, Bell, BellOff } from "lucide-react";
 import { useUpdateAiOptions } from "../../app/queries/options";
 import { useUpdateCurrentUser } from "../../app/queries/users";
 import { AuthContext } from "../App";
@@ -10,6 +10,7 @@ import { useOnboarding } from "../contexts/OnboardingContext";
 import { useEntities } from "../hooks/useEntities";
 import axios from "../../app/utils/axios-client";
 import { AGENT_MODEL_OPTIONS } from "../../app/utils/agent-model-mapping";
+import usePushNotifications from "../hooks/usePushNotifications";
 
 const UserOptions = ({ show, handleClose }) => {
     const { t } = useTranslation();
@@ -18,6 +19,48 @@ const UserOptions = ({ show, handleClose }) => {
     const { openOnboarding } = useOnboarding();
     const isRTL = direction === "rtl";
     const profilePictureInputRef = useRef();
+
+    // Push notifications
+    const { registerForPush } = usePushNotifications({ enabled: false });
+    const [notificationStatus, setNotificationStatus] = useState("unknown");
+    const [isEnablingNotifications, setIsEnablingNotifications] =
+        useState(false);
+
+    // Check notification status when modal opens
+    useEffect(() => {
+        if (show && typeof window !== "undefined") {
+            const checkStatus = () => {
+                if (!("Notification" in window) || !("PushManager" in window)) {
+                    setNotificationStatus("unsupported");
+                } else if (Notification.permission === "granted") {
+                    setNotificationStatus("enabled");
+                } else if (Notification.permission === "denied") {
+                    setNotificationStatus("denied");
+                } else {
+                    setNotificationStatus("default");
+                }
+            };
+            checkStatus();
+        }
+    }, [show]);
+
+    const handleEnableNotifications = async () => {
+        setIsEnablingNotifications(true);
+        try {
+            // userGesture: true is required for iOS to show the permission prompt
+            await registerForPush({ userGesture: true });
+            // Re-check status after attempting to register
+            if (Notification.permission === "granted") {
+                setNotificationStatus("enabled");
+            } else if (Notification.permission === "denied") {
+                setNotificationStatus("denied");
+            }
+        } catch (error) {
+            console.error("Failed to enable notifications:", error);
+        } finally {
+            setIsEnablingNotifications(false);
+        }
+    };
 
     const { entities } = useEntities(user?.contextId);
 
@@ -403,6 +446,51 @@ const UserOptions = ({ show, handleClose }) => {
                             <Sparkles className="w-4 h-4" />
                             {t("Meet a New AI")}
                         </button>
+                    </section>
+
+                    {/* Separator */}
+                    <hr className="border-gray-200 dark:border-gray-700" />
+
+                    {/* Notifications Section */}
+                    <section className="space-y-2">
+                        <label
+                            className={`block text-xs font-medium text-gray-700 dark:text-gray-300 ${isRTL ? "text-right" : "text-left"}`}
+                        >
+                            {t("Notifications")}
+                        </label>
+                        {notificationStatus === "unsupported" ? (
+                            <p className="text-xs text-gray-500">
+                                {t(
+                                    "Push notifications are not supported in this browser.",
+                                )}
+                            </p>
+                        ) : notificationStatus === "enabled" ? (
+                            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                                <Bell className="w-4 h-4" />
+                                {t("Notifications enabled")}
+                            </div>
+                        ) : notificationStatus === "denied" ? (
+                            <div className="flex items-center gap-2 text-sm text-red-500">
+                                <BellOff className="w-4 h-4" />
+                                <span>
+                                    {t(
+                                        "Notifications blocked. Please enable in browser settings.",
+                                    )}
+                                </span>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={handleEnableNotifications}
+                                disabled={isEnablingNotifications}
+                                className="lb-outline-secondary text-sm w-full sm:w-auto flex items-center justify-center gap-2"
+                            >
+                                <Bell className="w-4 h-4" />
+                                {isEnablingNotifications
+                                    ? t("Enabling...")
+                                    : t("Enable Notifications")}
+                            </button>
+                        )}
                     </section>
 
                     {/* Footer */}
