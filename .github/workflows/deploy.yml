@@ -67,6 +67,7 @@ jobs:
             CORTEX_GRAPHQL_API_URL=${{ secrets.CORTEX_GRAPHQL_API_URL }}
             CORTEX_MEDIA_API_URL=${{ secrets.CORTEX_MEDIA_API_URL }}
             NEXT_PUBLIC_AMPLITUDE_API_KEY=${{ secrets.NEXT_PUBLIC_AMPLITUDE_API_KEY }}
+            NEXT_PUBLIC_VAPID_PUBLIC_KEY=${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
 
   deploy:
     name: Deploy to Hetzner

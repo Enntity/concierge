@@ -45,19 +45,22 @@ const UserOptions = ({ show, handleClose }) => {
     }, [show]);
 
     const handleEnableNotifications = async () => {
+        console.log("[UserOptions] Enable notifications clicked");
         setIsEnablingNotifications(true);
         try {
             // userGesture: true is required for iOS to show the permission prompt
             await registerForPush({ userGesture: true });
-            // Re-check status after attempting to register
+            console.log("[UserOptions] registerForPush completed");
+        } catch (error) {
+            console.error("[UserOptions] Failed to enable notifications:", error);
+        } finally {
+            // Always re-check status after attempting, even if there was an error
+            // Permission might have been granted even if subscription save failed
             if (Notification.permission === "granted") {
                 setNotificationStatus("enabled");
             } else if (Notification.permission === "denied") {
                 setNotificationStatus("denied");
             }
-        } catch (error) {
-            console.error("Failed to enable notifications:", error);
-        } finally {
             setIsEnablingNotifications(false);
         }
     };
