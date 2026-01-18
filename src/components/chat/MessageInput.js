@@ -37,9 +37,11 @@ function MessageInput({
     onStopStreaming,
     initialShowFileUpload = false,
     isEntityUnavailable = false,
+    autoFocus = true,
 }) {
     const { t } = useTranslation();
     const activeChatId = useGetActiveChatId();
+    const textareaRef = useRef(null);
 
     const { userState, debouncedUpdateUserState } = useContext(AuthContext);
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
@@ -63,6 +65,23 @@ function MessageInput({
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeChatId]); // Only depend on activeChatId, not userState
+
+    // Auto-focus the textarea when the chat changes or on initial mount
+    // This ensures users can start typing immediately after navigating to a chat
+    useEffect(() => {
+        if (
+            autoFocus &&
+            !viewingReadOnlyChat &&
+            !isEntityUnavailable &&
+            textareaRef.current
+        ) {
+            // Small delay to ensure DOM is ready and any modals have closed
+            const focusTimeout = setTimeout(() => {
+                textareaRef.current?.focus();
+            }, 100);
+            return () => clearTimeout(focusTimeout);
+        }
+    }, [activeChatId, autoFocus, viewingReadOnlyChat, isEntityUnavailable]);
 
     // Reset sending lock when loading becomes false (message send completed)
     useEffect(() => {
@@ -365,6 +384,7 @@ function MessageInput({
                     )}
                     <div className="relative grow flex items-end">
                         <TextareaAutosize
+                            ref={textareaRef}
                             typeahead="none"
                             className={classNames(
                                 `w-full border-0 outline-none focus:shadow-none text-base leading-relaxed focus:ring-0 pt-2 resize-none bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400`,

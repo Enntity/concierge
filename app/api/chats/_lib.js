@@ -96,13 +96,10 @@ const getSimpleTitle = (message) => {
 
 export async function getRecentChatsOfCurrentUser() {
     const currentUser = await getCurrentUser(false);
-    const recentChatIds = currentUser.recentChatIds || [];
 
-    const recentChatsUnordered = await Chat.find(
-        {
-            _id: { $in: recentChatIds },
-            userId: currentUser._id,
-        },
+    // Query the 3 most recently updated chats directly - no need for MRU list
+    const recentChats = await Chat.find(
+        { userId: currentUser._id },
         {
             _id: 1,
             title: 1,
@@ -110,15 +107,17 @@ export async function getRecentChatsOfCurrentUser() {
             isUnused: 1,
             selectedEntityId: 1,
             selectedEntityName: 1,
+            updatedAt: 1,
         },
-    );
+    )
+        .sort({ updatedAt: -1 })
+        .limit(3);
 
     // For chats without a custom title, fetch the first message separately
     // This approach avoids truncating the messages array in the main cache
-    const firstChatId =
-        recentChatIds.length > 0 ? String(recentChatIds[0]) : null;
-    for (const chat of recentChatsUnordered) {
-        const isFirstChat = firstChatId && String(chat._id) === firstChatId;
+    for (let i = 0; i < recentChats.length; i++) {
+        const chat = recentChats[i];
+        const isFirstChat = i === 0;
         const needsFirstMessage =
             isFirstChat ||
             !chat.title ||
@@ -139,15 +138,6 @@ export async function getRecentChatsOfCurrentUser() {
             }
         }
     }
-
-    const recentChatsMap = recentChatsUnordered.reduce((acc, chat) => {
-        acc[chat._id] = chat;
-        return acc;
-    }, {});
-
-    const recentChats = recentChatIds
-        .filter((id) => recentChatsMap[id])
-        .map((id) => recentChatsMap[id]);
 
     return recentChats;
 }

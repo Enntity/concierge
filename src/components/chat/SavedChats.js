@@ -658,7 +658,9 @@ function SavedChats({ displayState }) {
         const now = dayjs();
         data.pages.forEach((page) => {
             filterChats(page).forEach((chat) => {
-                const chatDate = dayjs(chat.createdAt);
+                // Use updatedAt for categorization so recently active chats appear in "Today"
+                // Fall back to createdAt for older chats that might not have updatedAt
+                const chatDate = dayjs(chat.updatedAt || chat.createdAt);
                 if (chatDate.isSame(now, "day")) {
                     categories.today.push(chat);
                 } else if (chatDate.isSame(now.subtract(1, "day"), "day")) {
@@ -957,7 +959,10 @@ function SavedChats({ displayState }) {
                                             </span>
                                         )}
                                         <span className="flex-shrink-0">
-                                            {dayjs(chat.createdAt).fromNow()}
+                                            {dayjs(
+                                                chat.updatedAt ||
+                                                    chat.createdAt,
+                                            ).fromNow()}
                                         </span>
                                     </div>
                                 </div>
