@@ -1,5 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 
+// Cache for injected keyframe styles - prevents re-injection on every render
+const injectedKeyframes = new Set();
+
 const emotionData = {
     happy: {
         color: "hsl(51, 100%, 50%)",
@@ -308,12 +311,23 @@ const InlineEmotionDisplay = ({ emotion, children }) => {
         }
     }, [showBubble]);
 
-    const pulseKeyframes = `
-  @keyframes pulse-underline-${lowercaseEmotion} {
-    0%, 100% { border-bottom-color:${hslToRgba(backgroundColor, 0.6)}; }
-    50% { border-bottom-color: ${hslToRgba(backgroundColor, 0.8)}; }
-  }
-`;
+    // Inject keyframes only once per emotion type (not on every render)
+    const animationName = `pulse-underline-${lowercaseEmotion}`;
+    useEffect(() => {
+        if (injectedKeyframes.has(animationName)) return;
+
+        const styleEl = document.createElement("style");
+        styleEl.textContent = `
+            @keyframes ${animationName} {
+                0%, 100% { border-bottom-color: ${hslToRgba(backgroundColor, 0.6)}; }
+                50% { border-bottom-color: ${hslToRgba(backgroundColor, 0.8)}; }
+            }
+        `;
+        document.head.appendChild(styleEl);
+        injectedKeyframes.add(animationName);
+
+        // No cleanup - keyframes persist for app lifetime (they're reusable)
+    }, [animationName, backgroundColor]);
 
     return (
         <span
@@ -330,7 +344,6 @@ const InlineEmotionDisplay = ({ emotion, children }) => {
                 WebkitTapHighlightColor: "transparent",
             }}
         >
-            <style>{pulseKeyframes}</style>
             <span
                 style={{
                     borderBottom: `1px solid ${hslToRgba(backgroundColor, 0.8)}`,

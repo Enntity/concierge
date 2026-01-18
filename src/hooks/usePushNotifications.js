@@ -30,33 +30,21 @@ export default function usePushNotifications({ enabled }) {
      */
     const registerForPush = useCallback(
         async ({ userGesture = false } = {}) => {
-            console.log("[Push] registerForPush called, userGesture:", userGesture);
-            
             // For auto-init, only run once
             if (!userGesture && autoInitializedRef.current) {
-                console.log("[Push] Already auto-initialized, skipping");
                 return;
             }
 
-            if (typeof window === "undefined") {
-                console.log("[Push] No window object");
-                return;
-            }
-            
-            if (!("serviceWorker" in navigator)) {
-                console.log("[Push] serviceWorker not supported");
-                return;
-            }
-            
-            if (!("PushManager" in window)) {
-                console.log("[Push] PushManager not supported");
+            if (
+                typeof window === "undefined" ||
+                !("serviceWorker" in navigator) ||
+                !("PushManager" in window)
+            ) {
                 return;
             }
 
             const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-            console.log("[Push] VAPID public key present:", !!publicKey);
             if (!publicKey) {
-                console.log("[Push] No VAPID public key configured");
                 return;
             }
 
@@ -70,61 +58,46 @@ export default function usePushNotifications({ enabled }) {
 
             try {
                 // Register the service worker
-                console.log("[Push] Registering service worker at:", swUrl);
-                await navigator.serviceWorker.register(swUrl, {
-                    scope,
-                });
+                await navigator.serviceWorker.register(swUrl, { scope });
 
                 // Wait for the service worker to be ready (activated)
-                console.log("[Push] Waiting for service worker ready...");
                 const registration = await navigator.serviceWorker.ready;
-                console.log("[Push] Service worker ready");
 
                 let subscription =
                     await registration.pushManager.getSubscription();
-                console.log("[Push] Existing subscription:", !!subscription);
-                
+
                 if (!subscription) {
                     // Request permission
                     // For user gesture: always prompt (required for iOS)
                     // For auto: only prompt once (check localStorage)
-                    console.log("[Push] Current permission:", Notification.permission);
                     if (Notification.permission === "default") {
                         if (userGesture) {
-                            console.log("[Push] Requesting permission (user gesture)...");
-                            const result = await Notification.requestPermission();
-                            console.log("[Push] Permission result:", result);
+                            await Notification.requestPermission();
                         } else {
                             const promptedKey = "pwa_push_prompted";
                             if (!localStorage.getItem(promptedKey)) {
                                 localStorage.setItem(promptedKey, "true");
-                                console.log("[Push] Requesting permission (auto)...");
                                 await Notification.requestPermission();
                             }
                         }
                     }
 
                     if (Notification.permission !== "granted") {
-                        console.log("[Push] Permission not granted, aborting");
                         return;
                     }
 
-                    console.log("[Push] Subscribing to push manager...");
                     const applicationServerKey =
                         urlBase64ToUint8Array(publicKey);
                     subscription = await registration.pushManager.subscribe({
                         userVisibleOnly: true,
                         applicationServerKey,
                     });
-                    console.log("[Push] Subscribed successfully");
                 }
 
-                console.log("[Push] Saving subscription to server...");
                 await axios.post("/api/push-subscription", {
                     subscription,
                     userAgent: navigator.userAgent,
                 });
-                console.log("[Push] Registration complete!");
             } catch (error) {
                 console.warn("[Push] Registration failed:", error);
                 throw error; // Re-throw so caller knows it failed

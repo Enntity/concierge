@@ -10,7 +10,7 @@ import React, {
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import Loader from "../../../app/components/loader";
-import { convertMessageToMarkdown } from "../chat/ChatMessage";
+// Removed: convertMessageToMarkdown - using lightweight renderTextWithEmotions instead
 import { AuthContext } from "../../App";
 import { useEntityOnboarding } from "../../hooks/useEntityOnboarding";
 import { useEntities } from "../../hooks/useEntities";
@@ -114,7 +114,57 @@ const OnboardingSparkles = React.memo(({ size = 120 }) => {
     );
 });
 
-// Floating text component for entity messages with full markdown support
+// Lightweight text renderer with just emotion support (no full markdown)
+// Pattern: :cd_inline_emotion[text]{type="emotion"}
+const EMOTION_REGEX = /:cd_inline_emotion\[([^\]]*)\]\{type="([^"]*)"\}/g;
+
+const renderTextWithEmotions = (text) => {
+    if (!text) return null;
+
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    let key = 0;
+
+    // Reset regex state
+    EMOTION_REGEX.lastIndex = 0;
+
+    while ((match = EMOTION_REGEX.exec(text)) !== null) {
+        // Add text before the match
+        if (match.index > lastIndex) {
+            parts.push(
+                <span key={key++}>{text.slice(lastIndex, match.index)}</span>,
+            );
+        }
+
+        // Add the emotion span with simple styling (no animation to keep it light)
+        const [, emotionText, emotionType] = match;
+        parts.push(
+            <span
+                key={key++}
+                className="inline-emotion-simple"
+                title={emotionType}
+                style={{
+                    borderBottom: "1px solid rgba(103, 232, 249, 0.5)",
+                    paddingBottom: "1px",
+                }}
+            >
+                {emotionText}
+            </span>,
+        );
+
+        lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+        parts.push(<span key={key++}>{text.slice(lastIndex)}</span>);
+    }
+
+    return parts.length > 0 ? parts : text;
+};
+
+// Floating text component - lightweight version for onboarding
 const FloatingEntityMessage = React.memo(
     ({ content, isVisible, isStreaming }) => {
         const textContent = content?.trim() || "";
@@ -127,8 +177,11 @@ const FloatingEntityMessage = React.memo(
             `}
                 style={{ transitionDuration: isVisible ? "1000ms" : "300ms" }}
             >
-                <div className="onboarding-message-content text-base sm:text-lg md:text-2xl font-light text-center leading-relaxed text-slate-200 select-none">
-                    {convertMessageToMarkdown({ payload: textContent })}
+                <div
+                    className="onboarding-message-content text-base sm:text-lg md:text-2xl font-light text-center leading-relaxed text-slate-200 select-none"
+                    style={{ whiteSpace: "pre-wrap" }}
+                >
+                    {renderTextWithEmotions(textContent)}
                 </div>
             </div>
         );
@@ -198,7 +251,7 @@ const EtherealInput = React.memo(
                             hover:bg-cyan-500/20 transition-colors
                         "
                         >
-                            Enter ↵
+                            Enter ?
                         </button>
                     )}
                 </div>
@@ -543,7 +596,7 @@ const ContactingScreen = ({
                                         "emoji-float 3s ease-in-out infinite",
                                 }}
                             >
-                                {avatarIcon || "✨"}
+                                {avatarIcon || "?"}
                             </span>
                         )}
 
@@ -581,7 +634,7 @@ const ContactingScreen = ({
                             textShadow: "0 0 20px rgba(52, 211, 153, 0.5)",
                         }}
                     >
-                        ✓ {t("Connected")}
+                        ? {t("Connected")}
                     </p>
                 ) : (
                     <p className="text-lg text-slate-400 font-light tracking-wide">
@@ -1373,7 +1426,7 @@ export default function EntityOnboarding({
                         avatarIcon={
                             pendingEntityRef.current?.avatarIcon ||
                             createdEntity?.avatarIcon ||
-                            "✨"
+                            "?"
                         }
                         avatarImageUrl={avatarImageUrl}
                         isConnected={onboardingChatReady}
