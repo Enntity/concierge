@@ -493,6 +493,13 @@ export default function EntityContactsModal({
             <ContinuityMemoryEditor
                 show={!!memoryEditorEntityId}
                 onClose={() => {
+                    // Re-open the entity options dialog
+                    const entity = entities.find(
+                        (e) => e.id === memoryEditorEntityId,
+                    );
+                    if (entity) {
+                        setOptionsEntity(entity);
+                    }
                     setMemoryEditorEntityId(null);
                     setMemoryEditorEntityName(null);
                 }}
@@ -504,6 +511,13 @@ export default function EntityContactsModal({
             <ToolsEditor
                 show={!!toolsEditorEntityId}
                 onClose={() => {
+                    // Re-open the entity options dialog
+                    const entity = entities.find(
+                        (e) => e.id === toolsEditorEntityId,
+                    );
+                    if (entity) {
+                        setOptionsEntity(entity);
+                    }
                     setToolsEditorEntityId(null);
                     setToolsEditorEntityName(null);
                     setToolsEditorEntityTools([]);

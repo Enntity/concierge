@@ -10,7 +10,7 @@ import React, {
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import Loader from "../../../app/components/loader";
-// Removed: convertMessageToMarkdown - using lightweight renderTextWithEmotions instead
+// Removed: convertMessageToMarkdown - onboarding uses plain text only
 import { AuthContext } from "../../App";
 import { useEntityOnboarding } from "../../hooks/useEntityOnboarding";
 import { useEntities } from "../../hooks/useEntities";
@@ -114,56 +114,6 @@ const OnboardingSparkles = React.memo(({ size = 120 }) => {
     );
 });
 
-// Lightweight text renderer with just emotion support (no full markdown)
-// Pattern: :cd_inline_emotion[text]{type="emotion"}
-const EMOTION_REGEX = /:cd_inline_emotion\[([^\]]*)\]\{type="([^"]*)"\}/g;
-
-const renderTextWithEmotions = (text) => {
-    if (!text) return null;
-
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-    let key = 0;
-
-    // Reset regex state
-    EMOTION_REGEX.lastIndex = 0;
-
-    while ((match = EMOTION_REGEX.exec(text)) !== null) {
-        // Add text before the match
-        if (match.index > lastIndex) {
-            parts.push(
-                <span key={key++}>{text.slice(lastIndex, match.index)}</span>,
-            );
-        }
-
-        // Add the emotion span with simple styling (no animation to keep it light)
-        const [, emotionText, emotionType] = match;
-        parts.push(
-            <span
-                key={key++}
-                className="inline-emotion-simple"
-                title={emotionType}
-                style={{
-                    borderBottom: "1px solid rgba(103, 232, 249, 0.5)",
-                    paddingBottom: "1px",
-                }}
-            >
-                {emotionText}
-            </span>,
-        );
-
-        lastIndex = match.index + match[0].length;
-    }
-
-    // Add remaining text
-    if (lastIndex < text.length) {
-        parts.push(<span key={key++}>{text.slice(lastIndex)}</span>);
-    }
-
-    return parts.length > 0 ? parts : text;
-};
-
 // Floating text component - lightweight version for onboarding
 const FloatingEntityMessage = React.memo(
     ({ content, isVisible, isStreaming }) => {
@@ -181,7 +131,7 @@ const FloatingEntityMessage = React.memo(
                     className="onboarding-message-content text-base sm:text-lg md:text-2xl font-light text-center leading-relaxed text-slate-200 select-none"
                     style={{ whiteSpace: "pre-wrap" }}
                 >
-                    {renderTextWithEmotions(textContent)}
+                    {textContent}
                 </div>
             </div>
         );
@@ -251,7 +201,7 @@ const EtherealInput = React.memo(
                             hover:bg-cyan-500/20 transition-colors
                         "
                         >
-                            Enter ?
+                            Enter ↵
                         </button>
                     )}
                 </div>
@@ -634,7 +584,7 @@ const ContactingScreen = ({
                             textShadow: "0 0 20px rgba(52, 211, 153, 0.5)",
                         }}
                     >
-                        ? {t("Connected")}
+                        ✓ {t("Connected")}
                     </p>
                 ) : (
                     <p className="text-lg text-slate-400 font-light tracking-wide">

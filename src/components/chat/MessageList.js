@@ -71,6 +71,37 @@ const countImages = (message) => {
     }, 0);
 };
 
+/**
+ * Extract text content from a message payload.
+ * Handles both string payloads and array payloads (which may contain
+ * JSON text objects or plain strings).
+ */
+const getTextFromPayload = (payload) => {
+    if (typeof payload === "string") {
+        return payload;
+    }
+    if (!Array.isArray(payload)) {
+        return "";
+    }
+    // Extract text from array payload
+    return payload
+        .map((item) => {
+            try {
+                const obj = JSON.parse(item);
+                if (obj.type === "text") {
+                    return obj.text;
+                }
+                // Skip non-text items (images, files, etc.)
+                return null;
+            } catch (e) {
+                // Not JSON, treat as plain text
+                return item;
+            }
+        })
+        .filter(Boolean)
+        .join("\n");
+};
+
 const parseToolData = (toolString) => {
     if (!toolString) return null;
     try {
@@ -1040,11 +1071,7 @@ const MessageList = React.memo(
                                 className="opacity-0 group-hover:opacity-80 hover:opacity-100 transition-opacity"
                             />
                             <CopyButton
-                                item={
-                                    typeof message.payload === "string"
-                                        ? message.payload
-                                        : ""
-                                }
+                                item={getTextFromPayload(message.payload)}
                                 className="opacity-0 group-hover:opacity-80 hover:opacity-100 transition-opacity"
                             />
                         </div>

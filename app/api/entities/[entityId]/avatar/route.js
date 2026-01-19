@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../../utils/auth";
-import { getEntitiesCollection, isValidEntityId } from "../../_lib";
+import { isValidEntityId } from "../../_lib";
+import { getClient, MUTATIONS } from "../../../../../src/graphql";
 
 /**
  * PATCH /api/entities/[entityId]/avatar
- * Update an entity's avatar image
+ * Update an entity's avatar image via Cortex pathway
+ * This ensures Cortex's entity cache stays in sync
  */
 export async function PATCH(req, { params }) {
-    let client;
     try {
         const user = await getCurrentUser();
         if (!user?.contextId) {
@@ -43,66 +44,52 @@ export async function PATCH(req, { params }) {
             );
         }
 
-        // Get MongoDB collection
-        const result = await getEntitiesCollection();
-        client = result.client;
-        const { collection } = result;
-
-        // Verify entity exists and user has access
-        const entity = await collection.findOne({ id: entityId });
-        if (!entity) {
-            return NextResponse.json(
-                { error: "Entity not found" },
-                { status: 404 },
-            );
-        }
-
-        // Check access - user must be in assocUserIds (unless system entity)
-        if (
-            !entity.isSystem &&
-            (!entity.assocUserIds ||
-                !Array.isArray(entity.assocUserIds) ||
-                !entity.assocUserIds.includes(user.contextId))
-        ) {
-            return NextResponse.json(
-                {
-                    error: "Unauthorized - you don't have access to this entity",
-                },
-                { status: 403 },
-            );
-        }
-
-        // Update the entity's avatar
-        const updateResult = await collection.updateOne(
-            { id: entityId },
-            {
-                $set: {
-                    "avatar.image.url": imageUrl,
-                    updatedAt: new Date(),
-                },
+        // Update via Cortex pathway to keep cache in sync
+        const graphqlClient = getClient();
+        const result = await graphqlClient.mutate({
+            mutation: MUTATIONS.SYS_UPDATE_ENTITY,
+            variables: {
+                entityId,
+                contextId: user.contextId,
+                avatarImageUrl: imageUrl,
             },
-        );
+        });
 
-        if (updateResult.modifiedCount === 0) {
-            return NextResponse.json(
-                { error: "Failed to update avatar" },
-                { status: 500 },
-            );
+        const pathwayResult = result.data?.sys_update_entity?.result;
+        if (pathwayResult) {
+            let parsed;
+            try {
+                parsed =
+                    typeof pathwayResult === "string"
+                        ? JSON.parse(pathwayResult)
+                        : pathwayResult;
+            } catch (e) {
+                // If we can't parse, assume success if we got a result
+                parsed = { success: true };
+            }
+
+            if (parsed.error) {
+                return NextResponse.json(
+                    { error: parsed.error },
+                    { status: 400 },
+                );
+            }
+
+            return NextResponse.json({
+                success: true,
+                message: "Avatar updated successfully",
+            });
         }
 
-        return NextResponse.json({
-            success: true,
-            message: "Avatar updated successfully",
-        });
+        return NextResponse.json(
+            { error: "No response from Cortex" },
+            { status: 500 },
+        );
     } catch (error) {
         console.error("Error updating entity avatar:", error);
         return NextResponse.json(
             { error: error.message || "Failed to update avatar" },
             { status: 500 },
         );
-    } finally {
-        if (client) {
-            await client.close().catch(console.error);
-        }
     }
 }

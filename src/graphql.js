@@ -985,6 +985,9 @@ const SYS_UPDATE_ENTITY = gql`
         $preferredModel: String
         $modelOverride: String
         $reasoningEffort: String
+        $avatarText: String
+        $avatarDescription: String
+        $avatarImageUrl: String
     ) {
         sys_update_entity(
             entityId: $entityId
@@ -997,6 +1000,9 @@ const SYS_UPDATE_ENTITY = gql`
             preferredModel: $preferredModel
             modelOverride: $modelOverride
             reasoningEffort: $reasoningEffort
+            avatarText: $avatarText
+            avatarDescription: $avatarDescription
+            avatarImageUrl: $avatarImageUrl
         ) {
             result
         }
