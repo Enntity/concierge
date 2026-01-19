@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../utils/auth";
 import { getEntitiesCollection, isValidEntityId } from "../_lib";
+import { getClient, MUTATIONS } from "../../../../src/graphql";
 
 /**
  * GET /api/entities/[entityId]
@@ -68,7 +69,10 @@ export async function GET(req, { params }) {
 
 /**
  * PATCH /api/entities/[entityId]
- * Update entity settings (preferredModel, modelOverride, reasoningEffort, tools)
+ * Update entity settings via cortex sys_update_entity pathway
+ * This ensures changes are immediately reflected in both MongoDB and cortex's internal cache
+ *
+ * Supported properties:
  * - preferredModel: Default model for this entity (can be overridden by user preferences)
  * - modelOverride: Forced model that always takes precedence over user preferences
  * - reasoningEffort: How much thinking time (low, medium, high)
@@ -131,13 +135,50 @@ export async function PATCH(req, { params }) {
             }
         }
 
-        let client;
-        try {
-            const result = await getEntitiesCollection();
-            client = result.client;
-            const { collection } = result;
+        // Build variables for the pathway - only include defined values
+        const variables = {
+            entityId: entityId,
+            contextId: user.contextId,
+        };
 
-            // Verify entity exists and user has access
+        // Handle preferredModel - null means clear it
+        if (preferredModel !== undefined) {
+            variables.preferredModel = preferredModel;
+        }
+
+        // Handle modelOverride - null means clear it
+        if (modelOverride !== undefined) {
+            variables.modelOverride = modelOverride;
+        }
+
+        if (reasoningEffort !== undefined) {
+            variables.reasoningEffort = reasoningEffort;
+        }
+
+        // Handle tools - normalize to lowercase
+        if (tools !== undefined) {
+            variables.tools = tools.map((t) => t.toLowerCase());
+        }
+
+        // Check if there are any properties to update (besides entityId and contextId)
+        const propertyKeys = Object.keys(variables).filter(
+            (k) => k !== "entityId" && k !== "contextId",
+        );
+        if (propertyKeys.length === 0) {
+            return NextResponse.json(
+                { error: "No properties provided to update" },
+                { status: 400 },
+            );
+        }
+
+        // Defense-in-depth: Pre-flight authorization check before calling cortex
+        // (cortex also checks, but we verify here as a second layer)
+        let mongoClient;
+        try {
+            const mongoResult = await getEntitiesCollection();
+            mongoClient = mongoResult.client;
+            const { collection } = mongoResult;
+
             const entity = await collection.findOne({ id: entityId });
             if (!entity) {
                 return NextResponse.json(
@@ -157,77 +198,110 @@ export async function PATCH(req, { params }) {
                     { status: 403 },
                 );
             }
-
-            // Build update object - separate $set and $unset operations
-            const updateFields = { updatedAt: new Date() };
-            const unsetFields = {};
-
-            // Handle preferredModel - null means clear it
-            if (preferredModel !== undefined) {
-                if (preferredModel === null) {
-                    unsetFields.preferredModel = "";
-                } else {
-                    updateFields.preferredModel = preferredModel;
-                }
+        } finally {
+            if (mongoClient) {
+                await mongoClient.close().catch(console.error);
             }
+        }
 
-            // Handle modelOverride - null means clear it
-            if (modelOverride !== undefined) {
-                if (modelOverride === null) {
-                    unsetFields.modelOverride = "";
-                } else {
-                    updateFields.modelOverride = modelOverride;
-                }
-            }
+        // Call cortex sys_update_entity pathway via GraphQL
+        // This updates both MongoDB and the internal cache for immediate synchronization
+        try {
+            const graphqlClient = getClient();
+            const result = await graphqlClient.mutate({
+                mutation: MUTATIONS.SYS_UPDATE_ENTITY,
+                variables: variables,
+                fetchPolicy: "network-only",
+            });
 
-            if (reasoningEffort !== undefined) {
-                updateFields.reasoningEffort = reasoningEffort;
-            }
-
-            // Handle tools - store as array of lowercase strings
-            if (tools !== undefined) {
-                // Normalize to lowercase
-                updateFields.tools = tools.map((t) => t.toLowerCase());
-            }
-
-            // Build the update operation
-            const updateOp = { $set: updateFields };
-            if (Object.keys(unsetFields).length > 0) {
-                updateOp.$unset = unsetFields;
-            }
-
-            const updateResult = await collection.updateOne(
-                { id: entityId },
-                updateOp,
-            );
-
-            if (
-                updateResult.modifiedCount === 0 &&
-                updateResult.matchedCount === 0
-            ) {
+            const pathwayResult = result.data?.sys_update_entity?.result;
+            if (!pathwayResult) {
+                console.error(
+                    "No result from sys_update_entity pathway:",
+                    result,
+                );
                 return NextResponse.json(
-                    { error: "Failed to update entity" },
+                    { error: "Failed to update entity via cortex" },
                     { status: 500 },
                 );
             }
 
-            // Return updated entity
-            const updatedEntity = await collection.findOne({ id: entityId });
-            const { _id, ...entityData } = updatedEntity;
-
-            return NextResponse.json({
-                success: true,
-                entity: entityData,
-            });
-        } finally {
-            if (client) {
-                await client.close().catch(console.error);
+            // Parse the JSON result from the pathway
+            let parsed;
+            try {
+                parsed =
+                    typeof pathwayResult === "string"
+                        ? JSON.parse(pathwayResult)
+                        : pathwayResult;
+            } catch (e) {
+                console.error("Failed to parse pathway response:", e);
+                return NextResponse.json(
+                    { error: "Invalid response from cortex" },
+                    { status: 500 },
+                );
             }
+
+            if (!parsed.success) {
+                // Map pathway errors to appropriate HTTP status codes
+                const error = parsed.error || "Failed to update entity";
+                if (error.includes("not found")) {
+                    return NextResponse.json({ error }, { status: 404 });
+                }
+                if (
+                    error.includes("Not authorized") ||
+                    error.includes("Cannot update system")
+                ) {
+                    return NextResponse.json({ error }, { status: 403 });
+                }
+                return NextResponse.json({ error }, { status: 400 });
+            }
+
+            // Fetch the updated entity to return full data
+            // (pathway only returns success status and updated property names)
+            let mongoClient;
+            try {
+                const mongoResult = await getEntitiesCollection();
+                mongoClient = mongoResult.client;
+                const { collection } = mongoResult;
+
+                const updatedEntity = await collection.findOne({
+                    id: entityId,
+                });
+                if (!updatedEntity) {
+                    // Entity was updated but we can't fetch it - return partial success
+                    return NextResponse.json({
+                        success: true,
+                        updatedProperties: parsed.updatedProperties,
+                    });
+                }
+
+                const { _id, ...entityData } = updatedEntity;
+                return NextResponse.json({
+                    success: true,
+                    entity: entityData,
+                    updatedProperties: parsed.updatedProperties,
+                });
+            } finally {
+                if (mongoClient) {
+                    await mongoClient.close().catch(console.error);
+                }
+            }
+        } catch (graphqlError) {
+            console.error(
+                "Error calling sys_update_entity pathway:",
+                graphqlError,
+            );
+            // Don't expose internal error details to client
+            return NextResponse.json(
+                { error: "Failed to update entity" },
+                { status: 500 },
+            );
         }
     } catch (error) {
         console.error("Error updating entity:", error);
+        // Don't expose internal error details to client
         return NextResponse.json(
-            { error: error.message || "Failed to update entity" },
+            { error: "Failed to update entity" },
             { status: 500 },
         );
     }
@@ -235,7 +309,8 @@ export async function PATCH(req, { params }) {
 
 /**
  * DELETE /api/entities/[entityId]
- * Disassociate the current user from an entity
+ * Disassociate the current user from an entity via cortex sys_disassociate_entity pathway
+ * This ensures the change is immediately reflected in both MongoDB and cortex's internal cache
  */
 export async function DELETE(req, { params }) {
     try {
@@ -263,54 +338,73 @@ export async function DELETE(req, { params }) {
             );
         }
 
-        // Get MongoDB collection
-        let client;
+        // Call cortex sys_disassociate_entity pathway via GraphQL
         try {
-            const result = await getEntitiesCollection();
-            client = result.client;
-            const { collection } = result;
+            const graphqlClient = getClient();
+            const result = await graphqlClient.mutate({
+                mutation: MUTATIONS.SYS_DISASSOCIATE_ENTITY,
+                variables: {
+                    entityId: entityId,
+                    contextId: user.contextId,
+                },
+                fetchPolicy: "network-only",
+            });
 
-            // Verify entity exists
-            const entity = await collection.findOne({ id: entityId });
-            if (!entity) {
+            const pathwayResult = result.data?.sys_disassociate_entity?.result;
+            if (!pathwayResult) {
+                console.error(
+                    "No result from sys_disassociate_entity pathway:",
+                    result,
+                );
                 return NextResponse.json(
-                    { error: "Entity not found" },
-                    { status: 404 },
+                    { error: "Failed to disassociate entity via cortex" },
+                    { status: 500 },
                 );
             }
 
-            // Remove user from entity's assocUserIds
-            const updateResult = await collection.updateOne(
-                { id: entityId },
-                {
-                    $pull: { assocUserIds: user.contextId },
-                    $set: { updatedAt: new Date() },
-                },
-            );
-
-            if (updateResult.modifiedCount === 0) {
+            // Parse the JSON result from the pathway
+            let parsed;
+            try {
+                parsed =
+                    typeof pathwayResult === "string"
+                        ? JSON.parse(pathwayResult)
+                        : pathwayResult;
+            } catch (e) {
+                console.error("Failed to parse pathway response:", e);
                 return NextResponse.json(
-                    {
-                        success: false,
-                        error: "User was not associated with this entity",
-                    },
-                    { status: 400 },
+                    { error: "Invalid response from cortex" },
+                    { status: 500 },
                 );
+            }
+
+            if (!parsed.success) {
+                const error = parsed.error || "Failed to disassociate entity";
+                if (error.includes("not found")) {
+                    return NextResponse.json({ error }, { status: 404 });
+                }
+                return NextResponse.json({ error }, { status: 400 });
             }
 
             return NextResponse.json({
                 success: true,
-                message: `User disassociated from entity successfully`,
+                message:
+                    parsed.message ||
+                    "User disassociated from entity successfully",
             });
-        } finally {
-            if (client) {
-                await client.close().catch(console.error);
-            }
+        } catch (graphqlError) {
+            console.error(
+                "Error calling sys_disassociate_entity pathway:",
+                graphqlError,
+            );
+            return NextResponse.json(
+                { error: "Failed to disassociate entity" },
+                { status: 500 },
+            );
         }
     } catch (error) {
         console.error("Error disassociating entity:", error);
         return NextResponse.json(
-            { error: error.message || "Failed to disassociate entity" },
+            { error: "Failed to disassociate entity" },
             { status: 500 },
         );
     }

@@ -965,6 +965,52 @@ const SYS_GET_TOOLS = gql`
     }
 `;
 
+const SYS_GET_ENTITIES = gql`
+    query SysGetEntities($contextId: String!, $includeSystem: Boolean) {
+        sys_get_entities(contextId: $contextId, includeSystem: $includeSystem) {
+            result
+        }
+    }
+`;
+
+const SYS_UPDATE_ENTITY = gql`
+    mutation SysUpdateEntity(
+        $entityId: String!
+        $contextId: String!
+        $name: String
+        $description: String
+        $identity: String
+        $tools: [String]
+        $useMemory: Boolean
+        $preferredModel: String
+        $modelOverride: String
+        $reasoningEffort: String
+    ) {
+        sys_update_entity(
+            entityId: $entityId
+            contextId: $contextId
+            name: $name
+            description: $description
+            identity: $identity
+            tools: $tools
+            useMemory: $useMemory
+            preferredModel: $preferredModel
+            modelOverride: $modelOverride
+            reasoningEffort: $reasoningEffort
+        ) {
+            result
+        }
+    }
+`;
+
+const SYS_DISASSOCIATE_ENTITY = gql`
+    mutation SysDisassociateEntity($entityId: String!, $contextId: String!) {
+        sys_disassociate_entity(entityId: $entityId, contextId: $contextId) {
+            result
+        }
+    }
+`;
+
 const SYS_TOOL_MERMAID = gql`
     query Sys_tool_mermaid($chatHistory: [MultiMessage], $async: Boolean) {
         sys_tool_mermaid(chatHistory: $chatHistory, async: $async) {
@@ -1014,6 +1060,7 @@ const QUERIES = {
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,
     SYS_GET_TOOLS,
+    SYS_GET_ENTITIES,
     SYS_TOOL_MERMAID,
     EXPAND_STORY,
     FORMAT_PARAGRAPH_TURBO,
@@ -1094,6 +1141,8 @@ const MUTATIONS = {
     PUT_PATHWAY,
     DELETE_PATHWAY,
     SYS_STORE_CONTINUITY_MEMORY,
+    SYS_UPDATE_ENTITY,
+    SYS_DISASSOCIATE_ENTITY,
 };
 
 export {
@@ -1105,6 +1154,8 @@ export {
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,
     SYS_GET_TOOLS,
+    SYS_GET_ENTITIES,
+    SYS_UPDATE_ENTITY,
     SYS_TOOL_MERMAID,
     SELECT_SERVICES,
     SUMMARY,
