@@ -23,4 +23,8 @@ export const TASK_INFO = {
         displayName: "Build digest",
         isRetryable: true,
     },
+    "deep-synthesis": {
+        displayName: "Process memories",
+        isRetryable: false,
+    },
 };

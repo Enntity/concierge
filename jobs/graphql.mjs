@@ -798,6 +798,40 @@ const AZURE_VIDEO_TRANSLATE = gql`
     }
 `;
 
+/**
+ * Deep synthesis for continuity memory consolidation and discovery.
+ * Models human sleep consolidation in two phases:
+ * - Phase 1 (Consolidation): Per-memory analysis to absorb, merge, link, or keep
+ * - Phase 2 (Discovery): Batch pattern recognition and CORE_EXTENSION nominations
+ */
+const SYS_CONTINUITY_DEEP_SYNTHESIS = gql`
+    query DeepSynthesis(
+        $entityId: String!
+        $userId: String!
+        $memoryIds: [String]
+        $phase1Max: Int
+        $phase2Max: Int
+        $daysToLookBack: Int
+        $runPhase1: Boolean
+        $runPhase2: Boolean
+        $async: Boolean!
+    ) {
+        sys_continuity_deep_synthesis(
+            entityId: $entityId
+            userId: $userId
+            memoryIds: $memoryIds
+            phase1Max: $phase1Max
+            phase2Max: $phase2Max
+            daysToLookBack: $daysToLookBack
+            runPhase1: $runPhase1
+            runPhase2: $runPhase2
+            async: $async
+        ) {
+            result
+        }
+    }
+`;
+
 const getWorkspacePromptQuery = (pathwayName) => {
     return gql`
         query ${pathwayName}(
@@ -884,6 +918,7 @@ const QUERIES = {
     HEADLINE_CUSTOM,
     SUBHEAD,
     VISION,
+    SYS_CONTINUITY_DEEP_SYNTHESIS,
 };
 
 const SUBSCRIPTIONS = {
@@ -935,4 +970,5 @@ export {
     TRANSCRIBE_GEMINI,
     FORMAT_PARAGRAPH_TURBO,
     CODE_HUMAN_INPUT,
+    SYS_CONTINUITY_DEEP_SYNTHESIS,
 };

@@ -18,6 +18,7 @@ import {
     CheckSquare,
     Square,
     Filter,
+    Sparkles,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -27,6 +28,7 @@ import {
     TooltipProvider,
 } from "@/components/ui/tooltip";
 import { LanguageContext } from "../contexts/LanguageProvider";
+import { useNotificationsContext } from "../contexts/NotificationContext";
 import FilterInput from "./common/FilterInput";
 import BulkActionsBar from "./common/BulkActionsBar";
 import EmptyState from "./common/EmptyState";
@@ -49,6 +51,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useItemSelection } from "./images/hooks/useItemSelection";
 import { Modal } from "@/components/ui/modal";
+import { useRunTask } from "../../app/queries/notifications";
 
 // Memory types from continuity memory design
 const MEMORY_TYPES = [
@@ -273,7 +276,14 @@ function ContinuityMemoryItem({
                             </div>
                         </div>
                         <button
-                            onClick={() => onToggleSelect(item)}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                onToggleSelect(item, e);
+                            }}
+                            onMouseDown={(e) => {
+                                // Prevent text selection on shift-click
+                                if (e.shiftKey) e.preventDefault();
+                            }}
                             className="flex-shrink-0 mt-0.5"
                         >
                             {isSelected ? (
@@ -286,7 +296,14 @@ function ContinuityMemoryItem({
                 ) : (
                     <>
                         <button
-                            onClick={() => onToggleSelect(item)}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                onToggleSelect(item, e);
+                            }}
+                            onMouseDown={(e) => {
+                                // Prevent text selection on shift-click
+                                if (e.shiftKey) e.preventDefault();
+                            }}
                             className="flex-shrink-0 mt-0.5"
                         >
                             {isSelected ? (
@@ -346,6 +363,8 @@ export const ContinuityMemoryEditorContent = ({
 }) => {
     const { t } = useTranslation();
     const { direction } = useContext(LanguageContext);
+    const { openNotifications } = useNotificationsContext();
+    const runTask = useRunTask();
     const isRTL = direction === "rtl";
     const fileInputRef = useRef();
     const containerRef = useRef(null);
@@ -368,10 +387,17 @@ export const ContinuityMemoryEditorContent = ({
     const [deleteIdToDelete, setDeleteIdToDelete] = useState(null);
     const [showDeleteSelectedConfirm, setShowDeleteSelectedConfirm] =
         useState(false);
+    const [synthesizing, setSynthesizing] = useState(false);
 
     // Use the common selection hook
-    const { selectedIds, toggleSelection, clearSelection, setSelectedIds } =
-        useItemSelection((item) => item.id);
+    const {
+        selectedIds,
+        toggleSelection,
+        clearSelection,
+        setSelectedIds,
+        selectRange,
+        lastSelectedId,
+    } = useItemSelection((item) => item.id);
 
     // Load memories on mount
     const loadMemories = useCallback(async () => {
@@ -640,7 +666,58 @@ export const ContinuityMemoryEditorContent = ({
         }
     };
 
-    const handleToggleSelect = (item) => {
+    const handleSynthesize = async () => {
+        const toSynthesize = Array.from(selectedIds).filter(
+            (id) => !id.startsWith("temp-"),
+        );
+
+        if (toSynthesize.length === 0) {
+            setError(t("No saved memories selected for synthesis"));
+            return;
+        }
+
+        try {
+            setSynthesizing(true);
+            setError("");
+
+            const { taskId } = await runTask.mutateAsync({
+                type: "deep-synthesis",
+                entityId,
+                memoryIds: toSynthesize,
+                runPhase1: true,
+                runPhase2: true,
+            });
+
+            if (taskId) {
+                clearSelection();
+                openNotifications();
+            }
+        } catch (error) {
+            console.error("Error starting synthesis:", error);
+            setError(error.message || t("Failed to start synthesis"));
+        } finally {
+            setSynthesizing(false);
+        }
+    };
+
+    const handleToggleSelect = (item, event) => {
+        // Handle shift-click for range selection
+        if (event?.shiftKey && lastSelectedId) {
+            const lastIndex = filteredMemories.findIndex(
+                (m) => m.id === lastSelectedId,
+            );
+            const currentIndex = filteredMemories.findIndex(
+                (m) => m.id === item.id,
+            );
+
+            if (lastIndex !== -1 && currentIndex !== -1) {
+                const startIndex = Math.min(lastIndex, currentIndex);
+                const endIndex = Math.max(lastIndex, currentIndex);
+                selectRange(filteredMemories, startIndex, endIndex);
+                return;
+            }
+        }
+
         toggleSelection(item);
     };
 
@@ -1085,13 +1162,27 @@ export const ContinuityMemoryEditorContent = ({
                             allSelected={allSelected}
                             onSelectAll={handleSelectAll}
                             onClearSelection={clearSelection}
-                            isLoadingAll={deleting}
+                            isLoadingAll={deleting || synthesizing}
                             actions={{
                                 delete: {
                                     onClick: handleDeleteSelected,
                                     label: t("Delete Selected"),
                                     ariaLabel: t("Delete selected memories"),
                                 },
+                                custom: [
+                                    {
+                                        icon: Sparkles,
+                                        onClick: handleSynthesize,
+                                        disabled: synthesizing,
+                                        label: synthesizing
+                                            ? t("Synthesizing...")
+                                            : t("Synthesize"),
+                                        ariaLabel: t(
+                                            "Synthesize selected memories",
+                                        ),
+                                        className: "lb-primary",
+                                    },
+                                ],
                             }}
                         />
                     )}

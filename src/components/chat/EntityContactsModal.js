@@ -36,6 +36,7 @@ import { useGetChats, useAddChat } from "../../../app/queries/chats";
 import { useRouter } from "next/navigation";
 import { AuthContext } from "../../App";
 import ContinuityMemoryEditor from "../ContinuityMemoryEditor";
+import ToolsEditor from "./ToolsEditor";
 
 // Sort options
 const SORT_OPTIONS = {
@@ -62,6 +63,9 @@ export default function EntityContactsModal({
     const [deletedEntityIds, setDeletedEntityIds] = useState(new Set());
     const [memoryEditorEntityId, setMemoryEditorEntityId] = useState(null);
     const [memoryEditorEntityName, setMemoryEditorEntityName] = useState(null);
+    const [toolsEditorEntityId, setToolsEditorEntityId] = useState(null);
+    const [toolsEditorEntityName, setToolsEditorEntityName] = useState(null);
+    const [toolsEditorEntityTools, setToolsEditorEntityTools] = useState([]);
     const [optionsEntity, setOptionsEntity] = useState(null);
     const firstEntityRef = useRef(null);
 
@@ -472,6 +476,11 @@ export default function EntityContactsModal({
                     setMemoryEditorEntityId(entityId);
                     setMemoryEditorEntityName(entityName);
                 }}
+                onOpenToolsEditor={(entityId, entityName, entityTools) => {
+                    setToolsEditorEntityId(entityId);
+                    setToolsEditorEntityName(entityName);
+                    setToolsEditorEntityTools(entityTools);
+                }}
                 onEntityUpdate={(updatedEntity) => {
                     // Refresh entities list to reflect changes
                     if (refetchEntities) {
@@ -489,6 +498,38 @@ export default function EntityContactsModal({
                 }}
                 entityId={memoryEditorEntityId}
                 entityName={memoryEditorEntityName}
+            />
+
+            {/* Tools Editor */}
+            <ToolsEditor
+                show={!!toolsEditorEntityId}
+                onClose={() => {
+                    setToolsEditorEntityId(null);
+                    setToolsEditorEntityName(null);
+                    setToolsEditorEntityTools([]);
+                }}
+                entityId={toolsEditorEntityId}
+                entityName={toolsEditorEntityName}
+                entityTools={toolsEditorEntityTools}
+                onSave={async (tools) => {
+                    // Save tools via API
+                    const response = await fetch(
+                        `/api/entities/${toolsEditorEntityId}`,
+                        {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ tools }),
+                        },
+                    );
+                    const result = await response.json();
+                    if (!result.success) {
+                        throw new Error(result.error || "Failed to save tools");
+                    }
+                    // Refresh entities list
+                    if (refetchEntities) {
+                        refetchEntities();
+                    }
+                }}
             />
         </>
     );

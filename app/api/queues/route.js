@@ -47,6 +47,15 @@ const JOB_DATA_WHITELIST = {
             format: true,
         },
     },
+    "deep-synthesis": {
+        metadata: {
+            entityId: true,
+            runPhase1: true,
+            runPhase2: true,
+            phase1Max: true,
+            phase2Max: true,
+        },
+    },
     default: {
         taskId: true,
         userId: true,

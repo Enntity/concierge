@@ -582,6 +582,21 @@ export default React.forwardRef(function Sidebar({ isMobile }, ref) {
                                         </span>
                                     </button>
                                 </div>
+                                {currentUser?.role === "admin" && (
+                                    <div className="pt-2 pb-2 bg-gray-50 dark:bg-gray-700 -mx-5 px-5 text-gray-700 dark:text-gray-200">
+                                        <button
+                                            className="flex gap-2 items-center text-xs w-full hover:opacity-80 transition-opacity"
+                                            onClick={() =>
+                                                router.push("/admin")
+                                            }
+                                        >
+                                            <Icons.ShieldCheck className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-300" />
+                                            <span className="text-xs text-gray-500 dark:text-gray-300">
+                                                {t("Admin")}
+                                            </span>
+                                        </button>
+                                    </div>
+                                )}
                                 <div className="pt-2 pb-3 bg-gray-50 dark:bg-gray-700 -mx-5 px-5 text-gray-700 dark:text-gray-200">
                                     <SendFeedbackButton ref={ref} />
                                 </div>

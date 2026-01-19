@@ -2,7 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Settings, Brain, Sparkles, Loader2, Lock, Unlock } from "lucide-react";
+import {
+    Settings,
+    Brain,
+    Sparkles,
+    Loader2,
+    Lock,
+    Unlock,
+    Wrench,
+} from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -27,6 +35,7 @@ export default function EntityOptionsDialog({
     onClose,
     entity,
     onOpenMemoryEditor,
+    onOpenToolsEditor,
     onEntityUpdate,
 }) {
     const { t } = useTranslation();
@@ -68,6 +77,7 @@ export default function EntityOptionsDialog({
         const forceChanged = forceModel !== !!entity.modelOverride;
         const effortChanged =
             reasoningEffort !== (entity.reasoningEffort || "medium");
+
         setHasChanges(modelChanged || forceChanged || effortChanged);
     }, [preferredModel, forceModel, reasoningEffort, entity]);
 
@@ -109,6 +119,17 @@ export default function EntityOptionsDialog({
             onOpenMemoryEditor(entity.id, entity.name);
         }
     };
+
+    const handleOpenTools = () => {
+        onClose();
+        if (onOpenToolsEditor) {
+            onOpenToolsEditor(entity.id, entity.name, entity.tools || []);
+        }
+    };
+
+    // Get tools count for display
+    const toolsCount = entity?.tools?.length || 0;
+    const hasAllTools = entity?.tools?.includes("*");
 
     if (!entity) return null;
 
@@ -216,6 +237,33 @@ export default function EntityOptionsDialog({
                         </p>
                     </div>
 
+                    {/* Tools Editor Link */}
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                            onClick={handleOpenTools}
+                            className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                <Wrench className="w-5 h-5 text-orange-500" />
+                                <div className="text-left">
+                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        {t("Tools & Capabilities")}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        {hasAllTools
+                                            ? t("All tools enabled")
+                                            : toolsCount > 0
+                                              ? t("{{count}} tools enabled", {
+                                                    count: toolsCount,
+                                                })
+                                              : t("No tools enabled")}
+                                    </div>
+                                </div>
+                            </div>
+                            <span className="text-gray-400">→</span>
+                        </button>
+                    </div>
+
                     {/* Memory Editor Link */}
                     <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                         <button
@@ -238,16 +286,6 @@ export default function EntityOptionsDialog({
                             <span className="text-gray-400">→</span>
                         </button>
                     </div>
-
-                    {/* Future: Tools Section */}
-                    {/* 
-                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            {t("Tools & Capabilities")}
-                        </label>
-                        <p className="text-xs text-gray-500">Coming soon...</p>
-                    </div>
-                    */}
                 </div>
 
                 {/* Save Button */}

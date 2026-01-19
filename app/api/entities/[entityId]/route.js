@@ -68,10 +68,11 @@ export async function GET(req, { params }) {
 
 /**
  * PATCH /api/entities/[entityId]
- * Update entity settings (preferredModel, modelOverride, reasoningEffort)
+ * Update entity settings (preferredModel, modelOverride, reasoningEffort, tools)
  * - preferredModel: Default model for this entity (can be overridden by user preferences)
  * - modelOverride: Forced model that always takes precedence over user preferences
  * - reasoningEffort: How much thinking time (low, medium, high)
+ * - tools: Array of lowercase tool names the entity can use (empty array = no tools)
  */
 export async function PATCH(req, { params }) {
     try {
@@ -92,7 +93,7 @@ export async function PATCH(req, { params }) {
         }
 
         const body = await req.json();
-        const { preferredModel, modelOverride, reasoningEffort } = body;
+        const { preferredModel, modelOverride, reasoningEffort, tools } = body;
 
         // Validate reasoningEffort if provided
         const validReasoningEfforts = ["low", "medium", "high"];
@@ -106,6 +107,28 @@ export async function PATCH(req, { params }) {
                 },
                 { status: 400 },
             );
+        }
+
+        // Validate tools if provided - must be an array of strings
+        if (tools !== undefined) {
+            if (!Array.isArray(tools)) {
+                return NextResponse.json(
+                    { error: "Tools must be an array of strings" },
+                    { status: 400 },
+                );
+            }
+            // Ensure all items are lowercase strings (never write ['*'] - that's legacy)
+            const invalidTools = tools.filter(
+                (t) => typeof t !== "string" || t === "*",
+            );
+            if (invalidTools.length > 0) {
+                return NextResponse.json(
+                    {
+                        error: "Tools must be lowercase tool names. Wildcard '*' is not allowed.",
+                    },
+                    { status: 400 },
+                );
+            }
         }
 
         let client;
@@ -159,6 +182,12 @@ export async function PATCH(req, { params }) {
 
             if (reasoningEffort !== undefined) {
                 updateFields.reasoningEffort = reasoningEffort;
+            }
+
+            // Handle tools - store as array of lowercase strings
+            if (tools !== undefined) {
+                // Normalize to lowercase
+                updateFields.tools = tools.map((t) => t.toLowerCase());
             }
 
             // Build the update operation

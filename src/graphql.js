@@ -957,6 +957,14 @@ const AZURE_VIDEO_TRANSLATE = gql`
 
 // Legacy entity queries removed - now using direct MongoDB access via /api/entities
 
+const SYS_GET_TOOLS = gql`
+    query SysGetTools($includeDisabled: Boolean) {
+        sys_get_tools(includeDisabled: $includeDisabled) {
+            result
+        }
+    }
+`;
+
 const SYS_TOOL_MERMAID = gql`
     query Sys_tool_mermaid($chatHistory: [MultiMessage], $async: Boolean) {
         sys_tool_mermaid(chatHistory: $chatHistory, async: $async) {
@@ -1005,6 +1013,7 @@ const QUERIES = {
     SYS_READ_FILE_COLLECTION,
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,
+    SYS_GET_TOOLS,
     SYS_TOOL_MERMAID,
     EXPAND_STORY,
     FORMAT_PARAGRAPH_TURBO,
@@ -1095,6 +1104,7 @@ export {
     SYS_READ_FILE_COLLECTION,
     SYS_UPDATE_FILE_METADATA,
     SYS_ENTITY_AGENT,
+    SYS_GET_TOOLS,
     SYS_TOOL_MERMAID,
     SELECT_SERVICES,
     SUMMARY,
