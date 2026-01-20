@@ -13,7 +13,6 @@ function CopyButton({ item, className = "absolute top-1 end-1 " }) {
     }, [copied]);
 
     const copyFormattedText = async (text) => {
-        // If text is undefined or null, use an empty string instead
         const textToCopy = text || "";
 
         try {

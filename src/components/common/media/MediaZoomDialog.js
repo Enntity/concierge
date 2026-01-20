@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFilePreview, renderFilePreview } from "../../chat/useFilePreview";
+import { downloadSingleFile } from "../../../utils/fileDownloadUtils";
 import { cn } from "@/lib/utils";
 
 /**
@@ -86,12 +87,20 @@ function MediaZoomDialog({
         }
     };
 
-    const handleDownload = (e) => {
+    const handleDownload = async (e) => {
         e?.stopPropagation?.();
         if (onDownload) {
             onDownload(item);
         } else if (item?.url) {
-            window.open(item.url, "_blank", "noopener,noreferrer");
+            // Use display filename, falling back through various property names
+            const filename =
+                item.displayFilename ||
+                item.originalFilename ||
+                item.label ||
+                item.filename ||
+                item.name ||
+                "download";
+            await downloadSingleFile(item.url, filename);
         }
     };
 
@@ -188,7 +197,7 @@ function MediaZoomDialog({
                 fileType,
                 className:
                     fileType.isPdf || fileType.isDoc
-                        ? "w-full max-h-[80vh] rounded-lg border-none"
+                        ? "w-full h-[80vh] max-w-4xl rounded-lg border-none"
                         : "max-w-full max-h-[80vh] w-auto h-auto object-contain rounded-lg",
                 t,
             });

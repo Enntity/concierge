@@ -43,14 +43,14 @@ export async function POST(req) {
         console.log(`Creating ZIP with ${fileData.length} files`);
 
         // Apply reasonable limits
-        const MAX_FILES = 100;
+        const MAX_FILES = 500;
         const MAX_TOTAL_SIZE_MB = 1000; // 1GB limit
         const MAX_TOTAL_SIZE_BYTES = MAX_TOTAL_SIZE_MB * 1024 * 1024;
 
         if (fileData.length > MAX_FILES) {
             return Response.json(
                 {
-                    error: "Too many files selected. Maximum 100 files allowed.",
+                    error: "Too many files selected. Maximum 500 files allowed.",
                 },
                 { status: 400 },
             );

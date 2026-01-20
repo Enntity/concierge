@@ -634,11 +634,20 @@ export default function FileManager({
         setPreviewFile(file);
     }, []);
 
-    const handleDownload = useCallback((file, e) => {
+    const handleDownload = useCallback(async (file, e) => {
         e?.stopPropagation?.();
         const url = getFileUrl(file);
+        const filename =
+            file?.displayFilename ||
+            file?.originalName ||
+            file?.filename ||
+            file?.name ||
+            "download";
         if (url) {
-            window.open(url, "_blank", "noopener,noreferrer");
+            const { downloadSingleFile } = await import(
+                "../../utils/fileDownloadUtils"
+            );
+            await downloadSingleFile(url, filename);
         }
     }, []);
 

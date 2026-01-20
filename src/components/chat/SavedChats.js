@@ -1,17 +1,6 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import i18next from "i18next";
-import {
-    EditIcon,
-    UserCircle,
-    Trash2,
-    Plus,
-    Upload,
-    Check,
-    Download,
-    X,
-    Users,
-} from "lucide-react";
+import { Trash2, Plus, Upload, Check, Download, X, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
     useCallback,
@@ -25,7 +14,6 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import Loader from "../../../app/components/loader";
 import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
-import { ThemeContext } from "../../contexts/ThemeProvider";
 import {
     useAddChat,
     useBulkDeleteChats,
@@ -37,8 +25,6 @@ import {
     useSearchContent,
     useTotalChatCount,
 } from "../../../app/queries/chats";
-import classNames from "../../../app/utils/class-names";
-import config from "../../../config";
 import { getChatIdString, isValidObjectId } from "../../utils/helper";
 import { useItemSelection } from "../images/hooks/useItemSelection";
 import {
@@ -62,6 +48,7 @@ import {
 import BulkActionsBar from "../common/BulkActionsBar";
 import FilterInput from "../common/FilterInput";
 import EmptyState from "../common/EmptyState";
+import EntityIcon from "./EntityIcon";
 
 dayjs.extend(relativeTime);
 
@@ -86,7 +73,6 @@ const getCategoryTranslation = (category, t) => {
 
 function SavedChats({ displayState }) {
     const { t } = useTranslation();
-    const { theme } = useContext(ThemeContext);
     const { user } = useContext(AuthContext);
     const deleteChat = useDeleteChat();
     const bulkImportChats = useBulkImportChats();
@@ -103,10 +89,8 @@ function SavedChats({ displayState }) {
     const addChat = useAddChat();
     const updateChat = useUpdateChat();
     const { entities } = useEntities(user?.contextId);
-    const { getLogo } = config.global;
     const [editingId, setEditingId] = useState(null);
     const [editedName, setEditedName] = useState("");
-    const { language } = i18next;
     const [deleteChatId, setDeleteChatId] = useState(null);
 
     // Use shared selection hook
@@ -747,6 +731,11 @@ function SavedChats({ displayState }) {
         }
     };
 
+    // Get entity for a chat
+    const getEntityForChat = (chat) => {
+        return entities?.find((e) => e.id === chat?.selectedEntityId) || null;
+    };
+
     const renderChatElements = (chats) => {
         const uniqueChats = [];
         const seenIds = new Set();
@@ -760,7 +749,7 @@ function SavedChats({ displayState }) {
         }
 
         return (
-            <div className="chat-grid">
+            <div className="flex flex-col gap-1">
                 {uniqueChats.map(
                     (chat) =>
                         chat &&
@@ -768,19 +757,32 @@ function SavedChats({ displayState }) {
                         isValidObjectId(chat._id) && (
                             <div
                                 key={chat._id}
-                                className="chat-tile cursor-pointer"
+                                className="group flex items-center gap-3 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer transition-colors"
                                 onClick={(e) => handleChatClick(chat, e)}
                             >
-                                {/* Selection checkbox - always visible */}
+                                {/* Selection checkbox */}
                                 <div
-                                    className={`selection-checkbox ${selectedIds.has(chat._id) ? "selected" : ""}`}
+                                    className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-colors select-none ${
+                                        selectedIds.has(chat._id)
+                                            ? "bg-sky-500 border-sky-500"
+                                            : "border-gray-300 dark:border-gray-600 hover:border-sky-400"
+                                    }`}
+                                    onMouseDown={(e) => {
+                                        // Prevent text selection on shift-click
+                                        if (e.shiftKey) {
+                                            e.preventDefault();
+                                        }
+                                    }}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         const chatIdStr = getChatIdString(
                                             chat._id,
                                         );
                                         if (e.shiftKey && lastSelectedId) {
-                                            // Find indices for range selection
+                                            // Clear any text selection that might have occurred
+                                            window
+                                                .getSelection()
+                                                ?.removeAllRanges();
                                             const lastIndex =
                                                 uniqueChats.findIndex(
                                                     (c) =>
@@ -795,23 +797,20 @@ function SavedChats({ displayState }) {
                                                             c._id,
                                                         ) === chatIdStr,
                                                 );
-
                                             if (
                                                 lastIndex !== -1 &&
                                                 currentIndex !== -1
                                             ) {
-                                                const start = Math.min(
-                                                    lastIndex,
-                                                    currentIndex,
-                                                );
-                                                const end = Math.max(
-                                                    lastIndex,
-                                                    currentIndex,
-                                                );
                                                 selectRangeHook(
                                                     uniqueChats,
-                                                    start,
-                                                    end,
+                                                    Math.min(
+                                                        lastIndex,
+                                                        currentIndex,
+                                                    ),
+                                                    Math.max(
+                                                        lastIndex,
+                                                        currentIndex,
+                                                    ),
                                                 );
                                             }
                                         } else {
@@ -819,152 +818,118 @@ function SavedChats({ displayState }) {
                                         }
                                     }}
                                 >
-                                    <Check
-                                        className={`text-sm ${selectedIds.has(chat._id) ? "opacity-100" : "opacity-0"}`}
+                                    {selectedIds.has(chat._id) && (
+                                        <Check className="w-3 h-3 text-white" />
+                                    )}
+                                </div>
+
+                                {/* Entity avatar */}
+                                <div className="flex-shrink-0">
+                                    <EntityIcon
+                                        entity={getEntityForChat(chat)}
+                                        size="lg"
                                     />
                                 </div>
 
-                                {/* Chat content wrapper */}
-                                <div className="p-4 flex flex-col h-full">
-                                    {/* Title */}
-                                    {chat._id && editingId === chat._id ? (
-                                        <input
-                                            autoFocus
-                                            type="text"
-                                            className="font-semibold underline focus:ring-0 text-md w-full p-0 mb-2 bg-transparent border-0 ring-0"
-                                            value={editedName}
-                                            onChange={(e) =>
-                                                setEditedName(e.target.value)
-                                            }
-                                            onBlur={() => {
-                                                handleSaveEdit(chat);
-                                            }}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter") {
-                                                    handleSaveEdit(chat);
+                                {/* Chat info */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        {editingId === chat._id ? (
+                                            <input
+                                                autoFocus
+                                                type="text"
+                                                className="font-medium text-sm p-0 m-0 bg-transparent border-0 ring-0 focus:ring-0 outline-none text-gray-900 dark:text-gray-100 truncate flex-1 min-w-0"
+                                                style={{
+                                                    width: "calc(100% - 1rem)",
+                                                }}
+                                                value={editedName}
+                                                onChange={(e) =>
+                                                    setEditedName(
+                                                        e.target.value,
+                                                    )
                                                 }
-                                                if (e.key === "Escape") {
-                                                    setEditingId(null);
+                                                onBlur={() =>
+                                                    handleSaveEdit(chat)
                                                 }
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                        />
-                                    ) : (
-                                        <div className="flex items-center justify-between gap-2 mb-2">
-                                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                <h3
-                                                    className="font-semibold text-md truncate flex-1 cursor-pointer text-gray-900 dark:text-gray-100 hover:text-sky-500 dark:hover:text-sky-400"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setEditingId(chat._id);
-                                                        setEditedName(
-                                                            chat.title,
-                                                        );
-                                                    }}
-                                                >
-                                                    {t(chat.title) ||
-                                                        t("New Chat")}
-                                                </h3>
-                                                {chat.isPublic && (
-                                                    <div
-                                                        className="flex-shrink-0 flex items-center justify-center w-5 h-5 bg-sky-500 rounded-full"
-                                                        title={t("Shared chat")}
-                                                    >
-                                                        <Users className="w-3 h-3 text-white" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setEditingId(chat._id);
-                                                        setEditedName(
-                                                            chat.title,
-                                                        );
-                                                    }}
-                                                    className="text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 transition-colors"
-                                                    title={t("Edit title")}
-                                                >
-                                                    <EditIcon className="h-3 w-3" />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setDeleteChatId(
-                                                            chat._id,
-                                                        );
-                                                    }}
-                                                    className="text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 transition-colors"
-                                                    title={t("Delete")}
-                                                >
-                                                    <Trash2 className="h-3 w-3" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Messages preview */}
-                                    <div className="flex-1 overflow-hidden">
-                                        <ul className="w-full">
-                                            {!chat?.messages?.length && (
-                                                <li className="text-xs text-gray-500 flex gap-1 items-center">
-                                                    {t("Empty chat")}
-                                                </li>
-                                            )}
-                                            {chat?.messages
-                                                ?.slice(-3)
-                                                .map((m, index) => (
-                                                    <li
-                                                        key={index}
-                                                        className={classNames(
-                                                            "text-xs text-gray-500 dark:text-gray-400 flex gap-1 items-center overflow-hidden mb-0.5",
-                                                            m?.sender === "user"
-                                                                ? "bg-white dark:bg-gray-800"
-                                                                : "bg-sky-50 dark:bg-gray-700",
-                                                        )}
-                                                    >
-                                                        <div className="flex-shrink-0 flex items-center gap-1">
-                                                            {m?.sender ===
-                                                            "user" ? (
-                                                                <UserCircle className="w-4 h-4 text-gray-300" />
-                                                            ) : (
-                                                                <img
-                                                                    src={
-                                                                        theme ===
-                                                                        "dark"
-                                                                            ? "/app/assets/enntity_logo_dark.svg"
-                                                                            : getLogo(
-                                                                                  language,
-                                                                              )
-                                                                    }
-                                                                    alt="Logo"
-                                                                    className="w-4 h-4"
-                                                                />
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1 truncate py-0.5">
-                                                            {m?.payload}
-                                                        </div>
-                                                    </li>
-                                                ))}
-                                        </ul>
-                                    </div>
-
-                                    {/* Entity name and Timestamp */}
-                                    <div className="flex items-center justify-between text-[.7rem] text-gray-400 mt-2">
-                                        {chat.selectedEntityName && (
-                                            <span className="truncate max-w-[60%]">
-                                                {chat.selectedEntityName}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter")
+                                                        handleSaveEdit(chat);
+                                                    if (e.key === "Escape")
+                                                        setEditingId(null);
+                                                }}
+                                                onClick={(e) =>
+                                                    e.stopPropagation()
+                                                }
+                                            />
+                                        ) : (
+                                            <span
+                                                className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate cursor-text hover:text-sky-500 dark:hover:text-sky-400"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditingId(chat._id);
+                                                    setEditedName(chat.title);
+                                                }}
+                                            >
+                                                {chat.title || t("New Chat")}
                                             </span>
                                         )}
-                                        <span className="flex-shrink-0">
-                                            {dayjs(
-                                                chat.updatedAt ||
-                                                    chat.createdAt,
-                                            ).fromNow()}
-                                        </span>
+                                        {chat.isPublic && (
+                                            <Users className="w-3 h-3 text-sky-500 flex-shrink-0" />
+                                        )}
                                     </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                        {chat.selectedEntityName && (
+                                            <span>
+                                                {chat.selectedEntityName} ·{" "}
+                                            </span>
+                                        )}
+                                        {dayjs(
+                                            chat.updatedAt || chat.createdAt,
+                                        ).fromNow()}
+                                        {chat.messages?.length > 0 && (
+                                            <span>
+                                                {" "}
+                                                · {chat.messages.length}{" "}
+                                                {t("messages")}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            // Export single chat
+                                            const blob = new Blob(
+                                                [JSON.stringify(chat, null, 2)],
+                                                { type: "application/json" },
+                                            );
+                                            const a =
+                                                document.createElement("a");
+                                            a.href = URL.createObjectURL(blob);
+                                            a.download = `${chat.title || "chat"}.json`;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            document.body.removeChild(a);
+                                            URL.revokeObjectURL(a.href);
+                                        }}
+                                        className="p-1 text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 transition-colors"
+                                        title={t("Download")}
+                                    >
+                                        <Download className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDeleteChatId(chat._id);
+                                        }}
+                                        className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                        title={t("Delete")}
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
                                 </div>
                             </div>
                         ),

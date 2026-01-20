@@ -48,7 +48,12 @@ export function normalizeMediaItem(item) {
         type: type || "file",
         url,
         content: item.content || item.text,
-        label: item.label || item.filename || item.name,
+        label:
+            item.displayFilename ||
+            item.originalFilename ||
+            item.label ||
+            item.filename ||
+            item.name,
         mimeType: item.mimeType,
         youtubeEmbedUrl: item.youtubeEmbedUrl,
         duration: item.duration,

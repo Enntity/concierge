@@ -296,15 +296,14 @@ function MessageInput({
         <div>
             <div
                 className={classNames(
-                    "rounded-md border-2 mt-1 transition-all duration-300",
+                    "rounded-md border-2 mt-1 transition-all duration-300 overflow-hidden",
                     isDragging
-                        ? "border-sky-500 border-dashed bg-sky-50 dark:bg-sky-900/20 shadow-lg shadow-sky-500/20 scale-[1.01]"
+                        ? "border-sky-500 border-dashed bg-sky-50 dark:bg-sky-900/20 shadow-lg shadow-sky-500/20"
                         : "border-gray-300 dark:border-gray-500",
                     "bg-white dark:bg-gray-800",
                     "hover:border-gray-400 dark:hover:border-gray-400",
                     "focus-within:border-cyan-500/50 dark:focus-within:border-cyan-500/50",
                     "focus-within:shadow-lg focus-within:shadow-cyan-500/10 dark:focus-within:shadow-cyan-500/20",
-                    showFileUpload && "overflow-hidden",
                 )}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}

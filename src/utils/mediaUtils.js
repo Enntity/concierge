@@ -86,7 +86,12 @@ export const ACCEPTED_FILE_TYPES = [
     ...IMAGE_MIME_TYPES,
     ...VIDEO_MIME_TYPES,
     ...AUDIO_MIME_TYPES,
-];
+    // Additional text MIME types that browsers may report for text files
+    // (e.g., .md, .js, .json files are often reported as text/plain)
+    "text/plain",
+    "text/javascript",
+    "application/javascript",
+].filter(Boolean);
 
 // File type utilities
 export function getExtension(url) {

@@ -166,7 +166,7 @@ const MediaCard = React.memo(function MediaCard({
             <div
                 className={cn(
                     cardWidth,
-                    isSquareCard ? "aspect-square" : "",
+                    isSquareCard ? "aspect-square" : previewHeight,
                     className,
                     "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden relative group/media",
                     canPreview
@@ -179,7 +179,7 @@ const MediaCard = React.memo(function MediaCard({
                 {canPreview ? (
                     <MediaPreview
                         item={item}
-                        className={isSquareCard ? "" : previewHeight}
+                        className=""
                         mediaClassName={isSquareCard ? "" : "rounded-lg"}
                         onLoad={onLoad}
                         t={translationFn}

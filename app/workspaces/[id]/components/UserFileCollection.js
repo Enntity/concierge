@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import {
     downloadFilesAsZip,
+    downloadSingleFile,
+    getFilename,
     checkDownloadLimits,
 } from "@/src/utils/fileDownloadUtils";
 import { toast } from "react-toastify";
@@ -261,7 +263,7 @@ export default function UserFileCollection({
 
             // Check download limits
             const limitCheck = checkDownloadLimits(selectedFiles, {
-                maxFiles: 100,
+                maxFiles: 500,
                 maxTotalSizeMB: 1000,
             });
 
@@ -279,17 +281,12 @@ export default function UserFileCollection({
 
             // Handle single file download vs multiple files
             if (selectedFiles.length === 1) {
-                // Single file - download directly
+                // Single file - download with proper filename
                 const file = selectedFiles[0];
                 const url = file?.url || file?.gcs;
+                const filename = getFilename(file);
                 if (url) {
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.download = "";
-                    link.style.display = "none";
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                    await downloadSingleFile(url, filename);
                 }
             } else {
                 // Multiple files - create ZIP

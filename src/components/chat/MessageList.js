@@ -24,6 +24,7 @@ import {
 import CopyButton from "../CopyButton";
 import ReplayButton from "../ReplayButton";
 import MediaCard from "./MediaCard";
+import MediaGalleryCard from "./MediaGalleryCard";
 import { AuthContext } from "../../App";
 import BotMessage from "./BotMessage";
 import ScrollToBottom from "./ScrollToBottom";
@@ -77,26 +78,58 @@ const countImages = (message) => {
  * JSON text objects or plain strings).
  */
 const getTextFromPayload = (payload) => {
+    if (!payload) return "";
+
+    // Plain string
     if (typeof payload === "string") {
+        if (payload.startsWith("[")) {
+            try {
+                return getTextFromPayload(JSON.parse(payload));
+            } catch {
+                return payload;
+            }
+        }
         return payload;
     }
-    if (!Array.isArray(payload)) {
+
+    // React element - extract text from children
+    if (typeof payload === "object" && payload.$$typeof) {
+        const children = payload.props?.children;
+        if (Array.isArray(children)) {
+            return children.filter((c) => typeof c === "string").join("\n");
+        }
+        if (typeof children === "string") {
+            return children;
+        }
         return "";
     }
-    // Extract text from array payload
+
+    // Single object with text
+    if (typeof payload === "object" && !Array.isArray(payload)) {
+        if (payload.type === "text" && payload.text) return payload.text;
+        if (payload.text) return payload.text;
+        return "";
+    }
+
+    // Array of items
+    if (!Array.isArray(payload)) return "";
+
     return payload
         .map((item) => {
-            try {
-                const obj = JSON.parse(item);
-                if (obj.type === "text") {
-                    return obj.text;
-                }
-                // Skip non-text items (images, files, etc.)
+            if (typeof item === "object" && item !== null) {
+                if (item.type === "text" && item.text) return item.text;
                 return null;
-            } catch (e) {
-                // Not JSON, treat as plain text
-                return item;
             }
+            if (typeof item === "string") {
+                try {
+                    const obj = JSON.parse(item);
+                    if (obj.type === "text") return obj.text;
+                    return null;
+                } catch {
+                    return item;
+                }
+            }
+            return null;
         })
         .filter(Boolean)
         .join("\n");
@@ -385,9 +418,11 @@ const MessageListContent = React.memo(function MessageListContent({
                 })
                 .filter((item) => item !== null); // Remove null items (hidden from client)
 
-            // Group consecutive MediaCard components together so they can be on the same line
+            // Group consecutive MediaCard components together
+            // For 2+ items, use MediaGalleryCard; for single items, keep MediaCard
             const grouped = [];
             let currentGroup = [];
+            let currentGroupData = []; // Track item data for gallery
 
             arr.forEach((item, idx) => {
                 // Check if item is a MediaCard component (all media types: image, video, youtube, file)
@@ -400,17 +435,67 @@ const MessageListContent = React.memo(function MessageListContent({
 
                 if (isMediaCard) {
                     currentGroup.push(item);
+                    // Extract item data for gallery usage
+                    currentGroupData.push({
+                        type: item.props.type,
+                        url: item.props.src,
+                        src: item.props.src,
+                        filename: item.props.filename,
+                        label: item.props.filename,
+                        youtubeEmbedUrl: item.props.youtubeEmbedUrl,
+                        messageId: newMessage.id,
+                        payloadIndex: parseInt(item.key?.split("-").pop(), 10),
+                        isDeleted: item.props.isDeleted,
+                    });
                 } else {
                     if (currentGroup.length > 0) {
-                        grouped.push(
-                            <div
-                                key={`media-group-${idx}`}
-                                className="flex flex-wrap gap-2 my-2"
-                            >
-                                {currentGroup}
-                            </div>,
-                        );
+                        // Use gallery for 2+ items, single card for 1 item
+                        if (currentGroup.length > 1) {
+                            // Filter out deleted items for gallery
+                            const validItems = currentGroupData.filter(
+                                (d) => !d.isDeleted,
+                            );
+                            const deletedItems = currentGroup.filter(
+                                (c) => c.props.isDeleted,
+                            );
+
+                            if (validItems.length > 1) {
+                                grouped.push(
+                                    <div
+                                        key={`media-group-${idx}`}
+                                        className="flex flex-wrap gap-2 my-2"
+                                    >
+                                        <MediaGalleryCard
+                                            items={validItems}
+                                            onDeleteFile={onDeleteFile}
+                                            t={t}
+                                        />
+                                        {deletedItems}
+                                    </div>,
+                                );
+                            } else {
+                                // Only 1 valid item + deleted items, render individually
+                                grouped.push(
+                                    <div
+                                        key={`media-group-${idx}`}
+                                        className="flex flex-wrap gap-2 my-2"
+                                    >
+                                        {currentGroup}
+                                    </div>,
+                                );
+                            }
+                        } else {
+                            grouped.push(
+                                <div
+                                    key={`media-group-${idx}`}
+                                    className="flex flex-wrap gap-2 my-2"
+                                >
+                                    {currentGroup}
+                                </div>,
+                            );
+                        }
                         currentGroup = [];
+                        currentGroupData = [];
                     }
                     grouped.push(item);
                 }
@@ -418,14 +503,50 @@ const MessageListContent = React.memo(function MessageListContent({
 
             // Add any remaining media group
             if (currentGroup.length > 0) {
-                grouped.push(
-                    <div
-                        key={`media-group-end`}
-                        className="flex flex-wrap gap-2 my-2"
-                    >
-                        {currentGroup}
-                    </div>,
-                );
+                if (currentGroup.length > 1) {
+                    // Filter out deleted items for gallery
+                    const validItems = currentGroupData.filter(
+                        (d) => !d.isDeleted,
+                    );
+                    const deletedItems = currentGroup.filter(
+                        (c) => c.props.isDeleted,
+                    );
+
+                    if (validItems.length > 1) {
+                        grouped.push(
+                            <div
+                                key={`media-group-end`}
+                                className="flex flex-wrap gap-2 my-2"
+                            >
+                                <MediaGalleryCard
+                                    items={validItems}
+                                    onDeleteFile={onDeleteFile}
+                                    t={t}
+                                />
+                                {deletedItems}
+                            </div>,
+                        );
+                    } else {
+                        // Only 1 valid item + deleted items, render individually
+                        grouped.push(
+                            <div
+                                key={`media-group-end`}
+                                className="flex flex-wrap gap-2 my-2"
+                            >
+                                {currentGroup}
+                            </div>,
+                        );
+                    }
+                } else {
+                    grouped.push(
+                        <div
+                            key={`media-group-end`}
+                            className="flex flex-wrap gap-2 my-2"
+                        >
+                            {currentGroup}
+                        </div>,
+                    );
+                }
             }
 
             display = <>{grouped}</>;

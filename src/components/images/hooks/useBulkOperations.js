@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
 import {
     downloadFilesAsZip,
+    downloadSingleFile,
+    getFilename,
     checkDownloadLimits as checkDownloadLimitsUtil,
 } from "@/src/utils/fileDownloadUtils";
 
@@ -16,7 +18,7 @@ export const useBulkOperations = ({
     // Check if download is within limits
     const checkDownloadLimits = useCallback(() => {
         const limitCheck = checkDownloadLimitsUtil(selectedImagesObjects, {
-            maxFiles: 100,
+            maxFiles: 500,
             maxTotalSizeMB: 1000,
         });
 
@@ -56,17 +58,12 @@ export const useBulkOperations = ({
 
                 // Handle single file download vs multiple files
                 if (selectedImagesObjects.length === 1) {
-                    // Single file - download directly
+                    // Single file - download with proper filename
                     const img = selectedImagesObjects[0];
                     const url = img.azureUrl || img.url;
+                    const filename = getFilename(img);
                     if (url) {
-                        const link = document.createElement("a");
-                        link.href = url;
-                        link.download = ""; // Let browser determine filename
-                        link.style.display = "none";
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
+                        await downloadSingleFile(url, filename);
                     }
                 } else {
                     // Multiple files - create ZIP using shared utility

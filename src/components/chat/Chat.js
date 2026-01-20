@@ -164,6 +164,7 @@ function Chat({ viewingChat = null }) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showSharedByDialog, setShowSharedByDialog] = useState(false);
     const [showContactsModal, setShowContactsModal] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
 
     const { entities, refetch: refetchEntities } = useEntities(user?.contextId);
 
@@ -425,8 +426,8 @@ function Chat({ viewingChat = null }) {
                         </TooltipProvider>
                     )}
 
-                    {/* Hamburger menu for Export/Share/Clear */}
-                    <DropdownMenu>
+                    {/* More options menu */}
+                    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                         <DropdownMenuTrigger asChild>
                             <button
                                 className="flex items-center justify-center p-1.5 rounded-md transition-colors border bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
@@ -435,14 +436,21 @@ function Chat({ viewingChat = null }) {
                                 <MoreVertical className="w-4 h-4" />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align={isRTL ? "start" : "end"}>
+                        <DropdownMenuContent
+                            align={isRTL ? "start" : "end"}
+                            onCloseAutoFocus={(e) => e.preventDefault()}
+                            onInteractOutside={() => setMenuOpen(false)}
+                            onEscapeKeyDown={() => setMenuOpen(false)}
+                        >
                             <DropdownMenuItem
-                                onClick={handleExportActiveChat}
+                                onClick={() => {
+                                    handleExportActiveChat();
+                                    setMenuOpen(false);
+                                }}
                                 disabled={!chat?.messages?.length}
-                                className="flex items-center gap-2"
                             >
-                                <Download className="w-4 h-4" />
-                                <span>{t("Export")}</span>
+                                <Download className="w-4 h-4 mr-2" />
+                                {t("Export")}
                             </DropdownMenuItem>
 
                             {isChatOwner && !readOnly && (
@@ -451,31 +459,34 @@ function Chat({ viewingChat = null }) {
                                     {isShared ? (
                                         <>
                                             <DropdownMenuItem
-                                                onClick={handleCopyUrl}
-                                                className="flex items-center gap-2"
+                                                onClick={() => {
+                                                    handleCopyUrl();
+                                                    setMenuOpen(false);
+                                                }}
                                             >
-                                                <Copy className="w-4 h-4" />
-                                                <span>
-                                                    {t("Copy Share URL")}
-                                                </span>
+                                                <Copy className="w-4 h-4 mr-2" />
+                                                {t("Copy Share URL")}
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
-                                                onClick={() =>
-                                                    setShowUnshareConfirm(true)
-                                                }
-                                                className="flex items-center gap-2 text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+                                                onClick={() => {
+                                                    setShowUnshareConfirm(true);
+                                                    setMenuOpen(false);
+                                                }}
+                                                className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
                                             >
-                                                <Users className="w-4 h-4" />
-                                                <span>{t("Unshare")}</span>
+                                                <Users className="w-4 h-4 mr-2" />
+                                                {t("Unshare")}
                                             </DropdownMenuItem>
                                         </>
                                     ) : (
                                         <DropdownMenuItem
-                                            onClick={handleShare}
-                                            className="flex items-center gap-2"
+                                            onClick={() => {
+                                                handleShare();
+                                                setMenuOpen(false);
+                                            }}
                                         >
-                                            <Users className="w-4 h-4" />
-                                            <span>{t("Share")}</span>
+                                            <Users className="w-4 h-4 mr-2" />
+                                            {t("Share")}
                                         </DropdownMenuItem>
                                     )}
                                 </>
@@ -485,13 +496,14 @@ function Chat({ viewingChat = null }) {
                                 <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
-                                        onClick={() =>
-                                            setShowDeleteConfirm(true)
-                                        }
-                                        className="flex items-center gap-2 text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+                                        onClick={() => {
+                                            setShowDeleteConfirm(true);
+                                            setMenuOpen(false);
+                                        }}
+                                        className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
                                     >
-                                        <Trash2 className="w-4 h-4" />
-                                        <span>{t("Clear chat")}</span>
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        {t("Clear chat")}
                                     </DropdownMenuItem>
                                 </>
                             )}

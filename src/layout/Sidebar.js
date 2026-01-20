@@ -19,6 +19,7 @@ import {
 import { useCurrentUser } from "../../app/queries/users";
 import { useWorkspace } from "../../app/queries/workspaces";
 import { usePrefetchOnHover } from "../hooks/usePrefetch";
+import { useEntities } from "../hooks/useEntities";
 
 import classNames from "../../app/utils/class-names";
 import config from "../../config";
@@ -204,6 +205,7 @@ export default React.forwardRef(function Sidebar({ isMobile }, ref) {
         useGetActiveChats();
     const chats = chatsData || [];
     const { data: currentUser } = useCurrentUser();
+    const { entities } = useEntities(currentUser?.contextId);
 
     // Check if user is authenticated
     const isAuthenticated =
@@ -225,12 +227,25 @@ export default React.forwardRef(function Sidebar({ isMobile }, ref) {
                 ? chats.find((c) => String(c._id) === currentChatId)
                 : null;
 
-            // Create new chat, optionally with the same entity as current chat
+            // Use current chat's entity, or fall back to user's default entity
+            let selectedEntityId = currentChat?.selectedEntityId;
+            let selectedEntityName = currentChat?.selectedEntityName;
+
+            if (!selectedEntityId && currentUser?.defaultEntityId) {
+                selectedEntityId = currentUser.defaultEntityId;
+                const defaultEntity = entities?.find(
+                    (e) => e.id === selectedEntityId,
+                );
+                selectedEntityName =
+                    defaultEntity?.name || currentUser?.aiName || "AI";
+            }
+
+            // Create new chat with entity info
             const { _id } = await addChat.mutateAsync({
                 messages: [],
-                ...(currentChat?.selectedEntityId && {
-                    selectedEntityId: currentChat.selectedEntityId,
-                    selectedEntityName: currentChat.selectedEntityName,
+                ...(selectedEntityId && {
+                    selectedEntityId,
+                    selectedEntityName,
                 }),
             });
             router.push(`/chat/${String(_id)}`);

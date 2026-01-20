@@ -28,6 +28,72 @@ export function getFilename(file) {
 }
 
 /**
+ * Check if a URL requires proxying (blob storage URLs have CORS issues)
+ */
+function needsProxy(url) {
+    if (!url) return false;
+    try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname;
+        return (
+            hostname.endsWith(".blob.core.windows.net") ||
+            hostname.includes("storage.googleapis.com") ||
+            hostname.includes("storage.cloud.google.com")
+        );
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Download a single file with proper filename
+ * Uses a proxy for blob storage URLs to bypass CORS and force download
+ *
+ * @param {string} url - The URL to download from
+ * @param {string} filename - The filename to save as
+ * @returns {Promise<void>}
+ */
+export async function downloadSingleFile(url, filename) {
+    const safeName = filename || "download";
+
+    // For blob storage URLs, use the download proxy to bypass CORS
+    if (needsProxy(url)) {
+        const proxyUrl = `/api/download-proxy?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}`;
+        window.location.href = proxyUrl;
+        return;
+    }
+
+    // For same-origin URLs, fetch and download directly
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch file: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = safeName;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+        console.error("Error downloading file:", error);
+        // Fallback: direct link (works for same-origin)
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = safeName;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+}
+
+/**
  * Download multiple files as a ZIP archive
  * @param {Array} files - Array of file objects with url/azureUrl/gcs properties
  * @param {Object} options - Optional configuration
@@ -152,12 +218,12 @@ export async function downloadFilesAsZip(files, options = {}) {
  * Check if download is within limits
  * @param {Array} files - Array of file objects
  * @param {Object} options - Optional configuration
- * @param {number} options.maxFiles - Maximum number of files (default: 100)
+ * @param {number} options.maxFiles - Maximum number of files (default: 500)
  * @param {number} options.maxTotalSizeMB - Maximum total size in MB (default: 1000)
  * @returns {{allowed: boolean, error?: string, details?: string, errorKey?: string, detailsKey?: string, detailsParams?: Object}}
  */
 export function checkDownloadLimits(files, options = {}) {
-    const MAX_FILES = options.maxFiles || 100;
+    const MAX_FILES = options.maxFiles || 500;
     const MAX_TOTAL_SIZE_MB = options.maxTotalSizeMB || 1000;
 
     if (files.length > MAX_FILES) {
