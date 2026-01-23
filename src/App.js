@@ -21,6 +21,7 @@ import { ThemeProvider } from "./contexts/ThemeProvider";
 import { AutoTranscribeProvider } from "./contexts/AutoTranscribeContext";
 import { OnboardingProvider } from "./contexts/OnboardingContext";
 import { EntityOverlayProvider } from "./contexts/EntityOverlayContext";
+import { VoiceProvider } from "./contexts/VoiceContext";
 import Layout from "./layout/Layout";
 import usePushNotifications from "./hooks/usePushNotifications";
 import "./tailwind.css";
@@ -152,9 +153,11 @@ const App = ({
                                     <LanguageProvider savedLanguage={language}>
                                         <OnboardingProvider>
                                             <EntityOverlayProvider>
-                                                <Layout>
-                                                    <Body>{children}</Body>
-                                                </Layout>
+                                                <VoiceProvider>
+                                                    <Layout>
+                                                        <Body>{children}</Body>
+                                                    </Layout>
+                                                </VoiceProvider>
                                             </EntityOverlayProvider>
                                         </OnboardingProvider>
                                     </LanguageProvider>

@@ -21,6 +21,9 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { VoiceButton } from "../voice/VoiceButton";
+import { useVoice } from "../../contexts/VoiceContext";
+import { useChatEntity } from "../../contexts/ChatEntityContext";
 
 const DynamicFileUploader = dynamic(() => import("./FileUploader"), {
     ssr: false,
@@ -44,6 +47,8 @@ function MessageInput({
     const textareaRef = useRef(null);
 
     const { userState, debouncedUpdateUserState } = useContext(AuthContext);
+    const { startSession: startVoiceSession, isActive: isVoiceActive } = useVoice();
+    const { entityId } = useChatEntity();
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
     const MAX_INPUT_LENGTH = 100000;
     const [lengthLimitAlert, setLengthLimitAlert] = useState({
@@ -713,6 +718,23 @@ function MessageInput({
                             spellCheck="true"
                             inputMode="text"
                         />
+                        {/* Voice button */}
+                        <div className="pb-2">
+                            <VoiceButton
+                                onClick={() => {
+                                    if (entityId && activeChatId) {
+                                        startVoiceSession(entityId, activeChatId);
+                                    }
+                                }}
+                                disabled={
+                                    !entityId ||
+                                    !activeChatId ||
+                                    viewingReadOnlyChat ||
+                                    isEntityUnavailable ||
+                                    isVoiceActive
+                                }
+                            />
+                        </div>
                         <button
                             type={isStreaming || loading ? "button" : "submit"}
                             onClick={

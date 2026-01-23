@@ -20,6 +20,7 @@ import EntityIcon from "../components/chat/EntityIcon";
 import EntityContactsModal from "../components/chat/EntityContactsModal";
 import NotificationButton from "../components/notifications/NotificationButton";
 import EntityOverlay from "../components/EntityOverlay";
+import { VoiceModeOverlay } from "../components/voice/VoiceModeOverlay";
 import Tos from "../components/Tos";
 import UserOptions from "../components/UserOptions";
 import { LanguageContext } from "../contexts/LanguageProvider";
@@ -414,6 +415,9 @@ export default function Layout({ children }) {
                                 />
                                 {/* Entity Overlay - floats over content on both desktop and mobile */}
                                 <EntityOverlay />
+
+                                {/* Voice Mode Overlay - fullscreen voice interaction UI */}
+                                <VoiceModeOverlay />
 
                                 {/* Global Entity Contacts Modal */}
                                 <EntityContactsModal
