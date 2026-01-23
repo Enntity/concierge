@@ -235,6 +235,13 @@ export function useVoiceSession() {
             console.log('[useVoiceSession] Mute state:', muted);
         });
 
+        // Track complete - flush any remaining audio buffer
+        socket.on('audio:trackComplete', (data) => {
+            if (data.trackId && playerRef.current) {
+                playerRef.current.flushTrack(data.trackId);
+            }
+        });
+
         // Tool events
         socket.on('tool:status', (data) => {
             console.log('[useVoiceSession] Tool status:', data);

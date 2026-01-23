@@ -194,6 +194,17 @@ export class WavStreamPlayer {
   }
 
   /**
+   * Flushes any remaining buffered audio for a track
+   * Call this when you know no more audio is coming for a track
+   * @param {string} trackId
+   */
+  flushTrack(trackId) {
+    if (this.stream) {
+      this.stream.port.postMessage({ event: 'flush', trackId });
+    }
+  }
+
+  /**
    * Clears the interrupted state for a track
    * @param {string} trackId
    */
