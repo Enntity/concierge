@@ -21,10 +21,20 @@ export function useVoiceSession() {
     const playerRef = useRef(null);
     const isInitializedRef = useRef(false);
 
+    // VAD (Voice Activity Detection) state
+    const vadRef = useRef({
+        isSpeaking: false,
+        silenceStart: null,
+        silenceThreshold: 0.01,      // Audio level below this = silence
+        silenceDuration: 600,        // ms of silence before triggering speechEnd
+        speechStartThreshold: 0.02,  // Audio level above this = speech
+    });
+
     const {
         isActive,
         entityId,
         chatId,
+        sessionContext,
         isMuted,
         _setIsConnected,
         _setState,
@@ -58,8 +68,10 @@ export function useVoiceSession() {
      */
     const base64ToInt16Array = useCallback((base64) => {
         const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
+        // Ensure even byte length for Int16Array (2 bytes per sample)
+        const length = binary.length - (binary.length % 2);
+        const bytes = new Uint8Array(length);
+        for (let i = 0; i < length; i++) {
             bytes[i] = binary.charCodeAt(i);
         }
         return new Int16Array(bytes.buffer);
@@ -102,7 +114,6 @@ export function useVoiceSession() {
         // Set up track complete callback
         player.setTrackCompleteCallback((trackId) => {
             console.log('[useVoiceSession] Track complete:', trackId);
-            socketRef.current?.emit('audioPlaybackComplete', { trackId });
             _setState('idle');
         });
 
@@ -129,7 +140,23 @@ export function useVoiceSession() {
         // Connection events
         socket.on('connect', () => {
             console.log('[useVoiceSession] Connected to voice server');
-            _setIsConnected(true);
+            // Start the session
+            // Voice options: alloy, ash, ballad, coral, sage, shimmer, verse, echo
+            // verse and coral are more expressive/natural
+            socket.emit('session:start', {
+                entityId,
+                chatId,
+                provider: 'elevenlabs',
+                // voiceId: 'cgSgspJ2msm6clMCkdW9', // Previous voice
+                voiceId: 'tnSpp4vdxKPjI9w0GnoV',
+                // Pass full context for sys_entity_agent
+                userId: sessionContext?.userId,
+                contextId: sessionContext?.contextId || entityId,
+                contextKey: sessionContext?.contextKey,
+                aiName: sessionContext?.aiName,
+                userName: sessionContext?.userName,
+                model: sessionContext?.model,
+            });
         });
 
         socket.on('disconnect', (reason) => {
@@ -144,99 +171,89 @@ export function useVoiceSession() {
         });
 
         // Session events
-        socket.on('session.created', (data) => {
-            console.log('[useVoiceSession] Session created:', data);
+        socket.on('session:started', (data) => {
+            console.log('[useVoiceSession] Session started:', data);
             _setSessionId(data.sessionId);
+            _setIsConnected(true);
+        });
+
+        socket.on('session:error', (data) => {
+            console.error('[useVoiceSession] Session error:', data);
+            _setIsConnected(false);
+        });
+
+        socket.on('session:ended', (data) => {
+            console.log('[useVoiceSession] Session ended:', data);
+            _setIsConnected(false);
+        });
+
+        socket.on('provider:connected', () => {
+            console.log('[useVoiceSession] Provider connected');
         });
 
         // State events
-        socket.on('state', (data) => {
-            console.log('[useVoiceSession] State update:', data);
-            if (data.state) {
-                _setState(data.state);
-            }
-        });
-
-        socket.on('userSpeaking', (data) => {
-            _setState('userSpeaking');
-        });
-
-        socket.on('aiResponding', (data) => {
-            _setState('aiResponding');
-        });
-
-        socket.on('audioPlaying', (data) => {
-            _setState('audioPlaying');
+        socket.on('state:change', (state) => {
+            console.log('[useVoiceSession] State change:', state);
+            // Map server states to client states
+            const stateMap = {
+                'idle': 'idle',
+                'listening': 'userSpeaking',
+                'processing': 'aiResponding',
+                'speaking': 'audioPlaying',
+            };
+            _setState(stateMap[state] || state);
         });
 
         // Transcript events
-        socket.on('transcript.user', (data) => {
-            console.log('[useVoiceSession] User transcript:', data);
-            _setLiveUserTranscript(data.text || '');
-            if (data.final && data.text) {
-                _addToHistory('user', data.text);
-                _setLiveUserTranscript('');
-            }
-        });
-
-        socket.on('transcript.assistant', (data) => {
-            console.log('[useVoiceSession] Assistant transcript:', data);
-            _setLiveAssistantTranscript(data.text || '');
-            if (data.final && data.text) {
-                _addToHistory('assistant', data.text);
-                _setLiveAssistantTranscript('');
+        socket.on('transcript', (data) => {
+            console.log('[useVoiceSession] Transcript:', data);
+            if (data.type === 'user') {
+                _setLiveUserTranscript(data.content || '');
+                if (data.isFinal && data.content) {
+                    _addToHistory('user', data.content);
+                    _setLiveUserTranscript('');
+                }
+            } else if (data.type === 'assistant') {
+                _setLiveAssistantTranscript(data.content || '');
+                if (data.isFinal && data.content) {
+                    _addToHistory('assistant', data.content);
+                    _setLiveAssistantTranscript('');
+                }
             }
         });
 
         // Audio events
-        socket.on('audio', (data) => {
-            if (data.audio && playerRef.current) {
-                const pcmData = base64ToInt16Array(data.audio);
+        socket.on('audio:output', (data) => {
+            if (data.data && playerRef.current) {
+                const pcmData = base64ToInt16Array(data.data);
                 playerRef.current.add16BitPCM(pcmData, data.trackId || 'default');
                 _setState('audioPlaying');
             }
         });
 
-        socket.on('audio.interrupt', async () => {
-            console.log('[useVoiceSession] Audio interrupt');
-            if (playerRef.current) {
-                await playerRef.current.interrupt();
-            }
+        socket.on('audio:muted', (muted) => {
+            console.log('[useVoiceSession] Mute state:', muted);
         });
 
         // Tool events
-        socket.on('tool.start', (data) => {
-            console.log('[useVoiceSession] Tool started:', data);
-            _setCurrentTool({
-                name: data.name,
-                status: 'running',
-                message: data.message || `Running ${data.name}...`,
-            });
-        });
-
-        socket.on('tool.progress', (data) => {
-            console.log('[useVoiceSession] Tool progress:', data);
-            _setCurrentTool({
-                name: data.name,
-                status: 'running',
-                message: data.message,
-            });
-        });
-
-        socket.on('tool.complete', (data) => {
-            console.log('[useVoiceSession] Tool complete:', data);
-            _setCurrentTool(null);
-        });
-
-        socket.on('tool.error', (data) => {
-            console.error('[useVoiceSession] Tool error:', data);
-            _setCurrentTool({
-                name: data.name,
-                status: 'error',
-                message: data.error || 'Tool execution failed',
-            });
-            // Clear after a delay
-            setTimeout(() => _setCurrentTool(null), 3000);
+        socket.on('tool:status', (data) => {
+            console.log('[useVoiceSession] Tool status:', data);
+            if (data.status === 'completed') {
+                _setCurrentTool(null);
+            } else if (data.status === 'error') {
+                _setCurrentTool({
+                    name: data.name,
+                    status: 'error',
+                    message: data.message || 'Tool execution failed',
+                });
+                setTimeout(() => _setCurrentTool(null), 3000);
+            } else {
+                _setCurrentTool({
+                    name: data.name,
+                    status: data.status,
+                    message: data.message || `Running ${data.name}...`,
+                });
+            }
         });
 
         // Media events (for EntityOverlay integration)
@@ -281,14 +298,38 @@ export function useVoiceSession() {
 
             // Send audio chunk to server
             const base64Audio = arrayBufferToBase64(data.mono);
-            socketRef.current?.emit('appendAudio', { audio: base64Audio });
+            socketRef.current?.emit('audio:input', { data: base64Audio, sampleRate: VOICE_SAMPLE_RATE });
 
-            // Update input level for visualizer
+            // Update input level for visualizer and VAD
             if (recorderRef.current?.analyser) {
                 try {
                     const frequencies = recorderRef.current.getFrequencies('voice');
                     const avgLevel = frequencies.values.reduce((a, b) => a + b, 0) / frequencies.values.length;
                     _setInputLevel(avgLevel);
+
+                    // VAD: Voice Activity Detection
+                    const vad = vadRef.current;
+                    const now = Date.now();
+
+                    if (avgLevel > vad.speechStartThreshold) {
+                        // Speech detected
+                        if (!vad.isSpeaking) {
+                            console.log('[VAD] Speech started');
+                            vad.isSpeaking = true;
+                        }
+                        vad.silenceStart = null;
+                    } else if (avgLevel < vad.silenceThreshold && vad.isSpeaking) {
+                        // Silence detected while speaking
+                        if (!vad.silenceStart) {
+                            vad.silenceStart = now;
+                        } else if (now - vad.silenceStart > vad.silenceDuration) {
+                            // Silence duration exceeded - speech ended
+                            console.log('[VAD] Speech ended, triggering processing');
+                            vad.isSpeaking = false;
+                            vad.silenceStart = null;
+                            socketRef.current?.emit('audio:speechEnd');
+                        }
+                    }
                 } catch (e) {
                     // Ignore errors when session is ending
                 }
@@ -436,11 +477,11 @@ export function useVoiceSession() {
 
         // Manual controls
         sendMessage: useCallback((text) => {
-            socketRef.current?.emit('sendMessage', { text });
+            socketRef.current?.emit('text:input', text);
         }, []),
 
         cancelResponse: useCallback(() => {
-            socketRef.current?.emit('cancelResponse');
+            socketRef.current?.emit('audio:interrupt');
         }, []),
     };
 }

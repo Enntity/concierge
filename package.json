@@ -94,6 +94,7 @@
         "remark-math": "^6.0.0",
         "sass-loader": "^13.2.0",
         "sharp": "^0.34.5",
+        "socket.io-client": "^4.8.3",
         "stringcase": "^4.3.1",
         "styled-components": "^5.3.6",
         "tailwind-merge": "^2.2.1",

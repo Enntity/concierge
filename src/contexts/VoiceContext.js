@@ -95,18 +95,36 @@ export function VoiceProvider({ children }) {
     const [sourceNode, setSourceNode] = useState(null);
     const [analyserNode, setAnalyserNode] = useState(null);
 
-    // Refs for cleanup
+    // Refs for cleanup and callbacks
     const cleanupRef = useRef(null);
+    const onSessionEndRef = useRef(null);
+
+    // Extended session context
+    const [sessionContext, setSessionContext] = useState(null);
 
     /**
      * Start a new voice session
-     * @param {string} newEntityId - The entity to converse with
-     * @param {string} newChatId - The chat to store messages in
+     * @param {Object} options - Session options
+     * @param {string} options.entityId - The entity to converse with
+     * @param {string} options.chatId - The chat to store messages in
+     * @param {string} [options.userId] - The user's ID
+     * @param {string} [options.contextId] - The context ID for continuity
+     * @param {string} [options.aiName] - The entity's display name
+     * @param {string} [options.userName] - The user's display name
      */
-    const startSession = useCallback((newEntityId, newChatId) => {
+    const startSession = useCallback((options) => {
         if (isActive) {
             console.warn('Voice session already active');
             return;
+        }
+
+        // Support legacy (entityId, chatId) signature
+        let sessionOpts = options;
+        if (typeof options === 'string') {
+            sessionOpts = {
+                entityId: options,
+                chatId: arguments[1],
+            };
         }
 
         // Reset state
@@ -120,11 +138,12 @@ export function VoiceProvider({ children }) {
         setOutputLevel(0);
 
         // Set session info
-        setEntityId(newEntityId);
-        setChatId(newChatId);
+        setEntityId(sessionOpts.entityId);
+        setChatId(sessionOpts.chatId);
+        setSessionContext(sessionOpts);
         setIsActive(true);
 
-        console.log('[VoiceContext] Starting voice session', { entityId: newEntityId, chatId: newChatId });
+        console.log('[VoiceContext] Starting voice session', sessionOpts);
     }, [isActive]);
 
     /**
@@ -135,10 +154,24 @@ export function VoiceProvider({ children }) {
 
         console.log('[VoiceContext] Ending voice session');
 
+        // Capture history before clearing
+        const finalHistory = [...conversationHistory];
+        const finalChatId = chatId;
+        const finalEntityId = entityId;
+
         // Run cleanup if registered
         if (cleanupRef.current) {
             cleanupRef.current();
             cleanupRef.current = null;
+        }
+
+        // Call onSessionEnd callback with the conversation history
+        if (onSessionEndRef.current && finalHistory.length > 0) {
+            onSessionEndRef.current({
+                chatId: finalChatId,
+                entityId: finalEntityId,
+                messages: finalHistory,
+            });
         }
 
         // Reset all state
@@ -153,12 +186,21 @@ export function VoiceProvider({ children }) {
         setSessionId(null);
         setEntityId(null);
         setChatId(null);
+        setSessionContext(null);
         setInputLevel(0);
         setOutputLevel(0);
         setAudioContext(null);
         setSourceNode(null);
         setAnalyserNode(null);
-    }, [isActive]);
+    }, [isActive, conversationHistory, chatId, entityId]);
+
+    /**
+     * Register a callback for when the session ends
+     * @param {Function} callback - Called with { chatId, entityId, messages }
+     */
+    const registerOnSessionEnd = useCallback((callback) => {
+        onSessionEndRef.current = callback;
+    }, []);
 
     /**
      * Toggle mute state
@@ -218,6 +260,7 @@ export function VoiceProvider({ children }) {
                 sessionId,
                 entityId,
                 chatId,
+                sessionContext,
 
                 // Audio levels
                 inputLevel,
@@ -231,6 +274,7 @@ export function VoiceProvider({ children }) {
                 // Actions
                 startSession,
                 endSession,
+                registerOnSessionEnd,
                 toggleMute,
                 setMuted: setIsMuted,
 
