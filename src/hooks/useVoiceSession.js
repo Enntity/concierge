@@ -38,6 +38,8 @@ export function useVoiceSession() {
     const lastAiActivityRef = useRef(0); // timestamp for grace period during state bounces
     const shouldInterruptOnConfirmRef = useRef(false); // true if we should interrupt when speech is confirmed
     const clientAudioPlayingRef = useRef(false); // true when client is playing audio (for filler suppression)
+    const speechTimeoutRef = useRef(null); // fallback timeout when VAD fails to detect speech end
+    const lastAudioFrameTimeRef = useRef(0); // track when we last sent audio
 
     const {
         isActive,
@@ -181,6 +183,60 @@ export function useVoiceSession() {
         });
 
         console.log("[useVoiceSession] Creating Silero VAD...");
+
+        // Helper to handle speech end (called by VAD or fallback timeout)
+        const handleSpeechEnd = (source) => {
+            // Clear fallback timeout
+            if (speechTimeoutRef.current) {
+                clearTimeout(speechTimeoutRef.current);
+                speechTimeoutRef.current = null;
+            }
+
+            // Skip if not currently speaking
+            if (!userIsSpeakingRef.current) return;
+
+            console.log(`[VAD] Speech ended (${source})`);
+            userIsSpeakingRef.current = false;
+
+            // If we were waiting to interrupt, do it now - this is confirmed real speech
+            if (shouldInterruptOnConfirmRef.current) {
+                console.log("[VAD] Confirmed speech - executing interrupt");
+                shouldInterruptOnConfirmRef.current = false;
+                // Stop local audio
+                if (playerRef.current) {
+                    playerRef.current.interrupt();
+                }
+                // Notify server that client audio stopped
+                if (clientAudioPlayingRef.current) {
+                    clientAudioPlayingRef.current = false;
+                    socketRef.current?.emit("audio:clientStopped");
+                }
+                // Block all audio until we get a fresh response
+                awaitingNewResponseRef.current = true;
+            } else {
+                // Wasn't an interrupt situation, make sure volume is normal
+                playerRef.current?.unduck();
+            }
+
+            // Notify server to finalize transcript
+            socketRef.current?.emit("audio:speechEnd");
+            _setState("idle");
+        };
+
+        // Start fallback timeout for speech end detection
+        const startSpeechTimeout = () => {
+            if (speechTimeoutRef.current) {
+                clearTimeout(speechTimeoutRef.current);
+            }
+            // 3 second timeout - if VAD doesn't detect end, force it
+            speechTimeoutRef.current = setTimeout(() => {
+                if (userIsSpeakingRef.current) {
+                    console.log("[VAD] Fallback timeout - forcing speech end");
+                    handleSpeechEnd("timeout");
+                }
+            }, 3000);
+        };
+
         // Create Silero VAD for microphone with echo cancellation
         const vad = await MicVAD.new({
             // Path to asset files - library constructs full paths from these
@@ -214,11 +270,15 @@ export function useVoiceSession() {
                 console.log("[VAD] Speech started");
                 _setState("userSpeaking");
                 userIsSpeakingRef.current = true;
+                lastAudioFrameTimeRef.current = Date.now();
 
                 // Clear assistant transcript when user starts speaking
                 _setLiveAssistantTranscript("");
                 transcriptQueueRef.current = [];
                 currentDisplayedTrackRef.current = null;
+
+                // Start fallback timeout
+                startSpeechTimeout();
 
                 // Should we interrupt? Check if:
                 // 1. AI was recently active (within grace period), OR
@@ -248,33 +308,8 @@ export function useVoiceSession() {
                 }
             },
 
-            onSpeechEnd: (audio) => {
-                console.log("[VAD] Speech ended, audio length:", audio.length);
-                userIsSpeakingRef.current = false;
-
-                // If we were waiting to interrupt, do it now - this is confirmed real speech
-                if (shouldInterruptOnConfirmRef.current) {
-                    console.log("[VAD] Confirmed speech - executing interrupt");
-                    shouldInterruptOnConfirmRef.current = false;
-                    // Stop local audio
-                    if (playerRef.current) {
-                        playerRef.current.interrupt();
-                    }
-                    // Notify server that client audio stopped
-                    if (clientAudioPlayingRef.current) {
-                        clientAudioPlayingRef.current = false;
-                        socketRef.current?.emit("audio:clientStopped");
-                    }
-                    // Block all audio until we get a fresh response
-                    awaitingNewResponseRef.current = true;
-                } else {
-                    // Wasn't an interrupt situation, make sure volume is normal
-                    playerRef.current?.unduck();
-                }
-
-                // Notify server - this is confirmed real speech
-                socketRef.current?.emit("audio:speechStart");
-                socketRef.current?.emit("audio:speechEnd");
+            onSpeechEnd: () => {
+                handleSpeechEnd("VAD");
             },
 
             onFrameProcessed: (probabilities, audioFrame) => {
@@ -289,11 +324,25 @@ export function useVoiceSession() {
                         data: base64Audio,
                         sampleRate: 16000,
                     });
+
+                    // Reset speech timeout while actively sending audio with speech detected
+                    if (
+                        userIsSpeakingRef.current &&
+                        probabilities.isSpeech > 0.3
+                    ) {
+                        lastAudioFrameTimeRef.current = Date.now();
+                        startSpeechTimeout();
+                    }
                 }
             },
 
             onVADMisfire: () => {
                 console.log("[VAD] Misfire");
+                // Clear fallback timeout
+                if (speechTimeoutRef.current) {
+                    clearTimeout(speechTimeoutRef.current);
+                    speechTimeoutRef.current = null;
+                }
                 userIsSpeakingRef.current = false;
                 // Cancel pending interrupt - this was a false positive (likely echo)
                 if (shouldInterruptOnConfirmRef.current) {
@@ -657,12 +706,19 @@ export function useVoiceSession() {
             socketRef.current = null;
         }
 
+        // Clear speech timeout
+        if (speechTimeoutRef.current) {
+            clearTimeout(speechTimeoutRef.current);
+            speechTimeoutRef.current = null;
+        }
+
         isInitializedRef.current = false;
         userIsSpeakingRef.current = false;
         awaitingNewResponseRef.current = false;
         shouldInterruptOnConfirmRef.current = false;
         clientAudioPlayingRef.current = false;
         lastAiActivityRef.current = 0;
+        lastAudioFrameTimeRef.current = 0;
         transcriptQueueRef.current = [];
         currentDisplayedTrackRef.current = null;
         // Only play disconnect sound if we actually connected
