@@ -169,7 +169,33 @@ Be casual, warm, and natural. Vary your style. Keep it brief. Just output the gr
         }
 
         console.log("[Greeting] Success, greeting length:", greeting.length);
-        return NextResponse.json({ greeting });
+
+        // Fetch entity info for avatar display
+        let entity = null;
+        try {
+            const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+            const cookies = req.headers.get("cookie") || "";
+            const entityResponse = await fetch(
+                `${baseUrl}/api/entities?entityId=${entityId}`,
+                { headers: { cookie: cookies } },
+            );
+            if (entityResponse.ok) {
+                const entities = await entityResponse.json();
+                entity = entities?.[0] || null;
+            }
+        } catch (e) {
+            console.error("[Greeting] Error fetching entity info:", e.message);
+        }
+
+        return NextResponse.json({
+            greeting,
+            entity: entity ? {
+                id: entity.id,
+                name: entity.name,
+                avatarText: entity.avatarText,
+                avatar: entity.avatar,
+            } : null,
+        });
     } catch (error) {
         console.error(
             "[Greeting] Error generating greeting:",

@@ -34,7 +34,7 @@ import {
     LayoutGrid,
     Square,
 } from "lucide-react";
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import Loader from "../../components/loader";
 import {
@@ -47,34 +47,83 @@ import { useCurrentUser } from "../../queries/users";
 import classNames from "../../utils/class-names";
 import DigestBlock from "./DigestBlock";
 
-// Greeting component - standalone line
-function HomeGreeting() {
-    const { data: greeting, isLoading: greetingLoading } = useHomeGreeting();
+// Greeting component - compact banner with reserved space to prevent layout shift
+const HomeGreeting = React.memo(function HomeGreeting() {
+    const { data, isLoading: greetingLoading } = useHomeGreeting();
+    const greeting = data?.greeting;
+    const entity = data?.entity;
+    const textRef = React.useRef(null);
+    const containerRef = React.useRef(null);
+    const measuredGreetingRef = React.useRef(null);
+    const [shouldScroll, setShouldScroll] = useState(false);
 
-    if (greetingLoading) {
-        return (
-            <div className="mb-6 flex items-center gap-3">
-                <Loader delay={0} />
-            </div>
-        );
-    }
+    // Check if text overflows container - only remeasure when greeting actually changes
+    useEffect(() => {
+        if (greeting && greeting !== measuredGreetingRef.current) {
+            // Use requestAnimationFrame to ensure DOM is painted before measuring
+            requestAnimationFrame(() => {
+                if (textRef.current && containerRef.current) {
+                    const textWidth = textRef.current.scrollWidth;
+                    const containerWidth = containerRef.current.clientWidth;
+                    setShouldScroll(textWidth > containerWidth);
+                    measuredGreetingRef.current = greeting;
+                }
+            });
+        }
+    }, [greeting]);
 
-    if (!greeting) return null;
-
+    // Always render with fixed height to prevent layout shift
     return (
-        <div className="mb-6">
-            <div className="relative group">
-                {/* Glow effect behind text */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20 rounded-lg blur-xl opacity-70 group-hover:opacity-100 transition-opacity animate-pulse-slow" />
+        <div className="mb-2 min-h-[2.75rem] flex items-center">
+            <div className="relative w-full overflow-hidden rounded-lg bg-gradient-to-r from-gray-50/50 to-gray-100/30 dark:from-gray-800/30 dark:to-gray-900/20 border border-gray-200/30 dark:border-gray-700/30 px-4 py-2">
+                {/* Shimmer skeleton - visible while loading */}
+                {greetingLoading && (
+                    <div className="h-5 w-full rounded bg-gradient-to-r from-gray-200/50 via-gray-100/80 to-gray-200/50 dark:from-gray-700/50 dark:via-gray-600/80 dark:to-gray-700/50 bg-[length:200%_100%] animate-shimmer" />
+                )}
 
-                {/* Main greeting text */}
-                <p className="relative text-lg sm:text-xl font-medium leading-relaxed bg-gradient-to-r from-cyan-600 via-purple-500 to-cyan-600 dark:from-cyan-400 dark:via-purple-400 dark:to-cyan-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift">
-                    {greeting}
-                </p>
+                {/* Actual greeting content - ticker scroll if overflows */}
+                {greeting && !greetingLoading && (
+                    <div ref={containerRef} className="overflow-hidden flex items-center gap-2">
+                        {/* Entity avatar */}
+                        {entity && (
+                            <div className="flex-shrink-0">
+                                {entity.avatar?.image?.url ? (
+                                    <img
+                                        src={entity.avatar.image.url}
+                                        alt={entity.name || ""}
+                                        className="h-6 w-6 rounded-full object-cover ring-1 ring-gray-200/50 dark:ring-gray-700/50"
+                                    />
+                                ) : (
+                                    <span className="h-6 w-6 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-xs font-medium text-white ring-1 ring-gray-200/50 dark:ring-gray-700/50">
+                                        {entity.avatarText || entity.name?.[0] || "?"}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                        {/* Greeting text */}
+                        <div className="overflow-hidden flex-1">
+                            <div
+                                ref={textRef}
+                                className={`inline-flex whitespace-nowrap ${
+                                    shouldScroll ? "animate-ticker" : ""
+                                }`}
+                            >
+                                <span className="text-sm sm:text-base font-medium leading-snug bg-gradient-to-r from-cyan-600 via-purple-500 to-cyan-600 dark:from-cyan-400 dark:via-purple-400 dark:to-cyan-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift">
+                                    {greeting}
+                                </span>
+                                {shouldScroll && (
+                                    <span className="text-sm sm:text-base font-medium leading-snug bg-gradient-to-r from-cyan-600 via-purple-500 to-cyan-600 dark:from-cyan-400 dark:via-purple-400 dark:to-cyan-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-shift pl-16">
+                                        {greeting}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
-}
+});
 
 // Controls bar - compact, close to content
 function HomeControls({
@@ -88,7 +137,7 @@ function HomeControls({
     const { t } = useTranslation();
 
     return (
-        <div className="flex items-center justify-end gap-1.5 mb-3">
+        <div className="flex items-center justify-end gap-1.5 mb-1">
             {/* Edit mode indicator */}
             {editing && (
                 <span className="text-xs text-cyan-600 dark:text-cyan-400 mr-1 hidden sm:inline">
@@ -353,13 +402,13 @@ export default function DigestBlockList() {
     if (!digest.blocks?.length && !editing) {
         return (
             <>
-                <HomeGreeting />
                 <HomeControls
                     editing={false}
                     onToggleEdit={handleStartEdit}
                     layout={layout}
                     onLayoutChange={handleLayoutChange}
                 />
+                <HomeGreeting />
                 <EmptyState
                     onAddBlock={() => {
                         updateCurrentUserDigest.mutateAsync({
@@ -380,7 +429,6 @@ export default function DigestBlockList() {
 
     return (
         <>
-            <HomeGreeting layout={layout} />
             <HomeControls
                 editing={editing}
                 onToggleEdit={handleStartEdit}
@@ -389,6 +437,7 @@ export default function DigestBlockList() {
                 layout={layout}
                 onLayoutChange={handleLayoutChange}
             />
+            <HomeGreeting />
 
             {/* Blocks grid with responsive layout */}
             {editing ? (
@@ -515,6 +564,28 @@ export default function DigestBlockList() {
                 }
                 .animate-pulse-slow {
                     animation: pulse-slow 4s ease-in-out infinite;
+                }
+                @keyframes shimmer {
+                    0% {
+                        background-position: 200% 0;
+                    }
+                    100% {
+                        background-position: -200% 0;
+                    }
+                }
+                .animate-shimmer {
+                    animation: shimmer 2s ease-in-out infinite;
+                }
+                @keyframes ticker {
+                    0% {
+                        transform: translateX(0%);
+                    }
+                    100% {
+                        transform: translateX(-50%);
+                    }
+                }
+                .animate-ticker {
+                    animation: ticker 20s linear infinite;
                 }
             `}</style>
         </>

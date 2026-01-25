@@ -67,6 +67,7 @@ export default function EntityContactsModal({
     const [toolsEditorEntityName, setToolsEditorEntityName] = useState(null);
     const [toolsEditorEntityTools, setToolsEditorEntityTools] = useState([]);
     const [optionsEntity, setOptionsEntity] = useState(null);
+    const pendingOptionsEntityRef = useRef(null);
     const firstEntityRef = useRef(null);
 
     // Aggressively refetch entities when modal opens to get fresh avatars
@@ -482,7 +483,11 @@ export default function EntityContactsModal({
                     setToolsEditorEntityTools(entityTools);
                 }}
                 onEntityUpdate={(updatedEntity) => {
-                    // Refresh entities list to reflect changes
+                    // Update local options entity state immediately
+                    if (updatedEntity) {
+                        setOptionsEntity(updatedEntity);
+                    }
+                    // Also refresh entities list in background
                     if (refetchEntities) {
                         refetchEntities();
                     }
@@ -511,12 +516,11 @@ export default function EntityContactsModal({
             <ToolsEditor
                 show={!!toolsEditorEntityId}
                 onClose={() => {
-                    // Re-open the entity options dialog
-                    const entity = entities.find(
-                        (e) => e.id === toolsEditorEntityId,
-                    );
-                    if (entity) {
-                        setOptionsEntity(entity);
+                    // Reopen entity options dialog with fresh entity if available
+                    const freshEntity = pendingOptionsEntityRef.current;
+                    if (freshEntity) {
+                        setOptionsEntity(freshEntity);
+                        pendingOptionsEntityRef.current = null;
                     }
                     setToolsEditorEntityId(null);
                     setToolsEditorEntityName(null);
@@ -539,7 +543,20 @@ export default function EntityContactsModal({
                     if (!result.success) {
                         throw new Error(result.error || "Failed to save tools");
                     }
-                    // Refresh entities list
+
+                    // Fetch fresh entity data after save
+                    const freshResponse = await fetch(
+                        `/api/entities?entityId=${toolsEditorEntityId}`,
+                    );
+                    const freshEntities = await freshResponse.json();
+                    const freshEntity = freshEntities?.[0];
+
+                    // Store fresh entity in ref for onClose to use
+                    if (freshEntity) {
+                        pendingOptionsEntityRef.current = freshEntity;
+                    }
+
+                    // Refresh entities list in background
                     if (refetchEntities) {
                         refetchEntities();
                     }

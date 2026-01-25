@@ -27,6 +27,9 @@ const ToolsEditorContent = ({
     // Check if entity has wildcard (legacy "all tools" mode)
     const hasWildcard = entityTools.includes("*");
 
+    // Track unavailable tools (tools entity has that aren't in available list)
+    const [unavailableTools, setUnavailableTools] = useState([]);
+
     // Fetch available tools on mount
     useEffect(() => {
         setLoading(true);
@@ -40,16 +43,29 @@ const ToolsEditorContent = ({
                     const tools = data.tools || [];
                     setAvailableTools(tools);
 
+                    const availableToolNames = new Set(
+                        tools.map((t) => t.name.toLowerCase()),
+                    );
+
                     // Initialize selected tools
                     if (hasWildcard) {
                         // Wildcard means all tools enabled
-                        setSelectedTools(
-                            new Set(tools.map((t) => t.name.toLowerCase())),
-                        );
+                        setSelectedTools(new Set(availableToolNames));
+                        setUnavailableTools([]);
                     } else {
-                        setSelectedTools(
-                            new Set(entityTools.map((t) => t.toLowerCase())),
+                        // Filter entity tools to only include available ones
+                        const entityToolsLower = entityTools.map((t) =>
+                            t.toLowerCase(),
                         );
+                        const validTools = entityToolsLower.filter((t) =>
+                            availableToolNames.has(t),
+                        );
+                        const invalidTools = entityToolsLower.filter(
+                            (t) => !availableToolNames.has(t),
+                        );
+
+                        setSelectedTools(new Set(validTools));
+                        setUnavailableTools(invalidTools);
                     }
                 }
             })
@@ -176,6 +192,18 @@ const ToolsEditorContent = ({
                         <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded mb-3">
                             {t(
                                 "This entity had all tools enabled. Saving will update to explicit tool selection.",
+                            )}
+                        </div>
+                    )}
+
+                    {unavailableTools.length > 0 && (
+                        <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded mb-3">
+                            {t(
+                                "{{count}} tool(s) configured for this entity are no longer available: {{tools}}",
+                                {
+                                    count: unavailableTools.length,
+                                    tools: unavailableTools.join(", "),
+                                },
                             )}
                         </div>
                     )}
