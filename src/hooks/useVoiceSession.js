@@ -465,10 +465,19 @@ export function useVoiceSession() {
                     throw new Error('Failed to fetch voice config');
                 }
                 const config = await configResponse.json();
-                const voiceServerUrl = config.voiceServerUrl;
+
+                // Sanitize URL - trim whitespace that can cause socket.io namespace issues
+                const voiceServerUrl = config.voiceServerUrl?.trim();
 
                 if (!voiceServerUrl) {
                     throw new Error('Voice server URL not configured');
+                }
+
+                // Validate URL format
+                try {
+                    new URL(voiceServerUrl);
+                } catch {
+                    throw new Error(`Invalid voice server URL: "${voiceServerUrl}"`);
                 }
 
                 // Initialize audio with VAD
