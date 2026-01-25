@@ -8,10 +8,13 @@ export class WavStreamPlayer {
   /**
    * Creates a new WavStreamPlayer instance
    * @param {{sampleRate?: number, minBufferSize?: number}} options
+   * sampleRate is the INPUT sample rate (what we receive from server)
+   * The AudioContext will use the system's native rate and we'll upsample
    */
-  constructor({ sampleRate = 44100, minBufferSize = 10 } = {}) {
+  constructor({ sampleRate = 24000, minBufferSize = 10 } = {}) {
     this.scriptSrc = StreamProcessorSrc;
-    this.sampleRate = sampleRate;
+    this.inputSampleRate = sampleRate; // Rate of incoming audio (24kHz from ElevenLabs)
+    this.sampleRate = null; // Will be set to AudioContext's actual rate
     this.minBufferSize = minBufferSize;
     this.context = null;
     this.stream = null;
@@ -25,10 +28,16 @@ export class WavStreamPlayer {
 
   /**
    * Connects the audio context and enables output to speakers
+   * Uses system's native sample rate to avoid browser resampling artifacts
    * @returns {Promise<boolean>}
    */
   async connect() {
-    this.context = new AudioContext({ sampleRate: this.sampleRate });
+    // Don't specify sample rate - use system default (usually 48kHz)
+    // This avoids browser resampling artifacts
+    this.context = new AudioContext();
+    this.sampleRate = this.context.sampleRate; // Store actual rate for reference
+    console.log(`[WavStreamPlayer] AudioContext created at ${this.sampleRate}Hz (input: ${this.inputSampleRate}Hz)`);
+
     if (this.context.state === 'suspended') {
       await this.context.resume();
     }
@@ -116,8 +125,16 @@ export class WavStreamPlayer {
         streamNode.connect(this.analyser);
       }
       this.stream = streamNode;
-      // Send minBufferSize to the worklet
-      streamNode.port.postMessage({ event: 'config', minBufferSize: this.minBufferSize });
+      // Send config to the worklet including sample rate ratio for upsampling
+      const resampleRatio = this.sampleRate / this.inputSampleRate;
+      streamNode.port.postMessage({
+        event: 'config',
+        minBufferSize: this.minBufferSize,
+        inputSampleRate: this.inputSampleRate,
+        outputSampleRate: this.sampleRate,
+        resampleRatio: resampleRatio,
+      });
+      console.log(`[WavStreamPlayer] Resample ratio: ${resampleRatio} (${this.inputSampleRate}Hz -> ${this.sampleRate}Hz)`);
       return true;
     } catch (error) {
       console.error('Error starting stream:', error);

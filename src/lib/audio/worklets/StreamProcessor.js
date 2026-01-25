@@ -18,6 +18,16 @@ class StreamProcessor extends AudioWorkletProcessor {
     // Crossfade support - keep last sample for smoothing
     this.lastSample = 0;
     this.crossfadeLength = 4; // Samples to crossfade at boundaries
+    // Headroom and limiting to prevent clipping
+    this.headroom = 0.92; // Reduce gain slightly to prevent clipping
+    this.softClipThreshold = 0.95; // Start soft clipping above this
+
+    // Resampling support
+    this.resampleRatio = 1; // Will be set via config (e.g., 2 for 24kHz->48kHz)
+    this.inputSampleRate = 24000;
+    this.outputSampleRate = 48000;
+    this.resampleBuffer = []; // Buffer for input samples to resample
+    this.resamplePhase = 0; // Fractional position between input samples
 
     this.port.onmessage = (event) => {
       try {
@@ -31,7 +41,12 @@ class StreamProcessor extends AudioWorkletProcessor {
             }
             this.writeData(float32Array, payload.trackId);
           } else if (payload.event === 'config') {
-            this.minBufferSize = payload.minBufferSize;
+            this.minBufferSize = payload.minBufferSize || this.minBufferSize;
+            if (payload.resampleRatio) {
+              this.resampleRatio = payload.resampleRatio;
+              this.inputSampleRate = payload.inputSampleRate;
+              this.outputSampleRate = payload.outputSampleRate;
+            }
           } else if (payload.event === 'flush') {
             this.flushBuffer(payload.trackId);
           } else if (
@@ -60,6 +75,26 @@ class StreamProcessor extends AudioWorkletProcessor {
     };
   }
 
+  // Soft clipping function - attempt to tame hot signals gracefully without harsh clipping
+  softClip(sample) {
+    // Apply headroom reduction
+    sample *= this.headroom;
+
+    // Soft clip using tanh-like curve for samples approaching limits
+    if (sample > this.softClipThreshold) {
+      const excess = sample - this.softClipThreshold;
+      const range = 1.0 - this.softClipThreshold;
+      sample = this.softClipThreshold + range * Math.tanh(excess / range);
+    } else if (sample < -this.softClipThreshold) {
+      const excess = -sample - this.softClipThreshold;
+      const range = 1.0 - this.softClipThreshold;
+      sample = -(this.softClipThreshold + range * Math.tanh(excess / range));
+    }
+
+    // Hard clamp as final safety (should rarely hit after soft clip)
+    return Math.max(-1.0, Math.min(1.0, sample));
+  }
+
   handleError(error) {
     const now = currentTime;
     if (now - this.lastErrorTime > 5) {
@@ -77,16 +112,85 @@ class StreamProcessor extends AudioWorkletProcessor {
     }
   }
 
+  // Low-pass filter state for anti-aliasing after interpolation
+  // Simple 2-pole IIR filter tuned to cut frequencies above ~10kHz at 48kHz output
+  initLowPass() {
+    // Coefficients for ~10kHz cutoff at 48kHz (gentle roll-off to preserve clarity)
+    this.lpA1 = -1.3072850288;
+    this.lpA2 = 0.4918245861;
+    this.lpB0 = 0.0461348893;
+    this.lpB1 = 0.0922697786;
+    this.lpB2 = 0.0461348893;
+    this.lpX1 = 0; this.lpX2 = 0; // Input history
+    this.lpY1 = 0; this.lpY2 = 0; // Output history
+  }
+
+  lowPass(sample) {
+    if (this.lpB0 === undefined) this.initLowPass();
+
+    const output = this.lpB0 * sample + this.lpB1 * this.lpX1 + this.lpB2 * this.lpX2
+                   - this.lpA1 * this.lpY1 - this.lpA2 * this.lpY2;
+
+    this.lpX2 = this.lpX1; this.lpX1 = sample;
+    this.lpY2 = this.lpY1; this.lpY1 = output;
+
+    return output;
+  }
+
+  // Linear interpolation resampling with low-pass anti-aliasing filter
+  resample(inputSamples) {
+    if (this.resampleRatio === 1) {
+      return inputSamples; // No resampling needed
+    }
+
+    // Add new samples to resample buffer
+    for (let i = 0; i < inputSamples.length; i++) {
+      this.resampleBuffer.push(inputSamples[i]);
+    }
+
+    // Calculate how many output samples we can produce
+    const outputLength = Math.floor((this.resampleBuffer.length - 1) * this.resampleRatio);
+    if (outputLength <= 0) {
+      return new Float32Array(0);
+    }
+
+    const output = new Float32Array(outputLength);
+    const step = 1 / this.resampleRatio; // Step through input for each output sample
+
+    for (let i = 0; i < outputLength; i++) {
+      const inputPos = i * step;
+      const inputIndex = Math.floor(inputPos);
+      const frac = inputPos - inputIndex;
+
+      // Linear interpolation between adjacent samples
+      const sample1 = this.resampleBuffer[inputIndex] || 0;
+      const sample2 = this.resampleBuffer[inputIndex + 1] || sample1;
+      const interpolated = sample1 + (sample2 - sample1) * frac;
+
+      // Apply low-pass filter to remove aliasing artifacts
+      output[i] = this.lowPass(interpolated);
+    }
+
+    // Keep last sample for continuity with next chunk
+    const samplesUsed = Math.floor((outputLength - 1) / this.resampleRatio) + 1;
+    this.resampleBuffer = this.resampleBuffer.slice(Math.max(0, samplesUsed - 1));
+
+    return output;
+  }
+
   writeData(float32Array, trackId = null) {
     try {
+      // Resample input to output sample rate
+      const resampled = this.resample(float32Array);
+
       let { buffer } = this.write;
       let offset = this.writeOffset;
 
       // Update trackId for current write buffer
       this.write.trackId = trackId;
 
-      for (let i = 0; i < float32Array.length; i++) {
-        buffer[offset++] = float32Array[i];
+      for (let i = 0; i < resampled.length; i++) {
+        buffer[offset++] = resampled[i];
         if (offset >= buffer.length) {
           this.outputBuffers.push(this.write);
           this.write = { buffer: new Float32Array(this.bufferLength), trackId };
@@ -110,6 +214,11 @@ class StreamProcessor extends AudioWorkletProcessor {
   // Flush any remaining partial buffer (call at end of track)
   flushBuffer(trackId = null) {
     try {
+      // Clear resample buffer and filter state
+      this.resampleBuffer = [];
+      this.lpX1 = 0; this.lpX2 = 0;
+      this.lpY1 = 0; this.lpY2 = 0;
+
       if (this.writeOffset > 0) {
         // Apply a quick fade-out to the partial buffer to avoid clicks
         const { buffer } = this.write;
@@ -161,7 +270,12 @@ class StreamProcessor extends AudioWorkletProcessor {
           buffer[i] = this.lastSample * (1 - t) + buffer[i] * t;
         }
 
-        // Store last sample for next crossfade
+        // Apply soft clipping and headroom to prevent distortion
+        for (let i = 0; i < buffer.length; i++) {
+          buffer[i] = this.softClip(buffer[i]);
+        }
+
+        // Store last sample for next crossfade (after clipping)
         this.lastSample = buffer[buffer.length - 1];
 
         outputChannelData.set(buffer);
