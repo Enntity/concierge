@@ -36,7 +36,7 @@ const EntityOverlayContext = createContext({
 });
 
 const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov", ".ogg", ".m4v"];
-const DEFAULT_DURATION = 8000; // 8 seconds default per item
+const DEFAULT_DURATION = 24000; // 24 seconds default per item
 
 function isVideoUrl(url) {
     if (!url) return false;

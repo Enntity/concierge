@@ -5,6 +5,7 @@ import { io } from 'socket.io-client';
 import { useVoice } from '../contexts/VoiceContext';
 import { useEntityOverlay } from '../contexts/EntityOverlayContext';
 import { WavStreamPlayer } from '../lib/audio';
+import { SoundEffects } from '../lib/audio/SoundEffects';
 import { composeUserDateTimeInfo } from '../utils/datetimeUtils';
 
 const VOICE_SAMPLE_RATE = 24000; // Voice providers output 24kHz PCM
@@ -22,6 +23,11 @@ export function useVoiceSession() {
     const playerRef = useRef(null);
     const streamRef = useRef(null);
     const isInitializedRef = useRef(false);
+    const wasConnectedRef = useRef(false); // Track if we ever successfully connected (for disconnect sound)
+
+    // Transcript queue for syncing display with audio playback
+    const transcriptQueueRef = useRef([]); // Array of { trackId, text }
+    const currentDisplayedTrackRef = useRef(null);
 
     // === Interrupt State Machine ===
     // We track two things:
@@ -31,6 +37,7 @@ export function useVoiceSession() {
     const awaitingNewResponseRef = useRef(false);  // true after interrupt until new response starts
     const lastAiActivityRef = useRef(0);           // timestamp for grace period during state bounces
     const shouldInterruptOnConfirmRef = useRef(false); // true if we should interrupt when speech is confirmed
+    const clientAudioPlayingRef = useRef(false);   // true when client is playing audio (for filler suppression)
 
     const {
         isActive,
@@ -106,6 +113,23 @@ export function useVoiceSession() {
         player.setTrackCompleteCallback((trackId) => {
             console.log('[useVoiceSession] Track complete:', trackId);
             lastAiActivityRef.current = Date.now();
+
+            // Advance transcript to next queued item when current track finishes
+            if (transcriptQueueRef.current.length > 0) {
+                const next = transcriptQueueRef.current.shift();
+                currentDisplayedTrackRef.current = next.trackId;
+                _setLiveAssistantTranscript(next.text);
+                console.log('[useVoiceSession] Advanced transcript to:', next.trackId);
+            } else {
+                // No more queued - clear the current track marker
+                currentDisplayedTrackRef.current = null;
+            }
+
+            // Notify server that client audio stopped (for filler suppression)
+            if (clientAudioPlayingRef.current) {
+                clientAudioPlayingRef.current = false;
+                socketRef.current?.emit('audio:clientStopped');
+            }
         });
 
         // Load ONNX runtime first (required by vad-bundle which uses window.ort)
@@ -184,6 +208,11 @@ export function useVoiceSession() {
                 _setState('userSpeaking');
                 userIsSpeakingRef.current = true;
 
+                // Clear assistant transcript when user starts speaking
+                _setLiveAssistantTranscript('');
+                transcriptQueueRef.current = [];
+                currentDisplayedTrackRef.current = null;
+
                 // Should we interrupt? Check if:
                 // 1. AI was recently active (within grace period), OR
                 // 2. Player is actively streaming audio
@@ -216,6 +245,11 @@ export function useVoiceSession() {
                     // Stop local audio
                     if (playerRef.current) {
                         playerRef.current.interrupt();
+                    }
+                    // Notify server that client audio stopped
+                    if (clientAudioPlayingRef.current) {
+                        clientAudioPlayingRef.current = false;
+                        socketRef.current?.emit('audio:clientStopped');
                     }
                     // Block all audio until we get a fresh response
                     awaitingNewResponseRef.current = true;
@@ -274,7 +308,7 @@ export function useVoiceSession() {
 
         console.log('[useVoiceSession] Silero VAD initialized');
         return { vad, player };
-    }, [_setAudioContext, _setSourceNode, _setAnalyserNode, _setState, _setInputLevel, isMuted, float32ToBase64PCM16]);
+    }, [_setAudioContext, _setSourceNode, _setAnalyserNode, _setState, _setInputLevel, _setLiveAssistantTranscript, isMuted, float32ToBase64PCM16]);
 
     /**
      * Connect to voice server
@@ -328,6 +362,9 @@ export function useVoiceSession() {
             _setIsConnected(true);
             // Start the VAD
             vadRef.current?.start();
+            // Mark as connected and play sound only after VAD is ready
+            wasConnectedRef.current = true;
+            SoundEffects.playConnect();
         });
 
         socket.on('session:error', (data) => {
@@ -418,6 +455,12 @@ export function useVoiceSession() {
                 // Track AI activity
                 lastAiActivityRef.current = Date.now();
 
+                // Notify server that client is playing audio (for filler suppression)
+                if (!clientAudioPlayingRef.current) {
+                    clientAudioPlayingRef.current = true;
+                    socketRef.current?.emit('audio:clientPlaying');
+                }
+
                 const pcmData = base64ToInt16Array(data.data);
                 playerRef.current.add16BitPCM(pcmData, trackId);
                 _setState('audioPlaying');
@@ -426,6 +469,22 @@ export function useVoiceSession() {
 
         socket.on('audio:muted', (muted) => {
             console.log('[useVoiceSession] Mute state:', muted);
+        });
+
+        // Track start - queue transcript for display when audio plays
+        socket.on('audio:trackStart', (data) => {
+            if (data.text && data.trackId) {
+                // If nothing is currently playing, display immediately (first chunk)
+                if (!currentDisplayedTrackRef.current && transcriptQueueRef.current.length === 0) {
+                    currentDisplayedTrackRef.current = data.trackId;
+                    _setLiveAssistantTranscript(data.text);
+                    console.log('[useVoiceSession] Displaying first transcript:', data.trackId);
+                } else {
+                    // Queue for display when current track finishes
+                    transcriptQueueRef.current.push({ trackId: data.trackId, text: data.text });
+                    console.log('[useVoiceSession] Queued transcript:', data.trackId, 'queue length:', transcriptQueueRef.current.length);
+                }
+            }
         });
 
         // Track complete - flush any remaining audio buffer
@@ -542,7 +601,15 @@ export function useVoiceSession() {
         userIsSpeakingRef.current = false;
         awaitingNewResponseRef.current = false;
         shouldInterruptOnConfirmRef.current = false;
+        clientAudioPlayingRef.current = false;
         lastAiActivityRef.current = 0;
+        transcriptQueueRef.current = [];
+        currentDisplayedTrackRef.current = null;
+        // Only play disconnect sound if we actually connected
+        if (wasConnectedRef.current) {
+            SoundEffects.playDisconnect();
+            wasConnectedRef.current = false;
+        }
         console.log('[useVoiceSession] Cleanup complete');
     }, []);
 

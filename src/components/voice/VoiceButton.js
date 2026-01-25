@@ -20,17 +20,18 @@ export function VoiceButton({ onClick, disabled = false, className = '' }) {
             disabled={disabled}
             className={`
                 flex items-center justify-center
-                w-10 h-10 rounded-full
-                bg-blue-600 hover:bg-blue-700
-                disabled:bg-gray-600 disabled:cursor-not-allowed
-                transition-colors
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800
+                transition-all duration-300
+                disabled:cursor-not-allowed
+                ${disabled
+                    ? 'text-gray-400 dark:text-gray-500'
+                    : 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:scale-110 active:scale-95'
+                }
                 ${className}
             `}
             title="Start voice mode"
             aria-label="Start voice mode"
         >
-            <Mic className="w-5 h-5 text-white" />
+            <Mic className="w-5 h-5" />
         </button>
     );
 }

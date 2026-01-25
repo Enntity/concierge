@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Mic, Square, Minus, VolumeX, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Square, Minus } from 'lucide-react';
 import { useVoice } from '../../contexts/VoiceContext';
 import { MicrophoneVisualizer } from './MicrophoneVisualizer';
 
@@ -13,7 +13,6 @@ export function VoiceControls({ onMinimize }) {
         isMuted,
         toggleMute,
         endSession,
-        state,
         audioContext,
         sourceNode,
     } = useVoice();
@@ -30,16 +29,16 @@ export function VoiceControls({ onMinimize }) {
                 }`}
                 title={isMuted ? 'Unmute' : 'Mute'}
             >
-                {!isMuted && audioContext && sourceNode ? (
+                {isMuted ? (
+                    <MicOff className="w-8 h-8 text-red-400" />
+                ) : audioContext && sourceNode ? (
                     <MicrophoneVisualizer
                         audioContext={audioContext}
                         sourceNode={sourceNode}
                         size="large"
                     />
-                ) : isMuted ? (
-                    <VolumeX className="w-8 h-8 text-red-400" />
                 ) : (
-                    <Mic className="w-8 h-8 text-gray-400" />
+                    <Mic className="w-8 h-8 text-green-400" />
                 )}
             </button>
 

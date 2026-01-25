@@ -27,6 +27,8 @@ import {
 import { useEntities } from "../../hooks/useEntities";
 import { useOnboarding } from "../../contexts/OnboardingContext";
 import { useChatEntity } from "../../contexts/ChatEntityContext";
+import { useVoice } from "../../contexts/VoiceContext";
+import { VoiceModeContent } from "../voice/VoiceModeContent";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -110,6 +112,7 @@ function Chat({ viewingChat = null }) {
     const { user } = useContext(AuthContext);
     const { readOnly } = viewingChat || {};
     const publicChatOwner = viewingChat?.owner;
+    const { isActive: voiceModeActive } = useVoice();
 
     // Track the last URL chat ID we've updated to prevent duplicate calls
     const lastUpdatedUrlChatId = useRef(null);
@@ -512,14 +515,18 @@ function Chat({ viewingChat = null }) {
                 </div>
             </div>
             <div className="grow overflow-auto">
-                <ChatContent
-                    viewingChat={viewingChat}
-                    streamingEnabled={user.streamingEnabled}
-                    selectedEntityId={selectedEntityId}
-                    entities={entities}
-                    entityIconSize="lg"
-                    isEntityUnavailable={isEntityUnavailable}
-                />
+                {voiceModeActive ? (
+                    <VoiceModeContent />
+                ) : (
+                    <ChatContent
+                        viewingChat={viewingChat}
+                        streamingEnabled={user.streamingEnabled}
+                        selectedEntityId={selectedEntityId}
+                        entities={entities}
+                        entityIconSize="lg"
+                        isEntityUnavailable={isEntityUnavailable}
+                    />
+                )}
             </div>
 
             <AlertDialog

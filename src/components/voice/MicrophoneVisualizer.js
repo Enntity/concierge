@@ -58,20 +58,21 @@ export function MicrophoneVisualizer({
             ctx.arc(canvas.width / 2, canvas.height / 2, ringRadius, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Draw volume indicator with increased brightness
+            // Draw volume indicator with green tones (hue 140-160)
+            const hue = 140 + normalizedVolume * 20;
             ctx.beginPath();
-            ctx.strokeStyle = `hsla(${210 + normalizedVolume * 30}, 100%, 90%, 1.0)`;
+            ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 1.0)`;
             ctx.lineWidth = size === 'small' ? 3 : 4;
             ctx.arc(canvas.width / 2, canvas.height / 2, ringRadius, 0, Math.PI * 2 * normalizedVolume);
             ctx.stroke();
 
             // Subtle glow effect
             ctx.shadowBlur = 10;
-            ctx.shadowColor = `hsla(${210 + normalizedVolume * 30}, 100%, 70%, ${0.6})`;
+            ctx.shadowColor = `hsla(${hue}, 80%, 50%, 0.6)`;
 
             // Simpler second pass
             ctx.beginPath();
-            ctx.strokeStyle = `hsla(${210 + normalizedVolume * 30}, 100%, 95%, ${0.4 + normalizedVolume * 0.4})`;
+            ctx.strokeStyle = `hsla(${hue}, 80%, 70%, ${0.4 + normalizedVolume * 0.4})`;
             ctx.lineWidth = 2;
             ctx.arc(canvas.width / 2, canvas.height / 2, ringRadius + 1, 0, Math.PI * 2 * normalizedVolume);
             ctx.stroke();

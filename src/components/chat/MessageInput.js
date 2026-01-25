@@ -719,7 +719,7 @@ function MessageInput({
                             inputMode="text"
                         />
                         {/* Voice button */}
-                        <div className="pb-2">
+                        <div className="pb-2.5 flex items-end">
                             <VoiceButton
                                 onClick={() => {
                                     if (entityId && activeChatId) {

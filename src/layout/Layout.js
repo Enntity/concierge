@@ -416,8 +416,8 @@ export default function Layout({ children }) {
                                 {/* Entity Overlay - floats over content on both desktop and mobile */}
                                 <EntityOverlay />
 
-                                {/* Voice Mode Overlay - fullscreen voice interaction UI */}
-                                <VoiceModeOverlay />
+                                {/* Voice Mode Overlay - only for non-chat pages (Chat.js handles voice mode inline) */}
+                                {!pathname?.startsWith('/chat') && <VoiceModeOverlay />}
 
                                 {/* Global Entity Contacts Modal */}
                                 <EntityContactsModal
