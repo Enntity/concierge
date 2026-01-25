@@ -64,6 +64,10 @@ class StreamProcessor extends AudioWorkletProcessor {
             });
             if (payload.event === 'interrupt') {
               this.hasInterrupted = true;
+              // Clear all buffered audio immediately for instant silence
+              this.outputBuffers = [];
+              this.write = { buffer: new Float32Array(this.bufferLength), trackId: null };
+              this.writeOffset = 0;
             }
           } else {
             throw new Error(\`Unhandled event "\${payload.event}"\`);
@@ -250,7 +254,15 @@ class StreamProcessor extends AudioWorkletProcessor {
       const outputBuffers = this.outputBuffers;
 
       if (this.hasInterrupted) {
-        this.lastSample = 0; // Reset crossfade state
+        // Quick fade out over this frame to avoid click
+        if (this.lastSample !== 0) {
+          const fadeLength = outputChannelData.length;
+          for (let i = 0; i < fadeLength; i++) {
+            outputChannelData[i] = this.lastSample * (1 - i / fadeLength);
+          }
+          this.lastSample = 0;
+          return true; // One more frame for fade
+        }
         this.port.postMessage({ event: 'stop' });
         return false;
       } else if (!this.hasStarted && outputBuffers.length < this.minBufferSize) {

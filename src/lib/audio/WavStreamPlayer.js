@@ -19,6 +19,7 @@ export class WavStreamPlayer {
     this.context = null;
     this.stream = null;
     this.analyser = null;
+    this.gainNode = null; // For volume control
     this.trackSampleOffsets = {};
     this.interruptedTrackIds = {};
     this.isRestarting = false;
@@ -93,7 +94,14 @@ export class WavStreamPlayer {
     }
     try {
       const streamNode = new AudioWorkletNode(this.context, 'stream_processor');
-      streamNode.connect(this.context.destination);
+
+      // Create gain node for volume control if not exists
+      if (!this.gainNode) {
+        this.gainNode = this.context.createGain();
+        this.gainNode.connect(this.context.destination);
+      }
+      streamNode.connect(this.gainNode);
+
       streamNode.port.onmessage = (e) => {
         const { event } = e.data;
         if (event === 'stop') {
@@ -268,6 +276,36 @@ export class WavStreamPlayer {
    */
   async interrupt() {
     return this.getTrackSampleOffset(true);
+  }
+
+  /**
+   * Sets the output volume
+   * @param {number} volume - Volume level from 0 to 1
+   * @param {number} rampTimeMs - Time to ramp to new volume in milliseconds
+   */
+  setVolume(volume, rampTimeMs = 50) {
+    if (this.gainNode && this.context) {
+      const clampedVolume = Math.max(0, Math.min(1, volume));
+      this.gainNode.gain.linearRampToValueAtTime(
+        clampedVolume,
+        this.context.currentTime + rampTimeMs / 1000
+      );
+    }
+  }
+
+  /**
+   * Ducks the audio to a lower volume (for when user might be speaking)
+   * @param {number} volume - Duck volume level (default 0.05 = 5%)
+   */
+  duck(volume = 0.05) {
+    this.setVolume(volume, 30); // Quick duck
+  }
+
+  /**
+   * Restores audio to full volume after ducking
+   */
+  unduck() {
+    this.setVolume(1, 100); // Slightly slower restore
   }
 
   /**

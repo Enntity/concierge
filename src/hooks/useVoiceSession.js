@@ -22,7 +22,15 @@ export function useVoiceSession() {
     const playerRef = useRef(null);
     const streamRef = useRef(null);
     const isInitializedRef = useRef(false);
-    const isAiSpeakingRef = useRef(false);
+
+    // === Interrupt State Machine ===
+    // We track two things:
+    // 1. Is the user currently speaking? (gates audio while speaking)
+    // 2. Did we interrupt and are waiting for a new response? (gates stale audio)
+    const userIsSpeakingRef = useRef(false);       // true between speechStart and speechEnd/misfire
+    const awaitingNewResponseRef = useRef(false);  // true after interrupt until new response starts
+    const lastAiActivityRef = useRef(0);           // timestamp for grace period during state bounces
+    const shouldInterruptOnConfirmRef = useRef(false); // true if we should interrupt when speech is confirmed
 
     const {
         isActive,
@@ -94,10 +102,10 @@ export function useVoiceSession() {
         }
 
         // Set up track complete callback
+        // Update lastAiActivity when local audio finishes (server state may already be idle)
         player.setTrackCompleteCallback((trackId) => {
             console.log('[useVoiceSession] Track complete:', trackId);
-            isAiSpeakingRef.current = false;
-            _setState('idle');
+            lastAiActivityRef.current = Date.now();
         });
 
         // Load ONNX runtime first (required by vad-bundle which uses window.ort)
@@ -174,13 +182,50 @@ export function useVoiceSession() {
             onSpeechStart: () => {
                 console.log('[VAD] Speech started');
                 _setState('userSpeaking');
-                // Notify server - will trigger interrupt if AI is speaking
-                socketRef.current?.emit('audio:speechStart');
+                userIsSpeakingRef.current = true;
+
+                // Should we interrupt? Check if:
+                // 1. AI was recently active (within grace period), OR
+                // 2. Player is actively streaming audio
+                const timeSinceAi = Date.now() - lastAiActivityRef.current;
+                const aiRecentlyActive = lastAiActivityRef.current > 0 && timeSinceAi < 3000; // 3 second grace
+                const playerIsStreaming = playerRef.current?.stream != null;
+
+                console.log('[VAD] Interrupt check:', { timeSinceAi, aiRecentlyActive, playerIsStreaming });
+
+                if (aiRecentlyActive || playerIsStreaming) {
+                    // Don't interrupt yet - wait for confirmed speech (speechEnd)
+                    // This prevents echo-triggered false interrupts
+                    console.log('[VAD] Marking for interrupt on confirmation, ducking audio');
+                    shouldInterruptOnConfirmRef.current = true;
+                    // Duck the audio so it's less distracting while we confirm
+                    playerRef.current?.duck();
+                } else {
+                    shouldInterruptOnConfirmRef.current = false;
+                }
             },
 
             onSpeechEnd: (audio) => {
                 console.log('[VAD] Speech ended, audio length:', audio.length);
-                // Signal server to process the buffered audio
+                userIsSpeakingRef.current = false;
+
+                // If we were waiting to interrupt, do it now - this is confirmed real speech
+                if (shouldInterruptOnConfirmRef.current) {
+                    console.log('[VAD] Confirmed speech - executing interrupt');
+                    shouldInterruptOnConfirmRef.current = false;
+                    // Stop local audio
+                    if (playerRef.current) {
+                        playerRef.current.interrupt();
+                    }
+                    // Block all audio until we get a fresh response
+                    awaitingNewResponseRef.current = true;
+                } else {
+                    // Wasn't an interrupt situation, make sure volume is normal
+                    playerRef.current?.unduck();
+                }
+
+                // Notify server - this is confirmed real speech
+                socketRef.current?.emit('audio:speechStart');
                 socketRef.current?.emit('audio:speechEnd');
             },
 
@@ -189,18 +234,32 @@ export function useVoiceSession() {
                 const level = probabilities.isSpeech;
                 _setInputLevel(level);
 
-                // Stream audio to server (unless muted or AI is speaking)
-                if (!isMuted && !isAiSpeakingRef.current && socketRef.current) {
+                // Stream audio to server (unless muted)
+                if (!isMuted && socketRef.current) {
                     const base64Audio = float32ToBase64PCM16(audioFrame);
                     socketRef.current.emit('audio:input', {
                         data: base64Audio,
-                        sampleRate: 16000, // VAD uses 16kHz internally
+                        sampleRate: 16000,
                     });
                 }
             },
 
             onVADMisfire: () => {
-                console.log('[VAD] Misfire (speech too short)');
+                console.log('[VAD] Misfire');
+                userIsSpeakingRef.current = false;
+                // Cancel pending interrupt - this was a false positive (likely echo)
+                if (shouldInterruptOnConfirmRef.current) {
+                    console.log('[VAD] Misfire - cancelling pending interrupt, restoring volume');
+                    shouldInterruptOnConfirmRef.current = false;
+                    // Restore audio volume since it wasn't a real interrupt
+                    playerRef.current?.unduck();
+                }
+                // If we set awaitingNewResponse, clear it
+                if (awaitingNewResponseRef.current) {
+                    console.log('[VAD] Misfire - clearing await flag');
+                    awaitingNewResponseRef.current = false;
+                }
+                _setState('idle');
             },
         });
 
@@ -297,8 +356,25 @@ export function useVoiceSession() {
             const newState = stateMap[state] || state;
             _setState(newState);
 
-            // Track when AI is speaking for echo gating
-            isAiSpeakingRef.current = (state === 'speaking' || state === 'processing');
+            // Track AI activity for interrupt grace period
+            if (state === 'speaking' || state === 'processing') {
+                lastAiActivityRef.current = Date.now();
+            }
+
+            // When server starts speaking and user is done, allow audio
+            if (state === 'speaking' && awaitingNewResponseRef.current && !userIsSpeakingRef.current) {
+                console.log('[state:change] New response starting, clearing await flag');
+                awaitingNewResponseRef.current = false;
+                // Ensure volume is restored for new response
+                playerRef.current?.unduck();
+                // Clear interrupted track states
+                if (playerRef.current) {
+                    playerRef.current.interruptedTrackIds = {};
+                }
+            }
+
+            // Don't reset lastAiActivity on idle - let it age naturally
+            // Server may say idle before local audio finishes playing
         });
 
         // Transcript events
@@ -322,9 +398,28 @@ export function useVoiceSession() {
         // Audio events
         socket.on('audio:output', (data) => {
             if (data.data && playerRef.current) {
-                isAiSpeakingRef.current = true;
+                // Block audio if:
+                // 1. User is currently speaking, OR
+                // 2. We're awaiting a new response after an interrupt
+                if (userIsSpeakingRef.current || awaitingNewResponseRef.current) {
+                    return;
+                }
+
+                const trackId = data.trackId || 'default';
+
+                // Don't play if this track was interrupted
+                if (playerRef.current.interruptedTrackIds?.[trackId]) {
+                    return;
+                }
+
+                // Ensure volume is normal when playing audio
+                playerRef.current.unduck();
+
+                // Track AI activity
+                lastAiActivityRef.current = Date.now();
+
                 const pcmData = base64ToInt16Array(data.data);
-                playerRef.current.add16BitPCM(pcmData, data.trackId || 'default');
+                playerRef.current.add16BitPCM(pcmData, trackId);
                 _setState('audioPlaying');
             }
         });
@@ -340,13 +435,12 @@ export function useVoiceSession() {
             }
         });
 
-        // Stop audio playback (interruption)
+        // Stop audio playback (server-initiated interruption)
         socket.on('audio:stop', async () => {
-            console.log('[useVoiceSession] Stopping audio playback (interrupted)');
+            console.log('[useVoiceSession] Server requested audio stop');
             if (playerRef.current) {
                 await playerRef.current.interrupt();
             }
-            isAiSpeakingRef.current = false;
             _setState('idle');
         });
 
@@ -445,7 +539,10 @@ export function useVoiceSession() {
         }
 
         isInitializedRef.current = false;
-        isAiSpeakingRef.current = false;
+        userIsSpeakingRef.current = false;
+        awaitingNewResponseRef.current = false;
+        shouldInterruptOnConfirmRef.current = false;
+        lastAiActivityRef.current = 0;
         console.log('[useVoiceSession] Cleanup complete');
     }, []);
 
@@ -556,7 +653,9 @@ export function useVoiceSession() {
 
         cancelResponse: useCallback(() => {
             socketRef.current?.emit('audio:interrupt');
-            isAiSpeakingRef.current = false;
+            if (playerRef.current) {
+                playerRef.current.interrupt();
+            }
         }, []),
     };
 }
