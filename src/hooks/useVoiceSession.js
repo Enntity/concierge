@@ -45,6 +45,7 @@ export function useVoiceSession() {
         chatId,
         sessionContext,
         isMuted,
+        endSession,
         _setIsConnected,
         _setState,
         _setLiveUserTranscript,
@@ -716,7 +717,7 @@ export function useVoiceSession() {
             } catch (error) {
                 console.error("[useVoiceSession] Initialization error:", error);
                 isInitializedRef.current = false;
-                voice.endSession();
+                endSession();
             }
         };
 
@@ -727,7 +728,7 @@ export function useVoiceSession() {
         connectToServer,
         cleanup,
         _registerCleanup,
-        voice,
+        endSession,
     ]);
 
     /**
