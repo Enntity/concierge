@@ -218,8 +218,9 @@ export function useVoiceSession() {
                 playerRef.current?.unduck();
             }
 
-            // Notify server to finalize transcript
+            // Notify server to finalize transcript and process
             socketRef.current?.emit("audio:speechEnd");
+            socketRef.current?.emit("audio:commit"); // Explicit signal to finalize STT and send to AI
             _setState("idle");
         };
 
@@ -272,6 +273,9 @@ export function useVoiceSession() {
                 userIsSpeakingRef.current = true;
                 lastAudioFrameTimeRef.current = Date.now();
 
+                // Notify server that speech started
+                socketRef.current?.emit("audio:speechStart");
+
                 // Clear assistant transcript when user starts speaking
                 _setLiveAssistantTranscript("");
                 transcriptQueueRef.current = [];
@@ -309,7 +313,10 @@ export function useVoiceSession() {
             },
 
             onSpeechEnd: () => {
-                handleSpeechEnd("VAD");
+                // Small delay to ensure all pending audio frames are sent before signaling end
+                setTimeout(() => {
+                    handleSpeechEnd("VAD");
+                }, 150);
             },
 
             onFrameProcessed: (probabilities, audioFrame) => {
