@@ -1,81 +1,65 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
+import { Mic } from 'lucide-react';
+import { useVoice } from '../../contexts/VoiceContext';
 
 /**
- * MicrophoneVisualizer - Renders a simple circular volume indicator for microphone input
+ * MicrophoneVisualizer - Mic button with animated ring based on input level
  *
- * @param {Object} props
- * @param {AudioContext|null} props.audioContext - Audio context reference
- * @param {MediaStreamAudioSourceNode|null} props.sourceNode - MediaStreamAudioSourceNode from microphone
- * @param {'small'|'large'} props.size - Size variant (default 'large')
+ * Uses inputLevel from VoiceContext (set by VAD) for visualization.
+ * No Web Audio API complexity - just reads the level and animates.
  */
-export function MicrophoneVisualizer({
-    audioContext,
-    sourceNode,
-    size = 'large'
-}) {
+export function MicrophoneVisualizer() {
+    const { inputLevel } = useVoice();
     const canvasRef = useRef(null);
-    const analyzerRef = useRef(null);
     const animationRef = useRef(null);
-
-    const dimensions = size === 'small' ? 48 : 64;
-    const ringRadius = size === 'small' ? 21 : 28;
+    const smoothedLevelRef = useRef(0);
 
     useEffect(() => {
-        if (!audioContext || !sourceNode || !canvasRef.current) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
-        const analyzer = audioContext.createAnalyser();
-        analyzerRef.current = analyzer;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-        analyzer.fftSize = 256;
-        analyzer.smoothingTimeConstant = 0.7;
-
-        sourceNode.connect(analyzer);
+        const size = 64;
+        const cx = size / 2;
+        const cy = size / 2;
+        const ringRadius = 28;
 
         const draw = () => {
-            const canvas = canvasRef.current;
-            if (!canvas || !analyzer) return;
+            // Smooth the level for nicer animation
+            const target = inputLevel || 0;
+            smoothedLevelRef.current += (target - smoothedLevelRef.current) * 0.3;
+            const level = smoothedLevelRef.current;
 
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
+            // Clear
+            ctx.clearRect(0, 0, size, size);
 
-            const bufferLength = analyzer.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-            analyzer.getByteFrequencyData(dataArray);
-
-            // Calculate average volume
-            const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-            const normalizedVolume = Math.min(average / 128, 1);
-
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw background ring
+            // Background ring (always visible)
             ctx.beginPath();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.lineWidth = size === 'small' ? 3 : 4;
-            ctx.arc(canvas.width / 2, canvas.height / 2, ringRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(74, 222, 128, 0.3)';
+            ctx.lineWidth = 4;
+            ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Draw volume indicator with green tones (hue 140-160)
-            const hue = 140 + normalizedVolume * 20;
-            ctx.beginPath();
-            ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 1.0)`;
-            ctx.lineWidth = size === 'small' ? 3 : 4;
-            ctx.arc(canvas.width / 2, canvas.height / 2, ringRadius, 0, Math.PI * 2 * normalizedVolume);
-            ctx.stroke();
+            // Active ring (grows with level)
+            if (level > 0.01) {
+                const hue = 140 + level * 20;
 
-            // Subtle glow effect
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = `hsla(${hue}, 80%, 50%, 0.6)`;
+                // Glow
+                ctx.shadowBlur = 8 + level * 12;
+                ctx.shadowColor = `hsla(${hue}, 80%, 50%, 0.6)`;
 
-            // Simpler second pass
-            ctx.beginPath();
-            ctx.strokeStyle = `hsla(${hue}, 80%, 70%, ${0.4 + normalizedVolume * 0.4})`;
-            ctx.lineWidth = 2;
-            ctx.arc(canvas.width / 2, canvas.height / 2, ringRadius + 1, 0, Math.PI * 2 * normalizedVolume);
-            ctx.stroke();
+                ctx.beginPath();
+                ctx.strokeStyle = `hsla(${hue}, 80%, 55%, ${0.6 + level * 0.4})`;
+                ctx.lineWidth = 4 + level * 2;
+                ctx.arc(cx, cy, ringRadius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * level);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+            }
 
             animationRef.current = requestAnimationFrame(draw);
         };
@@ -87,14 +71,19 @@ export function MicrophoneVisualizer({
                 cancelAnimationFrame(animationRef.current);
             }
         };
-    }, [audioContext, sourceNode, size, ringRadius]);
+    }, [inputLevel]);
 
     return (
-        <canvas
-            ref={canvasRef}
-            width={dimensions}
-            height={dimensions}
-            className={size === 'small' ? 'w-12 h-12' : 'w-16 h-16'}
-        />
+        <div className="relative w-16 h-16 flex items-center justify-center">
+            {/* Canvas for ring animation */}
+            <canvas
+                ref={canvasRef}
+                width={64}
+                height={64}
+                className="absolute inset-0"
+            />
+            {/* Mic icon in center */}
+            <Mic className="w-7 h-7 text-green-400 relative z-10" />
+        </div>
     );
 }

@@ -125,8 +125,11 @@ export function FloatingTranscript() {
             animateScroll(text);
         } else if (buffer && !liveAssistantTranscript) {
             // Transcript cleared - cancel scroll and schedule hide
+            // Use longer delay for short texts that don't scroll (give time to read)
             cancelScrollAnimation();
-            scheduleHide(3000);
+            const estimatedReadTime = (buffer.length / CHARS_PER_SECOND) * 1000;
+            const hideDelay = Math.max(estimatedReadTime, 3000);
+            scheduleHide(hideDelay);
         }
     }, [liveAssistantTranscript, buffer, clearHideTimer, scheduleHide, cancelScrollAnimation, animateScroll]);
 
