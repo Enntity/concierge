@@ -15,7 +15,7 @@ const PUBLIC_PATHS = [
     "/api/enntity/push",
     "/privacy",
     "/published",
-    "/vad",  // VAD model and ONNX runtime files
+    "/vad", // VAD model and ONNX runtime files
 ];
 
 const isPublicPath = (pathname) => {

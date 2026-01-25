@@ -1,9 +1,9 @@
 "use client";
 
-import React from 'react';
-import { MicOff, Square, Minus } from 'lucide-react';
-import { useVoice } from '../../contexts/VoiceContext';
-import { MicrophoneVisualizer } from './MicrophoneVisualizer';
+import React from "react";
+import { MicOff, Square, Minus } from "lucide-react";
+import { useVoice } from "../../contexts/VoiceContext";
+import { MicrophoneVisualizer } from "./MicrophoneVisualizer";
 
 /**
  * VoiceControls - Control buttons for voice mode (mute, stop, minimize)
@@ -18,10 +18,10 @@ export function VoiceControls({ onMinimize }) {
                 onClick={toggleMute}
                 className={`relative flex items-center justify-center w-16 h-16 rounded-full transition-all ${
                     isMuted
-                        ? 'bg-red-500/20 hover:bg-red-500/30 ring-2 ring-red-500'
-                        : 'bg-gray-800/50 hover:bg-gray-800/70'
+                        ? "bg-red-500/20 hover:bg-red-500/30 ring-2 ring-red-500"
+                        : "bg-gray-800/50 hover:bg-gray-800/70"
                 }`}
-                title={isMuted ? 'Unmute' : 'Mute'}
+                title={isMuted ? "Unmute" : "Mute"}
             >
                 {isMuted ? (
                     <MicOff className="w-8 h-8 text-red-400" />

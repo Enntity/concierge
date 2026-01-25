@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
-import { Mic } from 'lucide-react';
-import { useVoice } from '../../contexts/VoiceContext';
+import { useEffect, useRef } from "react";
+import { Mic } from "lucide-react";
+import { useVoice } from "../../contexts/VoiceContext";
 
 /**
  * MicrophoneVisualizer - Mic button with animated ring based on input level
@@ -20,7 +20,7 @@ export function MicrophoneVisualizer() {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
         const size = 64;
@@ -31,7 +31,8 @@ export function MicrophoneVisualizer() {
         const draw = () => {
             // Smooth the level for nicer animation
             const target = inputLevel || 0;
-            smoothedLevelRef.current += (target - smoothedLevelRef.current) * 0.3;
+            smoothedLevelRef.current +=
+                (target - smoothedLevelRef.current) * 0.3;
             const level = smoothedLevelRef.current;
 
             // Clear
@@ -39,7 +40,7 @@ export function MicrophoneVisualizer() {
 
             // Background ring (always visible)
             ctx.beginPath();
-            ctx.strokeStyle = 'rgba(74, 222, 128, 0.3)';
+            ctx.strokeStyle = "rgba(74, 222, 128, 0.3)";
             ctx.lineWidth = 4;
             ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
             ctx.stroke();
@@ -55,7 +56,13 @@ export function MicrophoneVisualizer() {
                 ctx.beginPath();
                 ctx.strokeStyle = `hsla(${hue}, 80%, 55%, ${0.6 + level * 0.4})`;
                 ctx.lineWidth = 4 + level * 2;
-                ctx.arc(cx, cy, ringRadius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * level);
+                ctx.arc(
+                    cx,
+                    cy,
+                    ringRadius,
+                    -Math.PI / 2,
+                    -Math.PI / 2 + Math.PI * 2 * level,
+                );
                 ctx.stroke();
 
                 ctx.shadowBlur = 0;

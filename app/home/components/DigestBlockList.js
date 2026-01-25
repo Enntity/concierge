@@ -83,7 +83,10 @@ const HomeGreeting = React.memo(function HomeGreeting() {
 
                 {/* Actual greeting content - ticker scroll if overflows */}
                 {greeting && !greetingLoading && (
-                    <div ref={containerRef} className="overflow-hidden flex items-center gap-2">
+                    <div
+                        ref={containerRef}
+                        className="overflow-hidden flex items-center gap-2"
+                    >
                         {/* Entity avatar */}
                         {entity && (
                             <div className="flex-shrink-0">
@@ -95,7 +98,9 @@ const HomeGreeting = React.memo(function HomeGreeting() {
                                     />
                                 ) : (
                                     <span className="h-6 w-6 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-xs font-medium text-white ring-1 ring-gray-200/50 dark:ring-gray-700/50">
-                                        {entity.avatarText || entity.name?.[0] || "?"}
+                                        {entity.avatarText ||
+                                            entity.name?.[0] ||
+                                            "?"}
                                     </span>
                                 )}
                             </div>

@@ -16,7 +16,7 @@ class SoundEffectsManager {
             this.audioContext = new AudioContext();
         }
         // Resume if suspended (browser autoplay policy)
-        if (this.audioContext.state === 'suspended') {
+        if (this.audioContext.state === "suspended") {
             await this.audioContext.resume();
         }
         return this.audioContext;
@@ -34,15 +34,15 @@ class SoundEffectsManager {
 
         try {
             const [connect, disconnect] = await Promise.all([
-                this.loadSound('/sounds/connect.mp3'),
-                this.loadSound('/sounds/disconnect.mp3'),
+                this.loadSound("/sounds/connect.mp3"),
+                this.loadSound("/sounds/disconnect.mp3"),
             ]);
             this.connectBuffer = connect;
             this.disconnectBuffer = disconnect;
             this.initialized = true;
-            console.log('[SoundEffects] Initialized');
+            console.log("[SoundEffects] Initialized");
         } catch (error) {
-            console.error('[SoundEffects] Failed to load sounds:', error);
+            console.error("[SoundEffects] Failed to load sounds:", error);
         }
     }
 
@@ -56,7 +56,7 @@ class SoundEffectsManager {
             source.connect(context.destination);
             source.start(0);
         } catch (error) {
-            console.error('[SoundEffects] Failed to play sound:', error);
+            console.error("[SoundEffects] Failed to play sound:", error);
         }
     }
 

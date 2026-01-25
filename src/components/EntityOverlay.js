@@ -100,12 +100,14 @@ export default function EntityOverlay({ inVoiceMode = false }) {
     // Custom text renderer for ephemeral styling
     const renderEphemeralText = (content, isVoiceMode = false) => (
         <div className="text-center max-h-full overflow-auto">
-            <div className={cn(
-                "entity-overlay-message font-light leading-relaxed text-slate-200",
-                isVoiceMode
-                    ? "text-lg sm:text-xl md:text-2xl"
-                    : "text-xl sm:text-2xl md:text-3xl lg:text-4xl"
-            )}>
+            <div
+                className={cn(
+                    "entity-overlay-message font-light leading-relaxed text-slate-200",
+                    isVoiceMode
+                        ? "text-lg sm:text-xl md:text-2xl"
+                        : "text-xl sm:text-2xl md:text-3xl lg:text-4xl",
+                )}
+            >
                 {convertMessageToMarkdown({ payload: content })}
             </div>
         </div>
@@ -193,7 +195,10 @@ export default function EntityOverlay({ inVoiceMode = false }) {
                     {/* Navigation */}
                     {hasMultiple && (
                         <>
-                            <NavButton direction="left" onClick={previousItem} />
+                            <NavButton
+                                direction="left"
+                                onClick={previousItem}
+                            />
                             <NavButton direction="right" onClick={nextItem} />
 
                             {/* Indicator dots */}
@@ -258,7 +263,8 @@ export default function EntityOverlay({ inVoiceMode = false }) {
                                         <div className="text-center">
                                             <div className="entity-overlay-message text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light leading-relaxed text-slate-200">
                                                 {convertMessageToMarkdown({
-                                                    payload: currentItem.content,
+                                                    payload:
+                                                        currentItem.content,
                                                 })}
                                             </div>
                                         </div>

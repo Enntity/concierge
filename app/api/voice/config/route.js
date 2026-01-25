@@ -10,7 +10,7 @@ export async function GET() {
     if (!voiceServerUrl) {
         return Response.json(
             { error: "Voice server URL not configured" },
-            { status: 503 }
+            { status: 503 },
         );
     }
 
@@ -18,10 +18,12 @@ export async function GET() {
     try {
         new URL(voiceServerUrl);
     } catch {
-        console.error(`[voice/config] Invalid VOICE_SERVER_URL: "${process.env.VOICE_SERVER_URL}"`);
+        console.error(
+            `[voice/config] Invalid VOICE_SERVER_URL: "${process.env.VOICE_SERVER_URL}"`,
+        );
         return Response.json(
             { error: "Invalid voice server URL configuration" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 

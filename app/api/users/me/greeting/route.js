@@ -189,12 +189,14 @@ Be casual, warm, and natural. Vary your style. Keep it brief. Just output the gr
 
         return NextResponse.json({
             greeting,
-            entity: entity ? {
-                id: entity.id,
-                name: entity.name,
-                avatarText: entity.avatarText,
-                avatar: entity.avatar,
-            } : null,
+            entity: entity
+                ? {
+                      id: entity.id,
+                      name: entity.name,
+                      avatarText: entity.avatarText,
+                      avatar: entity.avatar,
+                  }
+                : null,
         });
     } catch (error) {
         console.error(

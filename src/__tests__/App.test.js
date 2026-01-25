@@ -348,7 +348,6 @@ describe("App Component", () => {
             userStateValue = updatedState;
 
             // Trigger useEffect that watches debouncedUserState
-            // eslint-disable-next-line testing-library/no-unnecessary-act
             act(() => {
                 // Force re-render by updating a prop
                 render(

@@ -1,0 +1,25 @@
+{
+    "extends": ["next/core-web-vitals"],
+    "ignorePatterns": [
+        "public/**",
+        "node_modules/**",
+        ".next/**",
+        "out/**",
+        "coverage/**"
+    ],
+    "rules": {
+        "react/no-unescaped-entities": "off",
+        "@next/next/no-img-element": "off",
+        "react/display-name": "off",
+        "react/no-children-prop": "off"
+    },
+    "overrides": [
+        {
+            "files": ["**/__tests__/**/*", "**/*.test.js", "**/*.test.jsx"],
+            "rules": {
+                "testing-library/no-unnecessary-act": "off",
+                "testing-library/no-node-access": "off"
+            }
+        }
+    ]
+}

@@ -1,13 +1,13 @@
 "use client";
 
-import React from 'react';
-import { useVoice } from '../../contexts/VoiceContext';
-import { useEntityOverlay } from '../../contexts/EntityOverlayContext';
-import { useVoiceSession } from '../../hooks/useVoiceSession';
-import { AudioVisualizer } from './AudioVisualizer';
-import { VoiceControls } from './VoiceControls';
-import { FloatingTranscript } from './FloatingTranscript';
-import EntityOverlay from '../EntityOverlay';
+import React from "react";
+import { useVoice } from "../../contexts/VoiceContext";
+import { useEntityOverlay } from "../../contexts/EntityOverlayContext";
+import { useVoiceSession } from "../../hooks/useVoiceSession";
+import { AudioVisualizer } from "./AudioVisualizer";
+import { VoiceControls } from "./VoiceControls";
+import { FloatingTranscript } from "./FloatingTranscript";
+import EntityOverlay from "../EntityOverlay";
 
 /**
  * VoiceModeContent - Voice mode UI that replaces chat content
@@ -20,12 +20,7 @@ import EntityOverlay from '../EntityOverlay';
  * - Smooth crossfade between visualizer and overlay content
  */
 export function VoiceModeContent() {
-    const {
-        isConnected,
-        currentTool,
-        audioContext,
-        analyserNode,
-    } = useVoice();
+    const { isConnected, currentTool, audioContext, analyserNode } = useVoice();
 
     const { visible: overlayVisible } = useEntityOverlay();
 
@@ -46,9 +41,10 @@ export function VoiceModeContent() {
                         className={`
                             absolute inset-0 flex items-center justify-center
                             transition-all duration-300 ease-out
-                            ${showOverlayContent
-                                ? 'opacity-0 scale-95 pointer-events-none'
-                                : 'opacity-100 scale-100'
+                            ${
+                                showOverlayContent
+                                    ? "opacity-0 scale-95 pointer-events-none"
+                                    : "opacity-100 scale-100"
                             }
                         `}
                     >
@@ -62,7 +58,9 @@ export function VoiceModeContent() {
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-lg">
                                 <div className="text-gray-500">
-                                    {isConnected ? 'Initializing audio...' : 'Connecting...'}
+                                    {isConnected
+                                        ? "Initializing audio..."
+                                        : "Connecting..."}
                                 </div>
                             </div>
                         )}
@@ -73,9 +71,10 @@ export function VoiceModeContent() {
                         className={`
                             absolute inset-0 flex items-center justify-center
                             transition-all duration-300 ease-out
-                            ${showOverlayContent
-                                ? 'opacity-100 scale-100'
-                                : 'opacity-0 scale-95 pointer-events-none'
+                            ${
+                                showOverlayContent
+                                    ? "opacity-100 scale-100"
+                                    : "opacity-0 scale-95 pointer-events-none"
                             }
                         `}
                     >
@@ -90,7 +89,7 @@ export function VoiceModeContent() {
 
                 {/* Tool status - fixed height region */}
                 <div className="h-8 mt-2 flex items-center justify-center">
-                    {currentTool && currentTool.status === 'running' && (
+                    {currentTool && currentTool.status === "running" && (
                         <div className="flex items-center gap-2 px-4 py-1 bg-gray-800/60 rounded-full transition-opacity duration-300">
                             <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
                             <span className="text-xs text-gray-400 truncate max-w-xs">

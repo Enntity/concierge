@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from 'react';
-import { io } from 'socket.io-client';
-import { useVoice } from '../contexts/VoiceContext';
-import { useEntityOverlay } from '../contexts/EntityOverlayContext';
-import { WavStreamPlayer } from '../lib/audio';
-import { SoundEffects } from '../lib/audio/SoundEffects';
-import { composeUserDateTimeInfo } from '../utils/datetimeUtils';
+import { useEffect, useRef, useCallback } from "react";
+import { io } from "socket.io-client";
+import { useVoice } from "../contexts/VoiceContext";
+import { useEntityOverlay } from "../contexts/EntityOverlayContext";
+import { WavStreamPlayer } from "../lib/audio";
+import { SoundEffects } from "../lib/audio/SoundEffects";
+import { composeUserDateTimeInfo } from "../utils/datetimeUtils";
 
 const VOICE_SAMPLE_RATE = 24000; // Voice providers output 24kHz PCM
 
@@ -33,11 +33,11 @@ export function useVoiceSession() {
     // We track two things:
     // 1. Is the user currently speaking? (gates audio while speaking)
     // 2. Did we interrupt and are waiting for a new response? (gates stale audio)
-    const userIsSpeakingRef = useRef(false);       // true between speechStart and speechEnd/misfire
-    const awaitingNewResponseRef = useRef(false);  // true after interrupt until new response starts
-    const lastAiActivityRef = useRef(0);           // timestamp for grace period during state bounces
+    const userIsSpeakingRef = useRef(false); // true between speechStart and speechEnd/misfire
+    const awaitingNewResponseRef = useRef(false); // true after interrupt until new response starts
+    const lastAiActivityRef = useRef(0); // timestamp for grace period during state bounces
     const shouldInterruptOnConfirmRef = useRef(false); // true if we should interrupt when speech is confirmed
-    const clientAudioPlayingRef = useRef(false);   // true when client is playing audio (for filler suppression)
+    const clientAudioPlayingRef = useRef(false); // true when client is playing audio (for filler suppression)
 
     const {
         isActive,
@@ -67,10 +67,10 @@ export function useVoiceSession() {
         const int16Array = new Int16Array(float32Array.length);
         for (let i = 0; i < float32Array.length; i++) {
             const s = Math.max(-1, Math.min(1, float32Array[i]));
-            int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
         }
         const bytes = new Uint8Array(int16Array.buffer);
-        let binary = '';
+        let binary = "";
         for (let i = 0; i < bytes.byteLength; i++) {
             binary += String.fromCharCode(bytes[i]);
         }
@@ -94,7 +94,7 @@ export function useVoiceSession() {
      * Initialize audio components with Silero VAD
      */
     const initializeAudio = useCallback(async () => {
-        console.log('[useVoiceSession] Initializing audio with Silero VAD...');
+        console.log("[useVoiceSession] Initializing audio with Silero VAD...");
 
         // Create player for AI audio output
         const player = new WavStreamPlayer({
@@ -111,7 +111,7 @@ export function useVoiceSession() {
         // Set up track complete callback
         // Update lastAiActivity when local audio finishes (server state may already be idle)
         player.setTrackCompleteCallback((trackId) => {
-            console.log('[useVoiceSession] Track complete:', trackId);
+            console.log("[useVoiceSession] Track complete:", trackId);
             lastAiActivityRef.current = Date.now();
 
             // Advance transcript to next queued item when current track finishes
@@ -119,7 +119,10 @@ export function useVoiceSession() {
                 const next = transcriptQueueRef.current.shift();
                 currentDisplayedTrackRef.current = next.trackId;
                 _setLiveAssistantTranscript(next.text);
-                console.log('[useVoiceSession] Advanced transcript to:', next.trackId);
+                console.log(
+                    "[useVoiceSession] Advanced transcript to:",
+                    next.trackId,
+                );
             } else {
                 // No more queued - clear the current track marker
                 currentDisplayedTrackRef.current = null;
@@ -128,39 +131,42 @@ export function useVoiceSession() {
             // Notify server that client audio stopped (for filler suppression)
             if (clientAudioPlayingRef.current) {
                 clientAudioPlayingRef.current = false;
-                socketRef.current?.emit('audio:clientStopped');
+                socketRef.current?.emit("audio:clientStopped");
             }
         });
 
         // Load ONNX runtime first (required by vad-bundle which uses window.ort)
         if (!window.ort) {
-            console.log('[useVoiceSession] Loading ONNX runtime...');
+            console.log("[useVoiceSession] Loading ONNX runtime...");
             await new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = '/vad/ort.min.js';
+                const script = document.createElement("script");
+                script.src = "/vad/ort.min.js";
                 script.onload = resolve;
                 script.onerror = reject;
                 document.head.appendChild(script);
             });
-            console.log('[useVoiceSession] ONNX runtime loaded, window.ort:', !!window.ort);
+            console.log(
+                "[useVoiceSession] ONNX runtime loaded, window.ort:",
+                !!window.ort,
+            );
         }
 
         // Load vad-web bundle (uses window.ort from above)
         if (!window.vad) {
-            console.log('[useVoiceSession] Loading vad-web bundle...');
+            console.log("[useVoiceSession] Loading vad-web bundle...");
             await new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = '/vad/vad-bundle.min.js';
+                const script = document.createElement("script");
+                script.src = "/vad/vad-bundle.min.js";
                 script.onload = resolve;
                 script.onerror = reject;
                 document.head.appendChild(script);
             });
-            console.log('[useVoiceSession] vad-web bundle loaded');
+            console.log("[useVoiceSession] vad-web bundle loaded");
         }
 
         const MicVAD = window.vad?.MicVAD;
         if (!MicVAD) {
-            throw new Error('MicVAD not found on window.vad after bundle load');
+            throw new Error("MicVAD not found on window.vad after bundle load");
         }
 
         // Get user media stream with echo cancellation
@@ -170,46 +176,46 @@ export function useVoiceSession() {
                 noiseSuppression: true,
                 autoGainControl: true,
                 sampleRate: 16000, // VAD expects 16kHz
-            }
+            },
         });
 
-        console.log('[useVoiceSession] Creating Silero VAD...');
+        console.log("[useVoiceSession] Creating Silero VAD...");
         // Create Silero VAD for microphone with echo cancellation
         const vad = await MicVAD.new({
             // Path to asset files - library constructs full paths from these
-            baseAssetPath: '/vad/',
-            onnxWASMBasePath: '/vad/',
+            baseAssetPath: "/vad/",
+            onnxWASMBasePath: "/vad/",
 
             // Use v5 model (or 'legacy' for older model)
-            model: 'v5',
+            model: "v5",
 
             // Configure ONNX runtime
             ortConfig: (ort) => {
                 ort.env.wasm.numThreads = 1;
-                console.log('[useVoiceSession] ONNX configured: numThreads=1');
+                console.log("[useVoiceSession] ONNX configured: numThreads=1");
             },
 
             // Don't start automatically - we'll start after socket connection
             startOnLoad: false,
 
             // VAD parameters
-            positiveSpeechThreshold: 0.5,  // Confidence threshold for speech
+            positiveSpeechThreshold: 0.5, // Confidence threshold for speech
             negativeSpeechThreshold: 0.35, // Confidence threshold for silence
-            minSpeechFrames: 3,            // Min frames before speech is confirmed
-            redemptionFrames: 8,           // Frames of silence before speech ends
-            preSpeechPadFrames: 3,         // Frames to include before speech start
+            minSpeechFrames: 3, // Min frames before speech is confirmed
+            redemptionFrames: 8, // Frames of silence before speech ends
+            preSpeechPadFrames: 3, // Frames to include before speech start
 
             // Custom stream getter with echo cancellation
             getStream: async () => stream,
 
             // Callbacks
             onSpeechStart: () => {
-                console.log('[VAD] Speech started');
-                _setState('userSpeaking');
+                console.log("[VAD] Speech started");
+                _setState("userSpeaking");
                 userIsSpeakingRef.current = true;
 
                 // Clear assistant transcript when user starts speaking
-                _setLiveAssistantTranscript('');
+                _setLiveAssistantTranscript("");
                 transcriptQueueRef.current = [];
                 currentDisplayedTrackRef.current = null;
 
@@ -217,15 +223,22 @@ export function useVoiceSession() {
                 // 1. AI was recently active (within grace period), OR
                 // 2. Player is actively streaming audio
                 const timeSinceAi = Date.now() - lastAiActivityRef.current;
-                const aiRecentlyActive = lastAiActivityRef.current > 0 && timeSinceAi < 3000; // 3 second grace
+                const aiRecentlyActive =
+                    lastAiActivityRef.current > 0 && timeSinceAi < 3000; // 3 second grace
                 const playerIsStreaming = playerRef.current?.stream != null;
 
-                console.log('[VAD] Interrupt check:', { timeSinceAi, aiRecentlyActive, playerIsStreaming });
+                console.log("[VAD] Interrupt check:", {
+                    timeSinceAi,
+                    aiRecentlyActive,
+                    playerIsStreaming,
+                });
 
                 if (aiRecentlyActive || playerIsStreaming) {
                     // Don't interrupt yet - wait for confirmed speech (speechEnd)
                     // This prevents echo-triggered false interrupts
-                    console.log('[VAD] Marking for interrupt on confirmation, ducking audio');
+                    console.log(
+                        "[VAD] Marking for interrupt on confirmation, ducking audio",
+                    );
                     shouldInterruptOnConfirmRef.current = true;
                     // Duck the audio so it's less distracting while we confirm
                     playerRef.current?.duck();
@@ -235,12 +248,12 @@ export function useVoiceSession() {
             },
 
             onSpeechEnd: (audio) => {
-                console.log('[VAD] Speech ended, audio length:', audio.length);
+                console.log("[VAD] Speech ended, audio length:", audio.length);
                 userIsSpeakingRef.current = false;
 
                 // If we were waiting to interrupt, do it now - this is confirmed real speech
                 if (shouldInterruptOnConfirmRef.current) {
-                    console.log('[VAD] Confirmed speech - executing interrupt');
+                    console.log("[VAD] Confirmed speech - executing interrupt");
                     shouldInterruptOnConfirmRef.current = false;
                     // Stop local audio
                     if (playerRef.current) {
@@ -249,7 +262,7 @@ export function useVoiceSession() {
                     // Notify server that client audio stopped
                     if (clientAudioPlayingRef.current) {
                         clientAudioPlayingRef.current = false;
-                        socketRef.current?.emit('audio:clientStopped');
+                        socketRef.current?.emit("audio:clientStopped");
                     }
                     // Block all audio until we get a fresh response
                     awaitingNewResponseRef.current = true;
@@ -259,8 +272,8 @@ export function useVoiceSession() {
                 }
 
                 // Notify server - this is confirmed real speech
-                socketRef.current?.emit('audio:speechStart');
-                socketRef.current?.emit('audio:speechEnd');
+                socketRef.current?.emit("audio:speechStart");
+                socketRef.current?.emit("audio:speechEnd");
             },
 
             onFrameProcessed: (probabilities, audioFrame) => {
@@ -271,7 +284,7 @@ export function useVoiceSession() {
                 // Stream audio to server (unless muted)
                 if (!isMuted && socketRef.current) {
                     const base64Audio = float32ToBase64PCM16(audioFrame);
-                    socketRef.current.emit('audio:input', {
+                    socketRef.current.emit("audio:input", {
                         data: base64Audio,
                         sampleRate: 16000,
                     });
@@ -279,21 +292,23 @@ export function useVoiceSession() {
             },
 
             onVADMisfire: () => {
-                console.log('[VAD] Misfire');
+                console.log("[VAD] Misfire");
                 userIsSpeakingRef.current = false;
                 // Cancel pending interrupt - this was a false positive (likely echo)
                 if (shouldInterruptOnConfirmRef.current) {
-                    console.log('[VAD] Misfire - cancelling pending interrupt, restoring volume');
+                    console.log(
+                        "[VAD] Misfire - cancelling pending interrupt, restoring volume",
+                    );
                     shouldInterruptOnConfirmRef.current = false;
                     // Restore audio volume since it wasn't a real interrupt
                     playerRef.current?.unduck();
                 }
                 // If we set awaitingNewResponse, clear it
                 if (awaitingNewResponseRef.current) {
-                    console.log('[VAD] Misfire - clearing await flag');
+                    console.log("[VAD] Misfire - clearing await flag");
                     awaitingNewResponseRef.current = false;
                 }
-                _setState('idle');
+                _setState("idle");
             },
         });
 
@@ -306,259 +321,300 @@ export function useVoiceSession() {
         _setAudioContext(audioContext);
         _setSourceNode(source);
 
-        console.log('[useVoiceSession] Silero VAD initialized');
+        console.log("[useVoiceSession] Silero VAD initialized");
         return { vad, player };
-    }, [_setAudioContext, _setSourceNode, _setAnalyserNode, _setState, _setInputLevel, _setLiveAssistantTranscript, isMuted, float32ToBase64PCM16]);
+    }, [
+        _setAudioContext,
+        _setSourceNode,
+        _setAnalyserNode,
+        _setState,
+        _setInputLevel,
+        _setLiveAssistantTranscript,
+        isMuted,
+        float32ToBase64PCM16,
+    ]);
 
     /**
      * Connect to voice server
      */
-    const connectToServer = useCallback(async (voiceServerUrl) => {
-        console.log('[useVoiceSession] Connecting to voice server:', voiceServerUrl);
+    const connectToServer = useCallback(
+        async (voiceServerUrl) => {
+            console.log(
+                "[useVoiceSession] Connecting to voice server:",
+                voiceServerUrl,
+            );
 
-        const socket = io(voiceServerUrl, {
-            transports: ['websocket'],
-            query: {
-                entityId,
-                chatId,
-            },
-        });
-
-        socketRef.current = socket;
-
-        // Connection events
-        socket.on('connect', () => {
-            console.log('[useVoiceSession] Connected to voice server');
-            socket.emit('session:start', {
-                entityId,
-                chatId,
-                // Don't specify provider - let server use DEFAULT_VOICE_PROVIDER
-                voiceId: 'tnSpp4vdxKPjI9w0GnoV',
-                userId: sessionContext?.userId,
-                contextId: sessionContext?.contextId || entityId,
-                contextKey: sessionContext?.contextKey,
-                aiName: sessionContext?.aiName,
-                userName: sessionContext?.userName,
-                model: sessionContext?.model,
-                userInfo: composeUserDateTimeInfo(),
+            const socket = io(voiceServerUrl, {
+                transports: ["websocket"],
+                query: {
+                    entityId,
+                    chatId,
+                },
             });
-        });
 
-        socket.on('disconnect', (reason) => {
-            console.log('[useVoiceSession] Disconnected from voice server:', reason);
-            _setIsConnected(false);
-            _setState('idle');
-        });
+            socketRef.current = socket;
 
-        socket.on('connect_error', (error) => {
-            console.error('[useVoiceSession] Connection error:', error);
-            _setIsConnected(false);
-        });
+            // Connection events
+            socket.on("connect", () => {
+                console.log("[useVoiceSession] Connected to voice server");
+                socket.emit("session:start", {
+                    entityId,
+                    chatId,
+                    // Don't specify provider - let server use DEFAULT_VOICE_PROVIDER
+                    voiceId: "tnSpp4vdxKPjI9w0GnoV",
+                    userId: sessionContext?.userId,
+                    contextId: sessionContext?.contextId || entityId,
+                    contextKey: sessionContext?.contextKey,
+                    aiName: sessionContext?.aiName,
+                    userName: sessionContext?.userName,
+                    model: sessionContext?.model,
+                    userInfo: composeUserDateTimeInfo(),
+                });
+            });
 
-        // Session events
-        socket.on('session:started', (data) => {
-            console.log('[useVoiceSession] Session started:', data);
-            _setSessionId(data.sessionId);
-            _setIsConnected(true);
-            // Start the VAD
-            vadRef.current?.start();
-            // Mark as connected and play sound only after VAD is ready
-            wasConnectedRef.current = true;
-            SoundEffects.playConnect();
-        });
+            socket.on("disconnect", (reason) => {
+                console.log(
+                    "[useVoiceSession] Disconnected from voice server:",
+                    reason,
+                );
+                _setIsConnected(false);
+                _setState("idle");
+            });
 
-        socket.on('session:error', (data) => {
-            console.error('[useVoiceSession] Session error:', data);
-            _setIsConnected(false);
-        });
+            socket.on("connect_error", (error) => {
+                console.error("[useVoiceSession] Connection error:", error);
+                _setIsConnected(false);
+            });
 
-        socket.on('session:ended', (data) => {
-            console.log('[useVoiceSession] Session ended:', data);
-            _setIsConnected(false);
-        });
+            // Session events
+            socket.on("session:started", (data) => {
+                console.log("[useVoiceSession] Session started:", data);
+                _setSessionId(data.sessionId);
+                _setIsConnected(true);
+                // Start the VAD
+                vadRef.current?.start();
+                // Mark as connected and play sound only after VAD is ready
+                wasConnectedRef.current = true;
+                SoundEffects.playConnect();
+            });
 
-        socket.on('provider:connected', () => {
-            console.log('[useVoiceSession] Provider connected');
-        });
+            socket.on("session:error", (data) => {
+                console.error("[useVoiceSession] Session error:", data);
+                _setIsConnected(false);
+            });
 
-        // State events
-        socket.on('state:change', (state) => {
-            console.log('[useVoiceSession] State change:', state);
-            const stateMap = {
-                'idle': 'idle',
-                'listening': 'userSpeaking',
-                'processing': 'aiResponding',
-                'speaking': 'audioPlaying',
-            };
-            const newState = stateMap[state] || state;
-            _setState(newState);
+            socket.on("session:ended", (data) => {
+                console.log("[useVoiceSession] Session ended:", data);
+                _setIsConnected(false);
+            });
 
-            // Track AI activity for interrupt grace period
-            if (state === 'speaking' || state === 'processing') {
-                lastAiActivityRef.current = Date.now();
-            }
+            socket.on("provider:connected", () => {
+                console.log("[useVoiceSession] Provider connected");
+            });
 
-            // When server starts speaking and user is done, allow audio
-            if (state === 'speaking' && awaitingNewResponseRef.current && !userIsSpeakingRef.current) {
-                console.log('[state:change] New response starting, clearing await flag');
-                awaitingNewResponseRef.current = false;
-                // Ensure volume is restored for new response
-                playerRef.current?.unduck();
-                // Clear interrupted track states
+            // State events
+            socket.on("state:change", (state) => {
+                console.log("[useVoiceSession] State change:", state);
+                const stateMap = {
+                    idle: "idle",
+                    listening: "userSpeaking",
+                    processing: "aiResponding",
+                    speaking: "audioPlaying",
+                };
+                const newState = stateMap[state] || state;
+                _setState(newState);
+
+                // Track AI activity for interrupt grace period
+                if (state === "speaking" || state === "processing") {
+                    lastAiActivityRef.current = Date.now();
+                }
+
+                // When server starts speaking and user is done, allow audio
+                if (
+                    state === "speaking" &&
+                    awaitingNewResponseRef.current &&
+                    !userIsSpeakingRef.current
+                ) {
+                    console.log(
+                        "[state:change] New response starting, clearing await flag",
+                    );
+                    awaitingNewResponseRef.current = false;
+                    // Ensure volume is restored for new response
+                    playerRef.current?.unduck();
+                    // Clear interrupted track states
+                    if (playerRef.current) {
+                        playerRef.current.interruptedTrackIds = {};
+                    }
+                }
+
+                // Don't reset lastAiActivity on idle - let it age naturally
+                // Server may say idle before local audio finishes playing
+            });
+
+            // Transcript events
+            socket.on("transcript", (data) => {
+                console.log("[useVoiceSession] Transcript:", data);
+                if (data.type === "user") {
+                    _setLiveUserTranscript(data.content || "");
+                    if (data.isFinal && data.content) {
+                        _addToHistory("user", data.content);
+                        _setLiveUserTranscript("");
+                    }
+                } else if (data.type === "assistant") {
+                    _setLiveAssistantTranscript(data.content || "");
+                    if (data.isFinal && data.content) {
+                        _addToHistory("assistant", data.content);
+                        _setLiveAssistantTranscript("");
+                    }
+                }
+            });
+
+            // Audio events
+            socket.on("audio:output", (data) => {
+                if (data.data && playerRef.current) {
+                    // Block audio if:
+                    // 1. User is currently speaking, OR
+                    // 2. We're awaiting a new response after an interrupt
+                    if (
+                        userIsSpeakingRef.current ||
+                        awaitingNewResponseRef.current
+                    ) {
+                        return;
+                    }
+
+                    const trackId = data.trackId || "default";
+
+                    // Don't play if this track was interrupted
+                    if (playerRef.current.interruptedTrackIds?.[trackId]) {
+                        return;
+                    }
+
+                    // Ensure volume is normal when playing audio
+                    playerRef.current.unduck();
+
+                    // Track AI activity
+                    lastAiActivityRef.current = Date.now();
+
+                    // Notify server that client is playing audio (for filler suppression)
+                    if (!clientAudioPlayingRef.current) {
+                        clientAudioPlayingRef.current = true;
+                        socketRef.current?.emit("audio:clientPlaying");
+                    }
+
+                    const pcmData = base64ToInt16Array(data.data);
+                    playerRef.current.add16BitPCM(pcmData, trackId);
+                    _setState("audioPlaying");
+                }
+            });
+
+            socket.on("audio:muted", (muted) => {
+                console.log("[useVoiceSession] Mute state:", muted);
+            });
+
+            // Track start - queue transcript for display when audio plays
+            socket.on("audio:trackStart", (data) => {
+                if (data.text && data.trackId) {
+                    // If nothing is currently playing, display immediately (first chunk)
+                    if (
+                        !currentDisplayedTrackRef.current &&
+                        transcriptQueueRef.current.length === 0
+                    ) {
+                        currentDisplayedTrackRef.current = data.trackId;
+                        _setLiveAssistantTranscript(data.text);
+                        console.log(
+                            "[useVoiceSession] Displaying first transcript:",
+                            data.trackId,
+                        );
+                    } else {
+                        // Queue for display when current track finishes
+                        transcriptQueueRef.current.push({
+                            trackId: data.trackId,
+                            text: data.text,
+                        });
+                        console.log(
+                            "[useVoiceSession] Queued transcript:",
+                            data.trackId,
+                            "queue length:",
+                            transcriptQueueRef.current.length,
+                        );
+                    }
+                }
+            });
+
+            // Track complete - flush any remaining audio buffer
+            socket.on("audio:trackComplete", (data) => {
+                if (data.trackId && playerRef.current) {
+                    playerRef.current.flushTrack(data.trackId);
+                }
+            });
+
+            // Stop audio playback (server-initiated interruption)
+            socket.on("audio:stop", async () => {
+                console.log("[useVoiceSession] Server requested audio stop");
                 if (playerRef.current) {
-                    playerRef.current.interruptedTrackIds = {};
+                    await playerRef.current.interrupt();
                 }
-            }
-
-            // Don't reset lastAiActivity on idle - let it age naturally
-            // Server may say idle before local audio finishes playing
-        });
-
-        // Transcript events
-        socket.on('transcript', (data) => {
-            console.log('[useVoiceSession] Transcript:', data);
-            if (data.type === 'user') {
-                _setLiveUserTranscript(data.content || '');
-                if (data.isFinal && data.content) {
-                    _addToHistory('user', data.content);
-                    _setLiveUserTranscript('');
-                }
-            } else if (data.type === 'assistant') {
-                _setLiveAssistantTranscript(data.content || '');
-                if (data.isFinal && data.content) {
-                    _addToHistory('assistant', data.content);
-                    _setLiveAssistantTranscript('');
-                }
-            }
-        });
-
-        // Audio events
-        socket.on('audio:output', (data) => {
-            if (data.data && playerRef.current) {
-                // Block audio if:
-                // 1. User is currently speaking, OR
-                // 2. We're awaiting a new response after an interrupt
-                if (userIsSpeakingRef.current || awaitingNewResponseRef.current) {
-                    return;
-                }
-
-                const trackId = data.trackId || 'default';
-
-                // Don't play if this track was interrupted
-                if (playerRef.current.interruptedTrackIds?.[trackId]) {
-                    return;
-                }
-
-                // Ensure volume is normal when playing audio
-                playerRef.current.unduck();
-
-                // Track AI activity
-                lastAiActivityRef.current = Date.now();
-
-                // Notify server that client is playing audio (for filler suppression)
-                if (!clientAudioPlayingRef.current) {
-                    clientAudioPlayingRef.current = true;
-                    socketRef.current?.emit('audio:clientPlaying');
-                }
-
-                const pcmData = base64ToInt16Array(data.data);
-                playerRef.current.add16BitPCM(pcmData, trackId);
-                _setState('audioPlaying');
-            }
-        });
-
-        socket.on('audio:muted', (muted) => {
-            console.log('[useVoiceSession] Mute state:', muted);
-        });
-
-        // Track start - queue transcript for display when audio plays
-        socket.on('audio:trackStart', (data) => {
-            if (data.text && data.trackId) {
-                // If nothing is currently playing, display immediately (first chunk)
-                if (!currentDisplayedTrackRef.current && transcriptQueueRef.current.length === 0) {
-                    currentDisplayedTrackRef.current = data.trackId;
-                    _setLiveAssistantTranscript(data.text);
-                    console.log('[useVoiceSession] Displaying first transcript:', data.trackId);
-                } else {
-                    // Queue for display when current track finishes
-                    transcriptQueueRef.current.push({ trackId: data.trackId, text: data.text });
-                    console.log('[useVoiceSession] Queued transcript:', data.trackId, 'queue length:', transcriptQueueRef.current.length);
-                }
-            }
-        });
-
-        // Track complete - flush any remaining audio buffer
-        socket.on('audio:trackComplete', (data) => {
-            if (data.trackId && playerRef.current) {
-                playerRef.current.flushTrack(data.trackId);
-            }
-        });
-
-        // Stop audio playback (server-initiated interruption)
-        socket.on('audio:stop', async () => {
-            console.log('[useVoiceSession] Server requested audio stop');
-            if (playerRef.current) {
-                await playerRef.current.interrupt();
-            }
-            _setState('idle');
-        });
-
-        // Tool events
-        socket.on('tool:status', (data) => {
-            console.log('[useVoiceSession] Tool status:', data);
-            if (data.status === 'completed') {
-                _setCurrentTool(null);
-            } else if (data.status === 'error') {
-                _setCurrentTool({
-                    name: data.name,
-                    status: 'error',
-                    message: data.message || 'Tool execution failed',
-                });
-                setTimeout(() => _setCurrentTool(null), 3000);
-            } else {
-                _setCurrentTool({
-                    name: data.name,
-                    status: data.status,
-                    message: data.message || `Running ${data.name}...`,
-                });
-            }
-        });
-
-        // Media events (for EntityOverlay integration)
-        socket.on('media', (data) => {
-            console.log('[useVoiceSession] Media event:', data);
-            showOverlay({
-                items: data.items || data.files,
-                entityId: entityId,
+                _setState("idle");
             });
-        });
 
-        // Error events
-        socket.on('error', (data) => {
-            console.error('[useVoiceSession] Server error:', data);
-        });
+            // Tool events
+            socket.on("tool:status", (data) => {
+                console.log("[useVoiceSession] Tool status:", data);
+                if (data.status === "completed") {
+                    _setCurrentTool(null);
+                } else if (data.status === "error") {
+                    _setCurrentTool({
+                        name: data.name,
+                        status: "error",
+                        message: data.message || "Tool execution failed",
+                    });
+                    setTimeout(() => _setCurrentTool(null), 3000);
+                } else {
+                    _setCurrentTool({
+                        name: data.name,
+                        status: data.status,
+                        message: data.message || `Running ${data.name}...`,
+                    });
+                }
+            });
 
-        return socket;
-    }, [
-        entityId,
-        chatId,
-        sessionContext,
-        base64ToInt16Array,
-        _setIsConnected,
-        _setState,
-        _setSessionId,
-        _setLiveUserTranscript,
-        _setLiveAssistantTranscript,
-        _addToHistory,
-        _setCurrentTool,
-        showOverlay,
-    ]);
+            // Media events (for EntityOverlay integration)
+            socket.on("media", (data) => {
+                console.log("[useVoiceSession] Media event:", data);
+                showOverlay({
+                    items: data.items || data.files,
+                    entityId: entityId,
+                });
+            });
+
+            // Error events
+            socket.on("error", (data) => {
+                console.error("[useVoiceSession] Server error:", data);
+            });
+
+            return socket;
+        },
+        [
+            entityId,
+            chatId,
+            sessionContext,
+            base64ToInt16Array,
+            _setIsConnected,
+            _setState,
+            _setSessionId,
+            _setLiveUserTranscript,
+            _setLiveAssistantTranscript,
+            _addToHistory,
+            _setCurrentTool,
+            showOverlay,
+        ],
+    );
 
     /**
      * Cleanup function
      */
     const cleanup = useCallback(async () => {
-        console.log('[useVoiceSession] Cleaning up...');
+        console.log("[useVoiceSession] Cleaning up...");
 
         // Stop VAD
         if (vadRef.current) {
@@ -566,7 +622,7 @@ export function useVoiceSession() {
                 vadRef.current.pause();
                 vadRef.current.destroy();
             } catch (e) {
-                console.warn('[useVoiceSession] Error stopping VAD:', e);
+                console.warn("[useVoiceSession] Error stopping VAD:", e);
             }
             vadRef.current = null;
         }
@@ -574,9 +630,12 @@ export function useVoiceSession() {
         // Stop media stream tracks
         if (streamRef.current) {
             try {
-                streamRef.current.getTracks().forEach(track => track.stop());
+                streamRef.current.getTracks().forEach((track) => track.stop());
             } catch (e) {
-                console.warn('[useVoiceSession] Error stopping media tracks:', e);
+                console.warn(
+                    "[useVoiceSession] Error stopping media tracks:",
+                    e,
+                );
             }
             streamRef.current = null;
         }
@@ -586,7 +645,7 @@ export function useVoiceSession() {
             try {
                 await playerRef.current.interrupt();
             } catch (e) {
-                console.warn('[useVoiceSession] Error stopping player:', e);
+                console.warn("[useVoiceSession] Error stopping player:", e);
             }
             playerRef.current = null;
         }
@@ -610,7 +669,7 @@ export function useVoiceSession() {
             SoundEffects.playDisconnect();
             wasConnectedRef.current = false;
         }
-        console.log('[useVoiceSession] Cleanup complete');
+        console.log("[useVoiceSession] Cleanup complete");
     }, []);
 
     /**
@@ -624,9 +683,9 @@ export function useVoiceSession() {
                 isInitializedRef.current = true;
 
                 // Get voice server URL from config
-                const configResponse = await fetch('/api/voice/config');
+                const configResponse = await fetch("/api/voice/config");
                 if (!configResponse.ok) {
-                    throw new Error('Failed to fetch voice config');
+                    throw new Error("Failed to fetch voice config");
                 }
                 const config = await configResponse.json();
 
@@ -634,14 +693,16 @@ export function useVoiceSession() {
                 const voiceServerUrl = config.voiceServerUrl?.trim();
 
                 if (!voiceServerUrl) {
-                    throw new Error('Voice server URL not configured');
+                    throw new Error("Voice server URL not configured");
                 }
 
                 // Validate URL format
                 try {
                     new URL(voiceServerUrl);
                 } catch {
-                    throw new Error(`Invalid voice server URL: "${voiceServerUrl}"`);
+                    throw new Error(
+                        `Invalid voice server URL: "${voiceServerUrl}"`,
+                    );
                 }
 
                 // Initialize audio with VAD
@@ -652,16 +713,22 @@ export function useVoiceSession() {
 
                 // Register cleanup
                 _registerCleanup(cleanup);
-
             } catch (error) {
-                console.error('[useVoiceSession] Initialization error:', error);
+                console.error("[useVoiceSession] Initialization error:", error);
                 isInitializedRef.current = false;
                 voice.endSession();
             }
         };
 
         init();
-    }, [isActive, initializeAudio, connectToServer, cleanup, _registerCleanup, voice]);
+    }, [
+        isActive,
+        initializeAudio,
+        connectToServer,
+        cleanup,
+        _registerCleanup,
+        voice,
+    ]);
 
     /**
      * Handle mute state changes
@@ -686,8 +753,10 @@ export function useVoiceSession() {
             if (!playerRef.current?.analyser) return;
 
             try {
-                const frequencies = playerRef.current.getFrequencies('voice');
-                const avgLevel = frequencies.values.reduce((a, b) => a + b, 0) / frequencies.values.length;
+                const frequencies = playerRef.current.getFrequencies("voice");
+                const avgLevel =
+                    frequencies.values.reduce((a, b) => a + b, 0) /
+                    frequencies.values.length;
                 _setOutputLevel(avgLevel);
             } catch (e) {
                 // Ignore errors when session is ending
@@ -715,11 +784,11 @@ export function useVoiceSession() {
 
         // Manual controls
         sendMessage: useCallback((text) => {
-            socketRef.current?.emit('text:input', text);
+            socketRef.current?.emit("text:input", text);
         }, []),
 
         cancelResponse: useCallback(() => {
-            socketRef.current?.emit('audio:interrupt');
+            socketRef.current?.emit("audio:interrupt");
             if (playerRef.current) {
                 playerRef.current.interrupt();
             }

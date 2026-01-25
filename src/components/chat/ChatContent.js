@@ -246,44 +246,67 @@ function ChatContent({
 
     // Register callback to persist voice transcripts to chat when session ends
     useEffect(() => {
-        registerOnSessionEnd(async ({ chatId: voiceChatId, entityId: voiceEntityId, messages: voiceMessages }) => {
-            if (!voiceMessages || voiceMessages.length === 0) return;
-            if (voiceChatId !== chatId) {
-                console.warn('[ChatContent] Voice session chatId mismatch, skipping transcript persistence');
-                return;
-            }
+        registerOnSessionEnd(
+            async ({
+                chatId: voiceChatId,
+                entityId: voiceEntityId,
+                messages: voiceMessages,
+            }) => {
+                if (!voiceMessages || voiceMessages.length === 0) return;
+                if (voiceChatId !== chatId) {
+                    console.warn(
+                        "[ChatContent] Voice session chatId mismatch, skipping transcript persistence",
+                    );
+                    return;
+                }
 
-            console.log('[ChatContent] Persisting voice transcripts to chat:', voiceMessages.length, 'messages');
+                console.log(
+                    "[ChatContent] Persisting voice transcripts to chat:",
+                    voiceMessages.length,
+                    "messages",
+                );
 
-            try {
-                // Convert voice messages to chat message format
-                const voiceChatMessages = voiceMessages.map((msg, index) => ({
-                    id: `voice-${Date.now()}-${index}`,
-                    payload: msg.content,
-                    sentTime: new Date(msg.timestamp).toISOString(),
-                    sender: msg.role === 'user' ? 'user' : 'enntity',
-                    direction: msg.role === 'user' ? 'outgoing' : 'incoming',
-                    position: 'single',
-                    isVoiceMessage: true,
-                }));
+                try {
+                    // Convert voice messages to chat message format
+                    const voiceChatMessages = voiceMessages.map(
+                        (msg, index) => ({
+                            id: `voice-${Date.now()}-${index}`,
+                            payload: msg.content,
+                            sentTime: new Date(msg.timestamp).toISOString(),
+                            sender: msg.role === "user" ? "user" : "enntity",
+                            direction:
+                                msg.role === "user" ? "outgoing" : "incoming",
+                            position: "single",
+                            isVoiceMessage: true,
+                        }),
+                    );
 
-                // Append to existing messages
-                const updatedMessages = [...(memoizedMessages || []), ...voiceChatMessages];
+                    // Append to existing messages
+                    const updatedMessages = [
+                        ...(memoizedMessages || []),
+                        ...voiceChatMessages,
+                    ];
 
-                await updateChatHook.mutateAsync({
-                    chatId: String(voiceChatId),
-                    messages: updatedMessages.map((m) => ({
-                        ...m,
-                        payload: m.payload,
-                    })),
-                });
+                    await updateChatHook.mutateAsync({
+                        chatId: String(voiceChatId),
+                        messages: updatedMessages.map((m) => ({
+                            ...m,
+                            payload: m.payload,
+                        })),
+                    });
 
-                console.log('[ChatContent] Voice transcripts persisted successfully');
-            } catch (error) {
-                console.error('[ChatContent] Failed to persist voice transcripts:', error);
-                toast.error('Failed to save voice conversation to chat');
-            }
-        });
+                    console.log(
+                        "[ChatContent] Voice transcripts persisted successfully",
+                    );
+                } catch (error) {
+                    console.error(
+                        "[ChatContent] Failed to persist voice transcripts:",
+                        error,
+                    );
+                    toast.error("Failed to save voice conversation to chat");
+                }
+            },
+        );
     }, [chatId, memoizedMessages, updateChatHook, registerOnSessionEnd]);
 
     // Handle app commands from the streaming messages

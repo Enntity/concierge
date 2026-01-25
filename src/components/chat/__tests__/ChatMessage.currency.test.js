@@ -54,14 +54,10 @@ jest.mock("react-markdown", () => {
                     }
                 });
 
-                // Extract text from tree (AST nodes, not DOM - eslint-disable for mock)
-                // eslint-disable-next-line testing-library/no-node-access
+                // Extract text from tree (AST nodes, not DOM)
                 const extractText = (node) => {
-                    // eslint-disable-next-line testing-library/no-node-access
                     if (node.type === "text" && node.value) return node.value;
-                    // eslint-disable-next-line testing-library/no-node-access
                     if (node.children) {
-                        // eslint-disable-next-line testing-library/no-node-access
                         return node.children
                             .map(extractText)
                             .filter(Boolean)
@@ -101,14 +97,10 @@ jest.mock("rehype-raw", () => ({
 jest.mock("katex/dist/katex.min.css", () => ({}));
 jest.mock("unist-util-visit", () => ({
     visit: (tree, type, visitor) => {
-        // eslint-disable-next-line testing-library/no-node-access
         const traverse = (node) => {
             if (!node) return;
-            // eslint-disable-next-line testing-library/no-node-access
             if (node.type === type && visitor) visitor(node);
-            // eslint-disable-next-line testing-library/no-node-access
             if (node.children) {
-                // eslint-disable-next-line testing-library/no-node-access
                 node.children.forEach(traverse);
             }
         };

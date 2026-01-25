@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
-import { useVoice } from '../../contexts/VoiceContext';
-import { useEntityOverlay } from '../../contexts/EntityOverlayContext';
-import { useChatEntity } from '../../contexts/ChatEntityContext';
-import { useVoiceSession } from '../../hooks/useVoiceSession';
-import { AudioVisualizer } from './AudioVisualizer';
-import { VoiceControls } from './VoiceControls';
-import { FloatingTranscript } from './FloatingTranscript';
-import EntityOverlay from '../EntityOverlay';
-import EntityIcon from '../chat/EntityIcon';
+import React, { useEffect, useState } from "react";
+import { X } from "lucide-react";
+import { useVoice } from "../../contexts/VoiceContext";
+import { useEntityOverlay } from "../../contexts/EntityOverlayContext";
+import { useChatEntity } from "../../contexts/ChatEntityContext";
+import { useVoiceSession } from "../../hooks/useVoiceSession";
+import { AudioVisualizer } from "./AudioVisualizer";
+import { VoiceControls } from "./VoiceControls";
+import { FloatingTranscript } from "./FloatingTranscript";
+import EntityOverlay from "../EntityOverlay";
+import EntityIcon from "../chat/EntityIcon";
 
 /**
  * VoiceModeOverlay - Fullscreen overlay for voice mode
@@ -56,14 +56,14 @@ export function VoiceModeOverlay() {
     // Get state display text
     const getStateText = () => {
         switch (state) {
-            case 'userSpeaking':
-                return 'Listening...';
-            case 'aiResponding':
-                return 'Thinking...';
-            case 'audioPlaying':
-                return 'Speaking...';
+            case "userSpeaking":
+                return "Listening...";
+            case "aiResponding":
+                return "Thinking...";
+            case "audioPlaying":
+                return "Speaking...";
             default:
-                return isConnected ? 'Ready' : 'Connecting...';
+                return isConnected ? "Ready" : "Connecting...";
         }
     };
 
@@ -82,7 +82,7 @@ export function VoiceModeOverlay() {
                 flex flex-col
                 bg-gray-900
                 transition-opacity duration-300
-                ${isVisible ? 'opacity-100' : 'opacity-0'}
+                ${isVisible ? "opacity-100" : "opacity-0"}
             `}
         >
             {/* Header */}
@@ -95,19 +95,25 @@ export function VoiceModeOverlay() {
                                 <EntityIcon entity={entity} size="md" />
                             ) : (
                                 <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-                                    <span className="text-gray-400 text-sm">?</span>
+                                    <span className="text-gray-400 text-sm">
+                                        ?
+                                    </span>
                                 </div>
                             )}
                         </div>
                         {/* Connection indicator */}
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-900 ${
-                            isConnected ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'
-                        }`} />
+                        <div
+                            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-900 ${
+                                isConnected
+                                    ? "bg-green-500"
+                                    : "bg-yellow-500 animate-pulse"
+                            }`}
+                        />
                     </div>
                     {/* Entity name and status */}
                     <div className="flex flex-col">
                         <span className="text-base font-medium text-white leading-tight">
-                            {entityName || entity?.name || 'Voice Mode'}
+                            {entityName || entity?.name || "Voice Mode"}
                         </span>
                         <span className="text-xs text-gray-400">
                             {getStateText()}
@@ -132,9 +138,10 @@ export function VoiceModeOverlay() {
                         className={`
                             absolute inset-0 flex items-center justify-center
                             transition-all duration-300 ease-out
-                            ${showOverlayContent
-                                ? 'opacity-0 scale-95 pointer-events-none'
-                                : 'opacity-100 scale-100'
+                            ${
+                                showOverlayContent
+                                    ? "opacity-0 scale-95 pointer-events-none"
+                                    : "opacity-100 scale-100"
                             }
                         `}
                     >
@@ -148,7 +155,9 @@ export function VoiceModeOverlay() {
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gray-800 rounded-lg">
                                 <div className="text-gray-500">
-                                    {isConnected ? 'Initializing audio...' : 'Connecting...'}
+                                    {isConnected
+                                        ? "Initializing audio..."
+                                        : "Connecting..."}
                                 </div>
                             </div>
                         )}
@@ -159,9 +168,10 @@ export function VoiceModeOverlay() {
                         className={`
                             absolute inset-0 flex items-center justify-center
                             transition-all duration-300 ease-out
-                            ${showOverlayContent
-                                ? 'opacity-100 scale-100'
-                                : 'opacity-0 scale-95 pointer-events-none'
+                            ${
+                                showOverlayContent
+                                    ? "opacity-100 scale-100"
+                                    : "opacity-0 scale-95 pointer-events-none"
                             }
                         `}
                     >
@@ -176,7 +186,7 @@ export function VoiceModeOverlay() {
 
                 {/* Tool status - fixed height region, doesn't push layout */}
                 <div className="h-8 mt-2 flex items-center justify-center">
-                    {currentTool && currentTool.status === 'running' && (
+                    {currentTool && currentTool.status === "running" && (
                         <div className="flex items-center gap-2 px-4 py-1 bg-gray-800/60 rounded-full transition-opacity duration-300">
                             <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
                             <span className="text-xs text-gray-400 truncate max-w-xs">

@@ -1,7 +1,7 @@
 "use client";
 
-import React from 'react';
-import { Mic } from 'lucide-react';
+import React from "react";
+import { Mic } from "lucide-react";
 
 /**
  * VoiceButton - Trigger button to start voice mode
@@ -12,7 +12,7 @@ import { Mic } from 'lucide-react';
  * @param {boolean} props.disabled - Whether the button is disabled
  * @param {string} props.className - Additional CSS classes
  */
-export function VoiceButton({ onClick, disabled = false, className = '' }) {
+export function VoiceButton({ onClick, disabled = false, className = "" }) {
     return (
         <button
             type="button"
@@ -22,9 +22,10 @@ export function VoiceButton({ onClick, disabled = false, className = '' }) {
                 flex items-center justify-center
                 transition-all duration-300
                 disabled:cursor-not-allowed
-                ${disabled
-                    ? 'text-gray-400 dark:text-gray-500'
-                    : 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:scale-110 active:scale-95'
+                ${
+                    disabled
+                        ? "text-gray-400 dark:text-gray-500"
+                        : "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:scale-110 active:scale-95"
                 }
                 ${className}
             `}

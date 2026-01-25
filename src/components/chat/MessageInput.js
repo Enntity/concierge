@@ -46,8 +46,10 @@ function MessageInput({
     const activeChatId = useGetActiveChatId();
     const textareaRef = useRef(null);
 
-    const { user, userState, debouncedUpdateUserState } = useContext(AuthContext);
-    const { startSession: startVoiceSession, isActive: isVoiceActive } = useVoice();
+    const { user, userState, debouncedUpdateUserState } =
+        useContext(AuthContext);
+    const { startSession: startVoiceSession, isActive: isVoiceActive } =
+        useVoice();
     const { entityId, entityName, entity } = useChatEntity();
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
     const MAX_INPUT_LENGTH = 100000;
@@ -724,12 +726,16 @@ function MessageInput({
                                 onClick={() => {
                                     if (entityId && activeChatId) {
                                         // Determine model: user preference > entity preference > default
-                                        const voiceModel = user?.agentModel || entity?.preferredModel || null;
+                                        const voiceModel =
+                                            user?.agentModel ||
+                                            entity?.preferredModel ||
+                                            null;
                                         startVoiceSession({
                                             entityId,
                                             chatId: activeChatId,
                                             userId: user?.userId,
-                                            contextId: user?.contextId || entityId,
+                                            contextId:
+                                                user?.contextId || entityId,
                                             contextKey: user?.contextKey,
                                             aiName: entityName,
                                             userName: user?.name || user?.email,

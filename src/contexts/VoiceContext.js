@@ -20,12 +20,12 @@ const VoiceContext = createContext({
     // Session state
     isActive: false,
     isConnected: false,
-    state: 'idle', // 'idle' | 'userSpeaking' | 'aiResponding' | 'audioPlaying'
+    state: "idle", // 'idle' | 'userSpeaking' | 'aiResponding' | 'audioPlaying'
     isMuted: false,
 
     // Transcripts
-    liveUserTranscript: '',
-    liveAssistantTranscript: '',
+    liveUserTranscript: "",
+    liveAssistantTranscript: "",
     conversationHistory: [],
 
     // Tool execution
@@ -70,12 +70,12 @@ export function VoiceProvider({ children }) {
     // Session state
     const [isActive, setIsActive] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
-    const [state, setState] = useState('idle');
+    const [state, setState] = useState("idle");
     const [isMuted, setIsMuted] = useState(false);
 
     // Transcripts
-    const [liveUserTranscript, setLiveUserTranscript] = useState('');
-    const [liveAssistantTranscript, setLiveAssistantTranscript] = useState('');
+    const [liveUserTranscript, setLiveUserTranscript] = useState("");
+    const [liveAssistantTranscript, setLiveAssistantTranscript] = useState("");
     const [conversationHistory, setConversationHistory] = useState([]);
 
     // Tool execution
@@ -112,39 +112,42 @@ export function VoiceProvider({ children }) {
      * @param {string} [options.aiName] - The entity's display name
      * @param {string} [options.userName] - The user's display name
      */
-    const startSession = useCallback((options) => {
-        if (isActive) {
-            console.warn('Voice session already active');
-            return;
-        }
+    const startSession = useCallback(
+        (options) => {
+            if (isActive) {
+                console.warn("Voice session already active");
+                return;
+            }
 
-        // Support legacy (entityId, chatId) signature
-        let sessionOpts = options;
-        if (typeof options === 'string') {
-            sessionOpts = {
-                entityId: options,
-                chatId: arguments[1],
-            };
-        }
+            // Support legacy (entityId, chatId) signature
+            let sessionOpts = options;
+            if (typeof options === "string") {
+                sessionOpts = {
+                    entityId: options,
+                    chatId: arguments[1],
+                };
+            }
 
-        // Reset state
-        setLiveUserTranscript('');
-        setLiveAssistantTranscript('');
-        setConversationHistory([]);
-        setCurrentTool(null);
-        setState('idle');
-        setIsMuted(false);
-        setInputLevel(0);
-        setOutputLevel(0);
+            // Reset state
+            setLiveUserTranscript("");
+            setLiveAssistantTranscript("");
+            setConversationHistory([]);
+            setCurrentTool(null);
+            setState("idle");
+            setIsMuted(false);
+            setInputLevel(0);
+            setOutputLevel(0);
 
-        // Set session info
-        setEntityId(sessionOpts.entityId);
-        setChatId(sessionOpts.chatId);
-        setSessionContext(sessionOpts);
-        setIsActive(true);
+            // Set session info
+            setEntityId(sessionOpts.entityId);
+            setChatId(sessionOpts.chatId);
+            setSessionContext(sessionOpts);
+            setIsActive(true);
 
-        console.log('[VoiceContext] Starting voice session', sessionOpts);
-    }, [isActive]);
+            console.log("[VoiceContext] Starting voice session", sessionOpts);
+        },
+        [isActive],
+    );
 
     /**
      * End the current voice session
@@ -152,7 +155,7 @@ export function VoiceProvider({ children }) {
     const endSession = useCallback(() => {
         if (!isActive) return;
 
-        console.log('[VoiceContext] Ending voice session');
+        console.log("[VoiceContext] Ending voice session");
 
         // Capture history before clearing
         const finalHistory = [...conversationHistory];
@@ -177,10 +180,10 @@ export function VoiceProvider({ children }) {
         // Reset all state
         setIsActive(false);
         setIsConnected(false);
-        setState('idle');
+        setState("idle");
         setIsMuted(false);
-        setLiveUserTranscript('');
-        setLiveAssistantTranscript('');
+        setLiveUserTranscript("");
+        setLiveAssistantTranscript("");
         setConversationHistory([]);
         setCurrentTool(null);
         setSessionId(null);
@@ -206,20 +209,20 @@ export function VoiceProvider({ children }) {
      * Toggle mute state
      */
     const toggleMute = useCallback(() => {
-        setIsMuted(prev => !prev);
+        setIsMuted((prev) => !prev);
     }, []);
 
     /**
      * Add a message to conversation history
      */
     const addToHistory = useCallback((role, content) => {
-        setConversationHistory(prev => [
+        setConversationHistory((prev) => [
             ...prev,
             {
                 role,
                 content,
                 timestamp: Date.now(),
-            }
+            },
         ]);
     }, []);
 

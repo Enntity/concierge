@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 /**
  * AudioVisualizer - Renders a radial/circular real-time audio visualization
@@ -16,7 +16,7 @@ export function AudioVisualizer({
     audioContext,
     analyserNode,
     width = 300,
-    height = 300
+    height = 300,
 }) {
     const canvasRef = useRef(null);
     const rotationRef = useRef(0);
@@ -36,7 +36,7 @@ export function AudioVisualizer({
             const canvas = canvasRef.current;
             if (!canvas || !analyserNode) return;
 
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext("2d");
             if (!ctx) return;
 
             const bufferLength = analyserNode.frequencyBinCount;
@@ -44,7 +44,7 @@ export function AudioVisualizer({
             analyserNode.getByteFrequencyData(dataArray);
 
             // Clear with fade effect
-            ctx.fillStyle = 'rgba(17, 24, 39, 0.3)';
+            ctx.fillStyle = "rgba(17, 24, 39, 0.3)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             const centerX = canvas.width / 2;
@@ -64,67 +64,83 @@ export function AudioVisualizer({
                 {
                     baseRadius: maxRadius * 0.4,
                     color: `hsl(${baseHue}, 90%, 70%)`,
-                    gradientColors: [`hsla(${baseHue}, 90%, 70%, 0.3)`, `hsla(${baseHue}, 90%, 50%, 0)`],
-                    rotation: rotationRef.current
+                    gradientColors: [
+                        `hsla(${baseHue}, 90%, 70%, 0.3)`,
+                        `hsla(${baseHue}, 90%, 50%, 0)`,
+                    ],
+                    rotation: rotationRef.current,
                 },
                 {
                     baseRadius: maxRadius * 0.6,
                     color: `hsl(${baseHue + 10}, 85%, 60%)`,
-                    gradientColors: [`hsla(${baseHue + 10}, 85%, 60%, 0.3)`, `hsla(${baseHue + 10}, 85%, 40%, 0)`],
-                    rotation: rotationRef.current + (Math.PI * 2 / 3)
+                    gradientColors: [
+                        `hsla(${baseHue + 10}, 85%, 60%, 0.3)`,
+                        `hsla(${baseHue + 10}, 85%, 40%, 0)`,
+                    ],
+                    rotation: rotationRef.current + (Math.PI * 2) / 3,
                 },
                 {
                     baseRadius: maxRadius * 0.8,
                     color: `hsl(${baseHue + 20}, 80%, 50%)`,
-                    gradientColors: [`hsla(${baseHue + 20}, 80%, 50%, 0.3)`, `hsla(${baseHue + 20}, 80%, 30%, 0)`],
-                    rotation: rotationRef.current + (Math.PI * 4 / 3)
-                }
+                    gradientColors: [
+                        `hsla(${baseHue + 20}, 80%, 50%, 0.3)`,
+                        `hsla(${baseHue + 20}, 80%, 30%, 0)`,
+                    ],
+                    rotation: rotationRef.current + (Math.PI * 4) / 3,
+                },
             ];
 
-            waveforms.forEach(({ baseRadius, color, gradientColors, rotation }) => {
-                const points = [];
+            waveforms.forEach(
+                ({ baseRadius, color, gradientColors, rotation }) => {
+                    const points = [];
 
-                for (let i = 0; i <= bufferLength; i++) {
-                    const amplitude = dataArray[i % bufferLength] / 255.0;
-                    const angle = (i * 2 * Math.PI) / bufferLength + rotation;
+                    for (let i = 0; i <= bufferLength; i++) {
+                        const amplitude = dataArray[i % bufferLength] / 255.0;
+                        const angle =
+                            (i * 2 * Math.PI) / bufferLength + rotation;
 
-                    const radius = baseRadius + (maxRadius * 0.4 * amplitude);
-                    const x = centerX + Math.cos(angle) * radius;
-                    const y = centerY + Math.sin(angle) * radius;
+                        const radius = baseRadius + maxRadius * 0.4 * amplitude;
+                        const x = centerX + Math.cos(angle) * radius;
+                        const y = centerY + Math.sin(angle) * radius;
 
-                    points.push([x, y]);
-                }
+                        points.push([x, y]);
+                    }
 
-                // Create gradient for fill
-                const gradient = ctx.createRadialGradient(
-                    centerX, centerY, baseRadius * 0.8,
-                    centerX, centerY, baseRadius * 1.2
-                );
-                gradient.addColorStop(0, gradientColors[0]);
-                gradient.addColorStop(1, gradientColors[1]);
+                    // Create gradient for fill
+                    const gradient = ctx.createRadialGradient(
+                        centerX,
+                        centerY,
+                        baseRadius * 0.8,
+                        centerX,
+                        centerY,
+                        baseRadius * 1.2,
+                    );
+                    gradient.addColorStop(0, gradientColors[0]);
+                    gradient.addColorStop(1, gradientColors[1]);
 
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                points.forEach(([x, y]) => {
-                    ctx.lineTo(x, y);
-                });
-                ctx.closePath();
-                ctx.fillStyle = gradient;
-                ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    points.forEach(([x, y]) => {
+                        ctx.lineTo(x, y);
+                    });
+                    ctx.closePath();
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
 
-                ctx.beginPath();
-                points.forEach(([x, y], i) => {
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                });
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
-                ctx.closePath();
-                ctx.stroke();
+                    ctx.beginPath();
+                    points.forEach(([x, y], i) => {
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    });
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2;
+                    ctx.closePath();
+                    ctx.stroke();
 
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = color;
-            });
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = color;
+                },
+            );
 
             rotationRef.current += 0.002;
             colorShiftRef.current += 0.005;
