@@ -61,6 +61,7 @@ class SoundEffectsManager {
     }
 
     async playConnect() {
+        console.log("[SoundEffects] playConnect called");
         await this.init();
         await this.playBuffer(this.connectBuffer);
     }

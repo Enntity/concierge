@@ -988,6 +988,13 @@ const SYS_UPDATE_ENTITY = gql`
         $avatarText: String
         $avatarDescription: String
         $avatarImageUrl: String
+        $voiceProvider: String
+        $voiceId: String
+        $voiceName: String
+        $voiceStability: Float
+        $voiceSimilarity: Float
+        $voiceStyle: Float
+        $voiceSpeakerBoost: Boolean
     ) {
         sys_update_entity(
             entityId: $entityId
@@ -1003,6 +1010,13 @@ const SYS_UPDATE_ENTITY = gql`
             avatarText: $avatarText
             avatarDescription: $avatarDescription
             avatarImageUrl: $avatarImageUrl
+            voiceProvider: $voiceProvider
+            voiceId: $voiceId
+            voiceName: $voiceName
+            voiceStability: $voiceStability
+            voiceSimilarity: $voiceSimilarity
+            voiceStyle: $voiceStyle
+            voiceSpeakerBoost: $voiceSpeakerBoost
         ) {
             result
         }

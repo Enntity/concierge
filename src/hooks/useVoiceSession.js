@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { io } from "socket.io-client";
 import { useVoice } from "../contexts/VoiceContext";
 import { useEntityOverlay } from "../contexts/EntityOverlayContext";
+import { useChatEntity } from "../contexts/ChatEntityContext";
 import { WavStreamPlayer } from "../lib/audio";
 import { SoundEffects } from "../lib/audio/SoundEffects";
 import { composeUserDateTimeInfo } from "../utils/datetimeUtils";
@@ -17,6 +18,11 @@ const VOICE_SAMPLE_RATE = 24000; // Voice providers output 24kHz PCM
 export function useVoiceSession() {
     const voice = useVoice();
     const { showOverlay } = useEntityOverlay();
+    const { entity } = useChatEntity();
+
+    // Use ref to access entity in callbacks without causing re-renders
+    const entityRef = useRef(entity);
+    entityRef.current = entity;
 
     const socketRef = useRef(null);
     const vadRef = useRef(null);
@@ -39,6 +45,7 @@ export function useVoiceSession() {
     const shouldInterruptOnConfirmRef = useRef(false); // true if we should interrupt when speech is confirmed
     const clientAudioPlayingRef = useRef(false); // true when client is playing audio (for filler suppression)
     const speechTimeoutRef = useRef(null); // fallback timeout when VAD fails to detect speech end
+    const speechEndDelayRef = useRef(null); // the 150ms delay before processing speech end
     const lastAudioFrameTimeRef = useRef(0); // track when we last sent audio
 
     const {
@@ -186,13 +193,17 @@ export function useVoiceSession() {
 
         // Helper to handle speech end (called by VAD or fallback timeout)
         const handleSpeechEnd = (source) => {
-            // Clear fallback timeout
+            // Clear all pending timeouts
             if (speechTimeoutRef.current) {
                 clearTimeout(speechTimeoutRef.current);
                 speechTimeoutRef.current = null;
             }
+            if (speechEndDelayRef.current) {
+                clearTimeout(speechEndDelayRef.current);
+                speechEndDelayRef.current = null;
+            }
 
-            // Skip if not currently speaking
+            // Skip if not currently speaking (prevents duplicate processing)
             if (!userIsSpeakingRef.current) return;
 
             console.log(`[VAD] Speech ended (${source})`);
@@ -313,8 +324,20 @@ export function useVoiceSession() {
             },
 
             onSpeechEnd: () => {
+                // Clear fallback timeout immediately when VAD detects speech end
+                if (speechTimeoutRef.current) {
+                    clearTimeout(speechTimeoutRef.current);
+                    speechTimeoutRef.current = null;
+                }
+
+                // Clear any pending speech end delay to prevent duplicates
+                if (speechEndDelayRef.current) {
+                    clearTimeout(speechEndDelayRef.current);
+                }
+
                 // Small delay to ensure all pending audio frames are sent before signaling end
-                setTimeout(() => {
+                speechEndDelayRef.current = setTimeout(() => {
+                    speechEndDelayRef.current = null;
                     handleSpeechEnd("VAD");
                 }, 150);
             },
@@ -414,11 +437,23 @@ export function useVoiceSession() {
             // Connection events
             socket.on("connect", () => {
                 console.log("[useVoiceSession] Connected to voice server");
+                const currentEntity = entityRef.current;
+                console.log("[useVoiceSession] Entity voice config:", currentEntity?.voice);
+
+                // Build voice settings from entity's voice configuration
+                const voiceSettings = currentEntity?.voice?.settings ? {
+                    stability: currentEntity.voice.settings.stability,
+                    similarity: currentEntity.voice.settings.similarity,
+                    style: currentEntity.voice.settings.style,
+                    speakerBoost: currentEntity.voice.settings.speakerBoost,
+                } : undefined;
+
                 socket.emit("session:start", {
                     entityId,
                     chatId,
-                    // Don't specify provider - let server use DEFAULT_VOICE_PROVIDER
-                    voiceId: "tnSpp4vdxKPjI9w0GnoV",
+                    // Use entity's voice configuration if available, otherwise default
+                    voiceId: currentEntity?.voice?.voiceId || "tnSpp4vdxKPjI9w0GnoV",
+                    voiceSettings,
                     userId: sessionContext?.userId,
                     contextId: sessionContext?.contextId || entityId,
                     contextKey: sessionContext?.contextKey,
@@ -713,10 +748,14 @@ export function useVoiceSession() {
             socketRef.current = null;
         }
 
-        // Clear speech timeout
+        // Clear speech timeouts
         if (speechTimeoutRef.current) {
             clearTimeout(speechTimeoutRef.current);
             speechTimeoutRef.current = null;
+        }
+        if (speechEndDelayRef.current) {
+            clearTimeout(speechEndDelayRef.current);
+            speechEndDelayRef.current = null;
         }
 
         isInitializedRef.current = false;

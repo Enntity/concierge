@@ -37,6 +37,7 @@ import { useRouter } from "next/navigation";
 import { AuthContext } from "../../App";
 import ContinuityMemoryEditor from "../ContinuityMemoryEditor";
 import ToolsEditor from "./ToolsEditor";
+import VoiceEditor from "./VoiceEditor";
 
 // Sort options
 const SORT_OPTIONS = {
@@ -66,6 +67,9 @@ export default function EntityContactsModal({
     const [toolsEditorEntityId, setToolsEditorEntityId] = useState(null);
     const [toolsEditorEntityName, setToolsEditorEntityName] = useState(null);
     const [toolsEditorEntityTools, setToolsEditorEntityTools] = useState([]);
+    const [voiceEditorEntityId, setVoiceEditorEntityId] = useState(null);
+    const [voiceEditorEntityName, setVoiceEditorEntityName] = useState(null);
+    const [voiceEditorCurrentVoice, setVoiceEditorCurrentVoice] = useState(null);
     const [optionsEntity, setOptionsEntity] = useState(null);
     const pendingOptionsEntityRef = useRef(null);
     const firstEntityRef = useRef(null);
@@ -482,6 +486,11 @@ export default function EntityContactsModal({
                     setToolsEditorEntityName(entityName);
                     setToolsEditorEntityTools(entityTools);
                 }}
+                onOpenVoiceEditor={(entityId, entityName, voice) => {
+                    setVoiceEditorEntityId(entityId);
+                    setVoiceEditorEntityName(entityName);
+                    setVoiceEditorCurrentVoice(voice);
+                }}
                 onEntityUpdate={(updatedEntity) => {
                     // Update local options entity state immediately
                     if (updatedEntity) {
@@ -547,6 +556,57 @@ export default function EntityContactsModal({
                     // Fetch fresh entity data after save
                     const freshResponse = await fetch(
                         `/api/entities?entityId=${toolsEditorEntityId}`,
+                    );
+                    const freshEntities = await freshResponse.json();
+                    const freshEntity = freshEntities?.[0];
+
+                    // Store fresh entity in ref for onClose to use
+                    if (freshEntity) {
+                        pendingOptionsEntityRef.current = freshEntity;
+                    }
+
+                    // Refresh entities list in background
+                    if (refetchEntities) {
+                        refetchEntities();
+                    }
+                }}
+            />
+
+            {/* Voice Editor */}
+            <VoiceEditor
+                show={!!voiceEditorEntityId}
+                onClose={() => {
+                    // Reopen entity options dialog with fresh entity if available
+                    const freshEntity = pendingOptionsEntityRef.current;
+                    if (freshEntity) {
+                        setOptionsEntity(freshEntity);
+                        pendingOptionsEntityRef.current = null;
+                    }
+                    setVoiceEditorEntityId(null);
+                    setVoiceEditorEntityName(null);
+                    setVoiceEditorCurrentVoice(null);
+                }}
+                entityId={voiceEditorEntityId}
+                entityName={voiceEditorEntityName}
+                currentVoice={voiceEditorCurrentVoice}
+                onSave={async (voiceConfig) => {
+                    // Save voice settings via API
+                    const response = await fetch(
+                        `/api/entities/${voiceEditorEntityId}`,
+                        {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(voiceConfig),
+                        },
+                    );
+                    const result = await response.json();
+                    if (!result.success) {
+                        throw new Error(result.error || "Failed to save voice settings");
+                    }
+
+                    // Fetch fresh entity data after save
+                    const freshResponse = await fetch(
+                        `/api/entities?entityId=${voiceEditorEntityId}`,
                     );
                     const freshEntities = await freshResponse.json();
                     const freshEntity = freshEntities?.[0];

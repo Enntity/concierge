@@ -77,6 +77,13 @@ export async function GET(req, { params }) {
  * - modelOverride: Forced model that always takes precedence over user preferences
  * - reasoningEffort: How much thinking time (low, medium, high)
  * - tools: Array of lowercase tool names the entity can use (empty array = no tools)
+ * - voiceProvider: TTS provider (e.g., 'elevenlabs')
+ * - voiceId: Provider-specific voice ID
+ * - voiceName: Display name for the voice
+ * - voiceStability: Voice stability setting (0.0 - 1.0)
+ * - voiceSimilarity: Voice similarity setting (0.0 - 1.0)
+ * - voiceStyle: Voice style setting (0.0 - 1.0)
+ * - voiceSpeakerBoost: Enable speaker boost (boolean)
  */
 export async function PATCH(req, { params }) {
     try {
@@ -97,7 +104,20 @@ export async function PATCH(req, { params }) {
         }
 
         const body = await req.json();
-        const { preferredModel, modelOverride, reasoningEffort, tools } = body;
+        const {
+            preferredModel,
+            modelOverride,
+            reasoningEffort,
+            tools,
+            // Voice fields
+            voiceProvider,
+            voiceId,
+            voiceName,
+            voiceStability,
+            voiceSimilarity,
+            voiceStyle,
+            voiceSpeakerBoost,
+        } = body;
 
         // Validate reasoningEffort if provided
         const validReasoningEfforts = ["low", "medium", "high"];
@@ -158,6 +178,50 @@ export async function PATCH(req, { params }) {
         // Handle tools - normalize to lowercase
         if (tools !== undefined) {
             variables.tools = tools.map((t) => t.toLowerCase());
+        }
+
+        // Handle voice fields
+        if (voiceProvider !== undefined) {
+            variables.voiceProvider = voiceProvider;
+        }
+        if (voiceId !== undefined) {
+            variables.voiceId = voiceId;
+        }
+        if (voiceName !== undefined) {
+            variables.voiceName = voiceName;
+        }
+        if (voiceStability !== undefined) {
+            const stability = parseFloat(voiceStability);
+            if (isNaN(stability) || stability < 0 || stability > 1) {
+                return NextResponse.json(
+                    { error: "voiceStability must be a number between 0 and 1" },
+                    { status: 400 },
+                );
+            }
+            variables.voiceStability = stability;
+        }
+        if (voiceSimilarity !== undefined) {
+            const similarity = parseFloat(voiceSimilarity);
+            if (isNaN(similarity) || similarity < 0 || similarity > 1) {
+                return NextResponse.json(
+                    { error: "voiceSimilarity must be a number between 0 and 1" },
+                    { status: 400 },
+                );
+            }
+            variables.voiceSimilarity = similarity;
+        }
+        if (voiceStyle !== undefined) {
+            const style = parseFloat(voiceStyle);
+            if (isNaN(style) || style < 0 || style > 1) {
+                return NextResponse.json(
+                    { error: "voiceStyle must be a number between 0 and 1" },
+                    { status: 400 },
+                );
+            }
+            variables.voiceStyle = style;
+        }
+        if (voiceSpeakerBoost !== undefined) {
+            variables.voiceSpeakerBoost = voiceSpeakerBoost === true || voiceSpeakerBoost === "true";
         }
 
         // Check if there are any properties to update (besides entityId and contextId)
