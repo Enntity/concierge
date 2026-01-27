@@ -124,6 +124,10 @@ export function useVoiceSession() {
             console.log("[useVoiceSession] Track complete:", trackId);
             lastAiActivityRef.current = Date.now();
 
+            // Notify server that this track finished playing
+            // This allows proper pacing between audio chunks
+            socketRef.current?.emit("audio:trackPlaybackComplete", { trackId });
+
             // Advance transcript to next queued item when current track finishes
             if (transcriptQueueRef.current.length > 0) {
                 const next = transcriptQueueRef.current.shift();
@@ -279,6 +283,9 @@ export function useVoiceSession() {
 
             // Callbacks
             onSpeechStart: () => {
+                // Ignore if no active session
+                if (!socketRef.current?.connected) return;
+
                 console.log("[VAD] Speech started");
                 _setState("userSpeaking");
                 userIsSpeakingRef.current = true;
@@ -324,6 +331,9 @@ export function useVoiceSession() {
             },
 
             onSpeechEnd: () => {
+                // Ignore if no active session
+                if (!socketRef.current?.connected) return;
+
                 // Clear fallback timeout immediately when VAD detects speech end
                 if (speechTimeoutRef.current) {
                     clearTimeout(speechTimeoutRef.current);
@@ -343,12 +353,15 @@ export function useVoiceSession() {
             },
 
             onFrameProcessed: (probabilities, audioFrame) => {
+                // Ignore if no active session
+                if (!socketRef.current?.connected) return;
+
                 // Update input level for visualizer
                 const level = probabilities.isSpeech;
                 _setInputLevel(level);
 
                 // Stream audio to server (unless muted)
-                if (!isMuted && socketRef.current) {
+                if (!isMuted) {
                     const base64Audio = float32ToBase64PCM16(audioFrame);
                     socketRef.current.emit("audio:input", {
                         data: base64Audio,
@@ -367,6 +380,9 @@ export function useVoiceSession() {
             },
 
             onVADMisfire: () => {
+                // Ignore if no active session
+                if (!socketRef.current?.connected) return;
+
                 console.log("[VAD] Misfire");
                 // Clear fallback timeout
                 if (speechTimeoutRef.current) {
@@ -430,6 +446,8 @@ export function useVoiceSession() {
                     entityId,
                     chatId,
                 },
+                // Disable auto-reconnection - we manage connection lifecycle explicitly
+                reconnection: false,
             });
 
             socketRef.current = socket;
@@ -776,10 +794,19 @@ export function useVoiceSession() {
     }, []);
 
     /**
-     * Initialize session when voice becomes active
+     * Initialize session when voice becomes active, cleanup when inactive
      */
     useEffect(() => {
-        if (!isActive || isInitializedRef.current) return;
+        // Clean up when session becomes inactive
+        if (!isActive) {
+            if (isInitializedRef.current) {
+                cleanup();
+            }
+            return;
+        }
+
+        // Already initialized, skip
+        if (isInitializedRef.current) return;
 
         const init = async () => {
             try {
@@ -834,6 +861,15 @@ export function useVoiceSession() {
     ]);
 
     /**
+     * Cleanup on unmount
+     */
+    useEffect(() => {
+        return () => {
+            cleanup();
+        };
+    }, [cleanup]);
+
+    /**
      * Handle mute state changes
      */
     useEffect(() => {
@@ -869,15 +905,6 @@ export function useVoiceSession() {
         const intervalId = setInterval(updateOutputLevel, 50);
         return () => clearInterval(intervalId);
     }, [isActive, _setOutputLevel]);
-
-    /**
-     * Cleanup on unmount
-     */
-    useEffect(() => {
-        return () => {
-            cleanup();
-        };
-    }, [cleanup]);
 
     return {
         // Expose refs for direct access if needed
