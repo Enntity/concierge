@@ -156,7 +156,7 @@ export function FloatingTranscript() {
     }, [clearHideTimer, cancelScrollAnimation]);
 
     return (
-        <div className="h-32 sm:h-20 md:h-20 w-full flex items-end justify-center px-4 overflow-hidden">
+        <div className="w-full flex items-end justify-center px-4 overflow-hidden">
             <div
                 className={`
                     floating-transcript-wrapper
@@ -169,12 +169,12 @@ export function FloatingTranscript() {
                 {/* Content area - scrolls in sync with audio */}
                 <div
                     ref={scrollRef}
-                    className="relative max-h-28 sm:max-h-16 md:max-h-16 overflow-y-auto overflow-x-hidden scrollbar-hide text-center px-2 floating-transcript-assistant"
+                    className="relative max-h-40 sm:max-h-32 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-hide text-center px-2 floating-transcript-assistant"
                     style={{
                         maskImage:
-                            "linear-gradient(to bottom, black 0%, black 85%, transparent 100%)",
+                            "linear-gradient(to bottom, transparent 0%, black 10%, black 85%, transparent 100%)",
                         WebkitMaskImage:
-                            "linear-gradient(to bottom, black 0%, black 85%, transparent 100%)",
+                            "linear-gradient(to bottom, transparent 0%, black 10%, black 85%, transparent 100%)",
                     }}
                 >
                     <p

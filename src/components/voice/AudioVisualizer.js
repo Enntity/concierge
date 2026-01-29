@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 /**
  * AudioVisualizer - Renders a radial/circular real-time audio visualization
  * Uses frequency data from an AnalyserNode to create animated waveforms
+ * Canvas is transparent — waveform trails fade to transparent, not opaque.
  *
  * @param {Object} props
  * @param {AudioContext|null} props.audioContext - Audio context reference
@@ -43,23 +44,19 @@ export function AudioVisualizer({
             const dataArray = new Uint8Array(bufferLength);
             analyserNode.getByteFrequencyData(dataArray);
 
-            // Clear with fade effect
-            ctx.fillStyle = "rgba(17, 24, 39, 0.3)";
+            // Clear with fade effect — fade existing pixels toward transparent
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalCompositeOperation = "source-over";
 
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
             const maxRadius = Math.min(centerX, centerY) - 10;
 
-            // Draw outer circle
-            ctx.beginPath();
-            ctx.strokeStyle = `hsl(${210 + Math.sin(colorShiftRef.current) * 20}, 80%, 60%)`;
-            ctx.lineWidth = 2;
-            ctx.arc(centerX, centerY, maxRadius, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Define base colors with shifting hues
-            const baseHue = 210 + Math.sin(colorShiftRef.current) * 20;
+            // Hue oscillates through cyan → blue → purple range
+            const sin = Math.sin(colorShiftRef.current);
+            const baseHue = 185 + sin * 40;
             const waveforms = [
                 {
                     baseRadius: maxRadius * 0.4,
@@ -159,14 +156,12 @@ export function AudioVisualizer({
 
     return (
         <div className="w-full h-full flex items-center justify-center pointer-events-none">
-            <div className="aspect-square w-full max-h-full">
-                <canvas
-                    ref={canvasRef}
-                    width={width}
-                    height={height}
-                    className="bg-gray-900 rounded-lg w-full h-full object-contain pointer-events-none"
-                />
-            </div>
+            <canvas
+                ref={canvasRef}
+                width={width}
+                height={height}
+                className="w-full h-full object-contain pointer-events-none"
+            />
         </div>
     );
 }
