@@ -6,6 +6,7 @@ import { useVoice } from "../contexts/VoiceContext";
 import { useEntityOverlay } from "../contexts/EntityOverlayContext";
 import { useChatEntity } from "../contexts/ChatEntityContext";
 import { WavStreamPlayer } from "../lib/audio";
+import { InterruptManager } from "../lib/audio/InterruptManager";
 import { SoundEffects } from "../lib/audio/SoundEffects";
 import { composeUserDateTimeInfo } from "../utils/datetimeUtils";
 
@@ -36,15 +37,14 @@ export function useVoiceSession() {
     const currentDisplayedTrackRef = useRef(null);
 
     // === Interrupt State Machine ===
-    // We track two things:
-    // 1. Is the user currently speaking? (gates audio while speaking)
-    // 2. Did we interrupt and are waiting for a new response? (gates stale audio)
+    // InterruptManager gates audio:speechStart to prevent echo-triggered false interrupts.
+    // When AI is playing, it enters PENDING, ducks audio, and confirms only after
+    // enough high-confidence speech frames accumulate.
     const userIsSpeakingRef = useRef(false); // true between speechStart and speechEnd/misfire
     const awaitingNewResponseRef = useRef(false); // true after interrupt until new response starts
     const awaitingTimeoutRef = useRef(null); // safety timeout to clear awaitingNewResponse
     const lastAiActivityRef = useRef(0); // timestamp for grace period during state bounces
-    const shouldInterruptOnConfirmRef = useRef(false); // true if we should interrupt when speech is confirmed
-    const serverConfirmedSpeechRef = useRef(false); // true when server detected speech (audio:stop) but VAD hasn't confirmed yet
+    const interruptManagerRef = useRef(null); // InterruptManager instance (created in initializeAudio)
     const clientAudioPlayingRef = useRef(false); // true when client is playing audio (for filler suppression)
     const speechTimeoutRef = useRef(null); // fallback timeout when VAD fails to detect speech end
     const speechEndDelayRef = useRef(null); // the 150ms delay before processing speech end
@@ -153,6 +153,41 @@ export function useVoiceSession() {
             _setAnalyserNode(player.analyser);
         }
 
+        // Create InterruptManager to gate speech interrupts
+        const interruptManager = new InterruptManager({
+            onInterruptConfirmed: () => {
+                console.log(
+                    "[InterruptManager] Interrupt confirmed - emitting speechStart",
+                );
+                // Emit the speechStart that was held back
+                socketRef.current?.emit("audio:speechStart");
+                // Stop local audio playback
+                if (playerRef.current) {
+                    playerRef.current.interrupt();
+                }
+                // Notify server that client audio stopped
+                if (clientAudioPlayingRef.current) {
+                    clientAudioPlayingRef.current = false;
+                    socketRef.current?.emit("audio:clientStopped");
+                }
+                // Block all audio until we get a fresh response
+                setAwaitingNewResponse(true);
+            },
+            onDuck: (shouldDuck) => {
+                if (shouldDuck) {
+                    playerRef.current?.duck();
+                } else {
+                    playerRef.current?.unduck();
+                }
+            },
+            onCancelled: () => {
+                console.log(
+                    "[InterruptManager] Cancelled - was echo or noise",
+                );
+            },
+        });
+        interruptManagerRef.current = interruptManager;
+
         // Set up track complete callback
         // Update lastAiActivity when local audio finishes (server state may already be idle)
         player.setTrackCompleteCallback((trackId) => {
@@ -247,27 +282,6 @@ export function useVoiceSession() {
 
             console.log(`[VAD] Speech ended (${source})`);
             userIsSpeakingRef.current = false;
-            serverConfirmedSpeechRef.current = false;
-
-            // If we were waiting to interrupt, do it now - this is confirmed real speech
-            if (shouldInterruptOnConfirmRef.current) {
-                console.log("[VAD] Confirmed speech - executing interrupt");
-                shouldInterruptOnConfirmRef.current = false;
-                // Stop local audio
-                if (playerRef.current) {
-                    playerRef.current.interrupt();
-                }
-                // Notify server that client audio stopped
-                if (clientAudioPlayingRef.current) {
-                    clientAudioPlayingRef.current = false;
-                    socketRef.current?.emit("audio:clientStopped");
-                }
-                // Block all audio until we get a fresh response
-                setAwaitingNewResponse(true);
-            } else {
-                // Wasn't an interrupt situation, make sure volume is normal
-                playerRef.current?.unduck();
-            }
 
             // Notify server to finalize transcript and process
             socketRef.current?.emit("audio:speechEnd");
@@ -327,9 +341,6 @@ export function useVoiceSession() {
                 userIsSpeakingRef.current = true;
                 lastAudioFrameTimeRef.current = Date.now();
 
-                // Notify server that speech started
-                socketRef.current?.emit("audio:speechStart");
-
                 // Clear assistant transcript when user starts speaking
                 _setLiveAssistantTranscript("");
                 transcriptQueueRef.current = [];
@@ -338,37 +349,39 @@ export function useVoiceSession() {
                 // Start fallback timeout
                 startSpeechTimeout();
 
-                // Should we interrupt? Check if:
-                // 1. AI was recently active (within grace period), OR
-                // 2. Player is actively streaming audio
+                // Check if AI is currently playing audio
                 const timeSinceAi = Date.now() - lastAiActivityRef.current;
                 const aiRecentlyActive =
-                    lastAiActivityRef.current > 0 && timeSinceAi < 3000; // 3 second grace
+                    lastAiActivityRef.current > 0 && timeSinceAi < 3000;
                 const playerIsStreaming = playerRef.current?.stream != null;
+                const aiIsPlaying = aiRecentlyActive || playerIsStreaming;
 
                 console.log("[VAD] Interrupt check:", {
                     timeSinceAi,
                     aiRecentlyActive,
                     playerIsStreaming,
+                    aiIsPlaying,
                 });
 
-                if (aiRecentlyActive || playerIsStreaming) {
-                    // Don't interrupt yet - wait for confirmed speech (speechEnd)
-                    // This prevents echo-triggered false interrupts
-                    console.log(
-                        "[VAD] Marking for interrupt on confirmation, ducking audio",
-                    );
-                    shouldInterruptOnConfirmRef.current = true;
-                    // Duck the audio so user's voice is easier to pick up
-                    playerRef.current?.duck();
-                } else {
-                    shouldInterruptOnConfirmRef.current = false;
+                // Let InterruptManager decide whether to emit speechStart now
+                const shouldEmitNow =
+                    interruptManagerRef.current?.onSpeechStart(aiIsPlaying) ??
+                    true;
+
+                if (shouldEmitNow) {
+                    // AI not playing - emit immediately (no echo risk)
+                    socketRef.current?.emit("audio:speechStart");
                 }
+                // Otherwise InterruptManager is PENDING and will call
+                // onInterruptConfirmed when speech is verified
             },
 
             onSpeechEnd: () => {
                 // Ignore if no active session
                 if (!socketRef.current?.connected) return;
+
+                // Let InterruptManager confirm if still pending (backstop for short utterances)
+                interruptManagerRef.current?.onSpeechEnd();
 
                 // Clear fallback timeout immediately when VAD detects speech end
                 if (speechTimeoutRef.current) {
@@ -396,6 +409,9 @@ export function useVoiceSession() {
                 const level = probabilities.isSpeech;
                 _setInputLevel(level);
 
+                // Feed frame to InterruptManager for confirmation/cancellation
+                interruptManagerRef.current?.onFrame(probabilities.isSpeech);
+
                 // Stream audio to server (unless muted)
                 if (!isMutedRef.current) {
                     const base64Audio = float32ToBase64PCM16(audioFrame);
@@ -421,18 +437,8 @@ export function useVoiceSession() {
 
                 console.log("[VAD] Misfire");
 
-                // If the server already confirmed speech (via audio:stop),
-                // the VAD is wrong — user IS speaking. Keep userIsSpeaking
-                // true and restart the speech timeout so speechEnd fires later.
-                if (serverConfirmedSpeechRef.current) {
-                    console.log(
-                        "[VAD] Misfire ignored - server confirmed speech, keeping userIsSpeaking",
-                    );
-                    serverConfirmedSpeechRef.current = false;
-                    // Restart speech timeout as fallback for detecting end of speech
-                    startSpeechTimeout();
-                    return;
-                }
+                // Let InterruptManager cancel if pending (handles unduck)
+                interruptManagerRef.current?.onMisfire();
 
                 // Clear fallback timeout
                 if (speechTimeoutRef.current) {
@@ -440,14 +446,6 @@ export function useVoiceSession() {
                     speechTimeoutRef.current = null;
                 }
                 userIsSpeakingRef.current = false;
-                // Cancel pending interrupt - this was a false positive (likely echo)
-                if (shouldInterruptOnConfirmRef.current) {
-                    console.log(
-                        "[VAD] Misfire - cancelling pending interrupt, restoring volume",
-                    );
-                    shouldInterruptOnConfirmRef.current = false;
-                    playerRef.current?.unduck();
-                }
                 // If we set awaitingNewResponse, clear it
                 if (awaitingNewResponseRef.current) {
                     console.log("[VAD] Misfire - clearing await flag");
@@ -736,17 +734,7 @@ export function useVoiceSession() {
                 if (playerRef.current) {
                     await playerRef.current.interrupt();
                 }
-                // If interrupt was pending VAD confirmation, the server's STT
-                // has already confirmed real speech. Mark this so the misfire
-                // handler doesn't incorrectly reset userIsSpeaking.
-                if (shouldInterruptOnConfirmRef.current) {
-                    console.log(
-                        "[useVoiceSession] Server confirmed speech - overriding VAD",
-                    );
-                    shouldInterruptOnConfirmRef.current = false;
-                    serverConfirmedSpeechRef.current = true;
-                    setAwaitingNewResponse(true);
-                }
+                setAwaitingNewResponse(true);
                 _setState("idle");
             });
 
@@ -880,8 +868,10 @@ export function useVoiceSession() {
         isInitializedRef.current = false;
         userIsSpeakingRef.current = false;
         setAwaitingNewResponse(false);
-        shouldInterruptOnConfirmRef.current = false;
-        serverConfirmedSpeechRef.current = false;
+        if (interruptManagerRef.current) {
+            interruptManagerRef.current.reset();
+            interruptManagerRef.current = null;
+        }
         clientAudioPlayingRef.current = false;
         lastAiActivityRef.current = 0;
         lastAudioFrameTimeRef.current = 0;
