@@ -440,7 +440,7 @@ export function useVoiceSession() {
      * Connect to voice server
      */
     const connectToServer = useCallback(
-        async (voiceServerUrl) => {
+        async (voiceServerUrl, authToken) => {
             console.log(
                 "[useVoiceSession] Connecting to voice server:",
                 voiceServerUrl,
@@ -451,6 +451,9 @@ export function useVoiceSession() {
                 query: {
                     entityId,
                     chatId,
+                },
+                auth: {
+                    token: authToken,
                 },
                 // Disable auto-reconnection - we manage connection lifecycle explicitly
                 reconnection: false,
@@ -870,11 +873,20 @@ export function useVoiceSession() {
                     );
                 }
 
+                // Get auth token for voice server
+                const tokenResponse = await fetch("/api/voice/token", {
+                    method: "POST",
+                });
+                if (!tokenResponse.ok) {
+                    throw new Error("Failed to get voice auth token");
+                }
+                const { token: voiceToken } = await tokenResponse.json();
+
                 // Initialize audio with VAD
                 await initializeAudio();
 
                 // Connect to server
-                await connectToServer(voiceServerUrl);
+                await connectToServer(voiceServerUrl, voiceToken);
 
                 // Register cleanup
                 _registerCleanup(cleanup);
