@@ -148,6 +148,29 @@ jest.mock("lucide-react", () => ({
             Stop Icon
         </div>
     ),
+    Mic: () => (
+        <div data-testid="mic-button" aria-label="mic">
+            Mic Icon
+        </div>
+    ),
+}));
+
+// Mock VoiceContext
+jest.mock("../../contexts/VoiceContext", () => ({
+    useVoice: () => ({
+        startSession: jest.fn(),
+        isActive: false,
+        isAvailable: false,
+    }),
+}));
+
+// Mock ChatEntityContext
+jest.mock("../../contexts/ChatEntityContext", () => ({
+    useChatEntity: () => ({
+        entityId: "test-entity-id",
+        entityName: "Test Entity",
+        entity: null,
+    }),
 }));
 
 // Mock the graphql queries

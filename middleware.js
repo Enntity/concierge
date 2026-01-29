@@ -11,10 +11,22 @@ export const config = {
 const PUBLIC_PATHS = [
     "/auth/login",
     "/auth/error",
-    "/api/auth",
+    "/api/auth/callback", // NextAuth OAuth callbacks
+    "/api/auth/signin", // NextAuth sign-in
+    "/api/auth/signout", // NextAuth sign-out
+    "/api/auth/session", // NextAuth session check
+    "/api/auth/csrf", // NextAuth CSRF token
+    "/api/auth/providers", // NextAuth providers list
+    "/api/auth/error", // NextAuth error page
+    "/api/auth/mobile-callback", // Mobile OAuth callback
+    "/api/auth/mobile", // Mobile JWT verification (has own auth)
+    "/api/auth/check-user", // Protected by x-auth-secret
+    "/api/auth/log-signup-request", // Protected by x-auth-secret
+    "/api/mobile/entities", // Mobile entities (has own JWT auth)
     "/api/enntity/push",
     "/privacy",
     "/published",
+    "/vad", // VAD model and ONNX runtime files
 ];
 
 const isPublicPath = (pathname) => {

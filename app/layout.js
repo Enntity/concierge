@@ -58,9 +58,10 @@ export default async function RootLayout({ children }) {
                         `,
                     }}
                 />
+                {/* eslint-disable-next-line @next/next/no-page-custom-font */}
                 <link
                     rel="stylesheet"
-                    href="https://fonts.googleapis.com/css?family=Playfair Display"
+                    href="https://fonts.googleapis.com/css?family=Playfair+Display&display=swap"
                 />
                 <link
                     rel="icon"

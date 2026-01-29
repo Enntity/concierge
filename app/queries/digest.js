@@ -10,7 +10,10 @@ export function useHomeGreeting() {
             const { data } = await axios.post(`/api/users/me/greeting`, {
                 userInfo,
             });
-            return data?.greeting || null;
+            return {
+                greeting: data?.greeting || null,
+                entity: data?.entity || null,
+            };
         },
         staleTime: 5 * 60 * 1000, // 5 minutes
         refetchOnWindowFocus: false,

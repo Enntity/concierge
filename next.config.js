@@ -68,7 +68,7 @@ const securityHeaders = [
     },
     {
         key: "Permissions-Policy",
-        value: "camera=(), microphone=(), geolocation=()",
+        value: "camera=(), microphone=(self), geolocation=()",
     },
 ];
 
@@ -78,6 +78,26 @@ const config = {
             {
                 source: "/:path*",
                 headers: securityHeaders,
+            },
+            {
+                // Ensure WASM files are served with correct MIME type
+                source: "/vad/:path*.wasm",
+                headers: [
+                    {
+                        key: "Content-Type",
+                        value: "application/wasm",
+                    },
+                ],
+            },
+            {
+                // Ensure ONNX files are served correctly
+                source: "/vad/:path*.onnx",
+                headers: [
+                    {
+                        key: "Content-Type",
+                        value: "application/octet-stream",
+                    },
+                ],
             },
         ];
     },
@@ -126,7 +146,7 @@ const config = {
     },
     output: "standalone",
     basePath: basePath || "",
-    webpack: (config) => {
+    webpack: (config, { isServer }) => {
         // Exclude mongodb and mongodb-client-encryption from the bundle to avoid errors, will be required and imported at runtime
         config.externals.push(
             "mongodb-client-encryption",
@@ -137,6 +157,24 @@ const config = {
 
         // Add @ path alias
         config.resolve.alias["@"] = path.join(__dirname, "@");
+
+        // Handle ONNX runtime for VAD
+        if (!isServer) {
+            config.resolve.fallback = {
+                ...config.resolve.fallback,
+                fs: false,
+                path: false,
+                crypto: false,
+            };
+
+            // No webpack config needed for onnxruntime-web since we load via script tags
+        }
+
+        // Ignore the dynamic import warnings from onnxruntime-web
+        config.module = {
+            ...config.module,
+            exprContextCritical: false,
+        };
 
         return config;
     },

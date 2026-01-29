@@ -1258,7 +1258,7 @@ const MessageList = React.memo(
                                     )}
                                 </div>
                                 <div className="text-sm opacity-75">
-                                    {t("Your AI assistant is ready to help")}
+                                    {t("Your entity is waiting")}
                                 </div>
                             </div>
                         )}

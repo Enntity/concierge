@@ -24,6 +24,11 @@ export const AGENT_MODEL_OPTIONS = [
         provider: "xai",
     },
     {
+        displayName: "Grok 4.1 Fast Non-Reasoning",
+        modelId: "xai-grok-4-1-fast-non-reasoning",
+        provider: "xai",
+    },
+    {
         displayName: "Gemini 3 Flash",
         modelId: "gemini-flash-3-vision",
         provider: "google",

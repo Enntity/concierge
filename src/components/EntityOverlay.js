@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useEntityOverlay } from "../contexts/EntityOverlayContext";
+import { useVoice } from "../contexts/VoiceContext";
 import { cn } from "@/lib/utils";
 import { convertMessageToMarkdown } from "./chat/ChatMessage";
 import {
@@ -21,8 +22,13 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  * - Auto-advance timer (via context)
  * - Text content with markdown
  * - Floating position
+ *
+ * Props:
+ * - inVoiceMode: When true, renders as embedded content without backdrop
+ *   (for integration with VoiceModeOverlay)
  */
-export default function EntityOverlay() {
+export default function EntityOverlay({ inVoiceMode = false }) {
+    const { isActive: voiceIsActive } = useVoice();
     const {
         visible,
         items,
@@ -84,13 +90,24 @@ export default function EntityOverlay() {
 
     if (!visible || !currentItem) return null;
 
+    // When voice mode is active, only the inVoiceMode instance should render
+    // The normal Layout.js instance should step aside
+    if (voiceIsActive && !inVoiceMode) return null;
+
     const isText = currentItem.type === "text";
     const hasMultiple = items.length > 1;
 
     // Custom text renderer for ephemeral styling
-    const renderEphemeralText = (content) => (
+    const renderEphemeralText = (content, isVoiceMode = false) => (
         <div className="text-center max-h-full overflow-auto">
-            <div className="entity-overlay-message text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light leading-relaxed text-slate-200">
+            <div
+                className={cn(
+                    "entity-overlay-message font-light leading-relaxed text-slate-200",
+                    isVoiceMode
+                        ? "text-lg sm:text-xl md:text-2xl"
+                        : "text-xl sm:text-2xl md:text-3xl lg:text-4xl",
+                )}
+            >
                 {convertMessageToMarkdown({ payload: content })}
             </div>
         </div>
@@ -119,6 +136,255 @@ export default function EntityOverlay() {
         </button>
     );
 
+    // Voice mode: render embedded content without backdrop
+    if (inVoiceMode) {
+        return (
+            <>
+                <div
+                    className="relative group/overlay"
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                >
+                    {/* Outer glow */}
+                    <div className="absolute -inset-4 rounded-[1.5rem] bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20 blur-xl opacity-75" />
+
+                    {/* Content container - sized for voice mode */}
+                    <div
+                        ref={mediaRef}
+                        className={cn(
+                            "relative overflow-hidden shadow-2xl cursor-pointer select-none",
+                            "w-[280px] h-[210px] sm:w-[320px] sm:h-[240px] md:w-[380px] md:h-[285px]",
+                            "ring-2 ring-cyan-400/50 hover:ring-cyan-300/70 transition-all duration-200",
+                            "focus:outline-none rounded-2xl",
+                            isText
+                                ? "bg-gradient-to-br from-slate-950/95 via-slate-900/90 to-slate-950/95 entity-overlay-text"
+                                : "bg-black/50 entity-overlay-media",
+                        )}
+                        onClick={() => setZoomOpen(true)}
+                    >
+                        {isText ? (
+                            <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
+                                {renderEphemeralText(currentItem.content, true)}
+                                <div className="absolute inset-0 pointer-events-none entity-overlay-text-glow" />
+                            </div>
+                        ) : (
+                            <MediaPreview
+                                item={currentItem}
+                                className="w-full h-full"
+                                mediaClassName="pointer-events-none"
+                                showPlayButton={false}
+                                autoPlay
+                                objectFit="cover"
+                                style={{
+                                    transform: `scale(${1 + zoomLevel * 0.5})`,
+                                    transition: "transform 0.15s ease-out",
+                                }}
+                            />
+                        )}
+
+                        {/* Label overlay */}
+                        {currentItem.label && (isHovering || zoomOpen) && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-3 py-2">
+                                <div className="text-sm text-white/90 truncate">
+                                    {currentItem.label}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Navigation */}
+                    {hasMultiple && (
+                        <>
+                            <NavButton
+                                direction="left"
+                                onClick={previousItem}
+                            />
+                            <NavButton direction="right" onClick={nextItem} />
+
+                            {/* Indicator dots */}
+                            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 opacity-0 group-hover/overlay:opacity-100 transition-opacity">
+                                {items.map((_, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={cn(
+                                            "h-1.5 rounded-full transition-all",
+                                            idx === currentIndex
+                                                ? "bg-cyan-400 w-4"
+                                                : "bg-white/50 w-1.5",
+                                        )}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )}
+
+                    {/* Corner decorations */}
+                    <div className="absolute -top-1 -left-1 w-4 h-4 border-l-2 border-t-2 border-cyan-400/60 rounded-tl" />
+                    <div className="absolute -top-1 -right-1 w-4 h-4 border-r-2 border-t-2 border-cyan-400/60 rounded-tr" />
+                    <div className="absolute -bottom-1 -left-1 w-4 h-4 border-l-2 border-b-2 border-cyan-400/60 rounded-bl" />
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 border-r-2 border-b-2 border-cyan-400/60 rounded-br" />
+                </div>
+
+                {/* Fullscreen Dialog - shared with normal mode */}
+                <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
+                    <DialogContent
+                        className="max-w-[90vw] max-h-[90vh] p-0 bg-transparent border-0 shadow-none flex items-center justify-center"
+                        aria-describedby="overlay-zoom-description"
+                    >
+                        <DialogTitle className="sr-only">
+                            Entity Response
+                        </DialogTitle>
+                        <DialogDescription
+                            id="overlay-zoom-description"
+                            className="sr-only"
+                        >
+                            Viewing entity response in full screen
+                        </DialogDescription>
+
+                        <div className="relative">
+                            {/* Fullscreen glow */}
+                            <div className="absolute -inset-8 rounded-3xl bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-cyan-500/20 blur-2xl animate-pulse" />
+                            <div className="absolute -inset-4 rounded-2xl bg-gradient-to-r from-cyan-400/30 via-blue-500/30 to-purple-400/30 blur-xl" />
+
+                            {/* Fixed container */}
+                            <div
+                                className={cn(
+                                    "relative w-[92vw] h-[85vh] max-w-[1400px] max-h-[900px]",
+                                    "rounded-2xl ring-4 ring-cyan-400/60",
+                                    "shadow-[0_0_60px_rgba(34,211,238,0.4),0_0_100px_rgba(139,92,246,0.3)]",
+                                    "overflow-hidden",
+                                    isText
+                                        ? "bg-gradient-to-br from-slate-950/98 via-slate-900/95 to-slate-950/98"
+                                        : "bg-black",
+                                )}
+                            >
+                                {isText ? (
+                                    <div className="absolute inset-0 flex items-center justify-center p-8 sm:p-12 md:p-16 overflow-auto">
+                                        <div className="text-center">
+                                            <div className="entity-overlay-message text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light leading-relaxed text-slate-200">
+                                                {convertMessageToMarkdown({
+                                                    payload:
+                                                        currentItem.content,
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <MediaPreview
+                                        item={currentItem}
+                                        className="w-full h-full"
+                                        autoPlay
+                                        objectFit="contain"
+                                    />
+                                )}
+
+                                {/* Label in fullscreen */}
+                                {currentItem.label && (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-6 py-4">
+                                        <div className="text-base sm:text-lg md:text-xl text-white/90 truncate">
+                                            {currentItem.label}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Fullscreen corner accents */}
+                                <div className="absolute -top-4 -left-4 w-8 h-8 border-l-2 border-t-2 border-cyan-400/60 rounded-tl-lg" />
+                                <div className="absolute -top-4 -right-4 w-8 h-8 border-r-2 border-t-2 border-cyan-400/60 rounded-tr-lg" />
+                                <div className="absolute -bottom-4 -left-4 w-8 h-8 border-l-2 border-b-2 border-cyan-400/60 rounded-bl-lg" />
+                                <div className="absolute -bottom-4 -right-4 w-8 h-8 border-r-2 border-b-2 border-cyan-400/60 rounded-br-lg" />
+                            </div>
+
+                            {/* Fullscreen navigation */}
+                            {hasMultiple && (
+                                <>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            previousItem();
+                                        }}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-black/70 hover:bg-black/90 text-white rounded-full p-3 transition-all"
+                                        aria-label="Previous"
+                                    >
+                                        <ChevronLeft className="w-6 h-6" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            nextItem();
+                                        }}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-black/70 hover:bg-black/90 text-white rounded-full p-3 transition-all"
+                                        aria-label="Next"
+                                    >
+                                        <ChevronRight className="w-6 h-6" />
+                                    </button>
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 bg-black/70 rounded-full px-4 py-2 text-white text-sm">
+                                        {currentIndex + 1} / {items.length}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Ephemeral styling */}
+                <style jsx global>{`
+                    .entity-overlay-text {
+                        box-shadow:
+                            0 0 30px rgba(34, 211, 238, 0.2),
+                            0 0 60px rgba(139, 92, 246, 0.15);
+                        animation: entity-overlay-fade-in 0.9s ease-out forwards;
+                    }
+                    .entity-overlay-text-glow::before {
+                        content: "";
+                        position: absolute;
+                        inset: -20%;
+                        background: radial-gradient(
+                            circle,
+                            rgba(34, 211, 238, 0.12),
+                            transparent 60%
+                        );
+                        filter: blur(20px);
+                    }
+                    .entity-overlay-message .chat-message {
+                        font-size: inherit !important;
+                        line-height: inherit !important;
+                        text-shadow:
+                            0 0 12px rgba(34, 211, 238, 0.4),
+                            0 0 24px rgba(139, 92, 246, 0.2);
+                    }
+                    .entity-overlay-message .chat-message p,
+                    .entity-overlay-message .chat-message div,
+                    .entity-overlay-message .chat-message span,
+                    .entity-overlay-message .chat-message li,
+                    .entity-overlay-message .chat-message h1,
+                    .entity-overlay-message .chat-message h2,
+                    .entity-overlay-message .chat-message h3 {
+                        font-size: inherit !important;
+                        line-height: inherit !important;
+                        color: #e2e8f0;
+                        margin: 0;
+                    }
+                    .entity-overlay-media {
+                        box-shadow:
+                            0 0 30px rgba(34, 211, 238, 0.3),
+                            0 0 60px rgba(139, 92, 246, 0.2);
+                    }
+                    @keyframes entity-overlay-fade-in {
+                        from {
+                            opacity: 0;
+                            transform: translateY(12px) scale(0.98);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0) scale(1);
+                        }
+                    }
+                `}</style>
+            </>
+        );
+    }
+
+    // Normal mode: full-screen overlay with backdrop
     return (
         <>
             {/* Backdrop */}

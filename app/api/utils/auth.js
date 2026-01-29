@@ -7,14 +7,14 @@ import crypto from "crypto";
 
 export const getCurrentUser = async (convertToJsonObj = true) => {
     if (!mongoose.connection.readyState) {
-        return { userId: "nodb", name: "No Database Connected" };
+        return null;
     }
 
     // Get user from NextAuth session
     const session = await auth();
 
     if (!session?.user) {
-        return { userId: "anonymous", name: "Anonymous" };
+        return null;
     }
 
     const id =
