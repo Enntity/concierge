@@ -1,25 +1,33 @@
 FROM ubuntu:20.04 AS base
 
-# Node.js 22.x LTS - patched for CVE async_hooks stack overflow vulnerability
-RUN apt-get update && apt-get install -y curl && \
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y nodejs && \
-    apt-get install -y curl libssl1.1 && \
-    curl -O https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz && \
-    mkdir -p /app/mongo_crypt_lib && \
-    tar -xvf mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz -C /app/mongo_crypt_lib --strip-components=1 && \
-    rm mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz && \
-    chmod 755 /app/mongo_crypt_lib/mongo_crypt_v1.so && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    useradd -m appuser
+# Node.js 22.x LTS and common dependencies in a single layer
+RUN apt-get update \
+    && apt-get install -y curl libssl1.1 \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ENV MONGOCRYPT_PATH=/app/mongo_crypt_lib/mongo_crypt_v1.so
-
-WORKDIR /home/appuser/app
+FROM base AS deps
+WORKDIR /app
 
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 
+FROM base AS runner
+WORKDIR /app
+
+# MongoDB client encryption library
+RUN curl -O https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz \
+    && mkdir -p /app/mongo_crypt_lib \
+    && tar -xf mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz -C /app/mongo_crypt_lib --strip-components=1 \
+    && rm mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz \
+    && useradd -m appuser \
+    && chown -R appuser:appuser /app/mongo_crypt_lib \
+    && chmod 755 /app/mongo_crypt_lib/mongo_crypt_v1.so
+
+ENV MONGOCRYPT_PATH=/app/mongo_crypt_lib/mongo_crypt_v1.so
+
+COPY --from=deps --chown=appuser:appuser /app/node_modules ./node_modules
 COPY --chown=appuser:appuser . .
 
 USER appuser

@@ -1,9 +1,11 @@
 FROM ubuntu:20.04 AS base
 
-RUN apt-get update && apt-get install -y curl
-# Node.js 22.x LTS - patched for CVE async_hooks stack overflow vulnerability
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-RUN apt-get install -y nodejs
+# Node.js 22.x LTS and common dependencies in a single layer
+RUN apt-get update \
+    && apt-get install -y curl libssl1.1 \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 FROM base AS deps
 WORKDIR /app
@@ -46,14 +48,25 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV production
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
-RUN mkdir .next && chown nextjs:nodejs .next
+# Download MongoDB client encryption library
+RUN curl -O https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz \
+    && mkdir -p /app/mongo_crypt_lib \
+    && tar -xf mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz -C /app/mongo_crypt_lib --strip-components=1 \
+    && rm mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz \
+    && chown -R nextjs:nodejs /app/mongo_crypt_lib \
+    && chmod 755 /app/mongo_crypt_lib/mongo_crypt_v1.so
+
+ENV MONGOCRYPT_PATH=/app/mongo_crypt_lib/mongo_crypt_v1.so
+
+# Copy Next.js standalone output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-# Copy all source for worker (jobs imports from app/api, src, config, etc.)
+COPY --from=builder /app/public ./public
+
+# Copy source for worker (jobs imports from app/api, src, config, etc.)
 COPY --from=builder --chown=nextjs:nodejs /app/jobs ./jobs
 COPY --from=builder --chown=nextjs:nodejs /app/src ./src
 COPY --from=builder --chown=nextjs:nodejs /app/config ./config
@@ -61,23 +74,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/app ./app
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
-RUN apt-get update && apt-get install -y curl libssl1.1 \
-    && curl -O https://downloads.mongodb.com/linux/mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz \
-    && mkdir -p /app/mongo_crypt_lib \
-    && tar -xvf mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz -C /app/mongo_crypt_lib --strip-components=1 \
-    && rm mongo_crypt_shared_v1-linux-x86_64-enterprise-ubuntu2004-7.0.12.tgz \
-    && chown -R nextjs:nodejs /app/mongo_crypt_lib \
-    && chmod 755 /app/mongo_crypt_lib/mongo_crypt_v1.so \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-ENV MONGOCRYPT_PATH=/app/mongo_crypt_lib/mongo_crypt_v1.so
-
 USER nextjs
 EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:3000/ || exit 1
 

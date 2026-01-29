@@ -1,0 +1,38 @@
+# Version control
+.git
+.gitignore
+
+# Dependencies (rebuilt in container)
+node_modules
+.pnp
+.pnp.js
+
+# Build output (rebuilt in container)
+.next
+build
+coverage
+
+# Environment and secrets
+.env
+.env.*
+deploy/env.production
+load-env.sh
+
+# IDE and OS
+.vscode
+.DS_Store
+*.code-workspace
+.cursorrules
+.nvmrc
+
+# Docker (not needed inside build)
+Dockerfile
+Dockerfile.worker
+docker-compose*.yml
+
+# Logs and misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm-cache
+dump.rdb

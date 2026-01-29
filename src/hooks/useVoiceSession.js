@@ -525,7 +525,8 @@ export function useVoiceSession() {
                 socket.emit("session:start", {
                     entityId,
                     chatId,
-                    // Use entity's voice configuration if available, otherwise default
+                    // Use entity's voice provider and ID if available
+                    provider: currentEntity?.voice?.voiceProvider || undefined,
                     voiceId:
                         currentEntity?.voice?.voiceId || "tnSpp4vdxKPjI9w0GnoV",
                     voiceSettings,
