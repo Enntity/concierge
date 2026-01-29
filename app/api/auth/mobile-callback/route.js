@@ -2,7 +2,7 @@ import { auth } from "../../../../auth";
 import { NextResponse } from "next/server";
 import { SignJWT } from "jose";
 import { getCurrentUser } from "../../utils/auth";
-import dbConnect from "../../../../src/lib/dbConnect";
+import { connectToDatabase } from "../../../../src/db.mjs";
 
 /**
  * Mobile auth callback - redirects to app with session token
@@ -20,7 +20,7 @@ export async function GET(request) {
     }
 
     // Get full user info from database
-    await dbConnect();
+    await connectToDatabase();
     const user = await getCurrentUser();
 
     if (!user?.contextId) {
@@ -28,6 +28,8 @@ export async function GET(request) {
     }
 
     // Create a signed JWT for mobile
+    console.log("[mobile-callback] Creating token for user:", user.userId);
+    console.log("[mobile-callback] AUTH_SECRET exists:", !!process.env.AUTH_SECRET);
     const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
     const token = await new SignJWT({
         userId: user.userId,
@@ -41,6 +43,9 @@ export async function GET(request) {
         .setIssuedAt()
         .setExpirationTime("7d")
         .sign(secret);
+
+    console.log("[mobile-callback] Token created, length:", token.length);
+    console.log("[mobile-callback] Token preview:", token.substring(0, 50) + "...");
 
     // Redirect to app with token
     return NextResponse.redirect(`enntityvoice://auth?token=${token}`);

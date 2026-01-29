@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
     "/auth/login",
     "/auth/error",
     "/api/auth",
+    "/api/mobile", // Mobile app uses JWT auth, not NextAuth session
     "/api/enntity/push",
     "/privacy",
     "/published",

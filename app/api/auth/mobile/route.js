@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-import dbConnect from "../../../../src/lib/dbConnect";
+import { connectToDatabase } from "../../../../src/db.mjs";
 import User from "../../models/user";
 
 /**
@@ -21,13 +21,18 @@ export async function GET(request) {
         }
 
         const token = authHeader.substring(7);
+        console.log("[mobile/auth] Token length:", token.length);
+        console.log("[mobile/auth] Token preview:", token.substring(0, 50) + "...");
+        console.log("[mobile/auth] AUTH_SECRET exists:", !!process.env.AUTH_SECRET);
         const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
 
         let payload;
         try {
             const result = await jwtVerify(token, secret);
             payload = result.payload;
+            console.log("[mobile/auth] Token verified, userId:", payload.userId);
         } catch (err) {
+            console.error("[mobile/auth] Token verification failed:", err.message);
             return NextResponse.json(
                 { error: "Invalid or expired token" },
                 { status: 401 }
@@ -35,7 +40,7 @@ export async function GET(request) {
         }
 
         // Get fresh user data from database
-        await dbConnect();
+        await connectToDatabase();
         const user = await User.findOne({ userId: payload.userId });
 
         if (!user) {
