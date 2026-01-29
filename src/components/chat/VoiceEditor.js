@@ -10,12 +10,7 @@ import FilterInput from "../common/FilterInput";
 /**
  * VoiceEditorContent - Content for the voice selection modal
  */
-const VoiceEditorContent = ({
-    entityId,
-    currentVoice,
-    onClose,
-    onSave,
-}) => {
+const VoiceEditorContent = ({ entityId, currentVoice, onClose, onSave }) => {
     const { t } = useTranslation();
     const [availableVoices, setAvailableVoices] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -103,7 +98,10 @@ const VoiceEditorContent = ({
     };
 
     const handlePlayPreview = (voice) => {
-        if (!voice.preview_url) return;
+        if (!voice.preview_url || !voice.preview_url.startsWith("https://")) {
+            console.warn("Invalid preview URL");
+            return;
+        }
 
         // If already playing this voice, stop it
         if (playingVoiceId === voice.voice_id) {
@@ -234,7 +232,8 @@ const VoiceEditorContent = ({
                                             const isPlaying =
                                                 playingVoiceId ===
                                                 voice.voice_id;
-                                            const labels = getVoiceLabels(voice);
+                                            const labels =
+                                                getVoiceLabels(voice);
 
                                             return (
                                                 <div
@@ -370,7 +369,9 @@ const VoiceEditorContent = ({
                                     step="0.05"
                                     value={similarity}
                                     onChange={(e) =>
-                                        setSimilarity(parseFloat(e.target.value))
+                                        setSimilarity(
+                                            parseFloat(e.target.value),
+                                        )
                                     }
                                     className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                                 />
@@ -383,8 +384,7 @@ const VoiceEditorContent = ({
                             {/* Style */}
                             <div>
                                 <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                    {t("Style")}:{" "}
-                                    {(style * 100).toFixed(0)}%
+                                    {t("Style")}: {(style * 100).toFixed(0)}%
                                 </label>
                                 <input
                                     type="range"
@@ -471,9 +471,7 @@ const VoiceEditor = ({
     return (
         <Modal
             widthClassName="max-w-5xl"
-            title={
-                t("Voice Settings") + (entityName ? ` - ${entityName}` : "")
-            }
+            title={t("Voice Settings") + (entityName ? ` - ${entityName}` : "")}
             show={show}
             onHide={onClose}
         >

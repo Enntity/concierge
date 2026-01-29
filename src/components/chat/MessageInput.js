@@ -48,8 +48,11 @@ function MessageInput({
 
     const { user, userState, debouncedUpdateUserState } =
         useContext(AuthContext);
-    const { startSession: startVoiceSession, isActive: isVoiceActive } =
-        useVoice();
+    const {
+        startSession: startVoiceSession,
+        isActive: isVoiceActive,
+        isAvailable: isVoiceAvailable,
+    } = useVoice();
     const { entityId, entityName, entity } = useChatEntity();
     const [isUploadingMedia, setIsUploadingMedia] = useState(false);
     const MAX_INPUT_LENGTH = 100000;
@@ -442,13 +445,13 @@ function MessageInput({
                                     e.clipboardData.getData("text/html");
                                 if (pastedHtmlContent) {
                                     // Extract actual text content from HTML to check length
-                                    const tempDiv =
-                                        document.createElement("div");
-                                    tempDiv.innerHTML = pastedHtmlContent;
+                                    const parser = new DOMParser();
+                                    const doc = parser.parseFromString(
+                                        pastedHtmlContent,
+                                        "text/html",
+                                    );
                                     const htmlTextContent =
-                                        tempDiv.textContent ||
-                                        tempDiv.innerText ||
-                                        "";
+                                        doc.body.textContent || "";
 
                                     if (
                                         htmlTextContent.length >
@@ -499,26 +502,31 @@ function MessageInput({
                                                     item.getAsString((html) => {
                                                         let imgSrc = null;
                                                         let textFoundInHtml = false;
-                                                        const tempDiv =
-                                                            document.createElement(
-                                                                "div",
+                                                        const parser =
+                                                            new DOMParser();
+                                                        const doc =
+                                                            parser.parseFromString(
+                                                                html,
+                                                                "text/html",
                                                             );
-                                                        tempDiv.innerHTML =
-                                                            html;
-                                                        const images =
-                                                            tempDiv.getElementsByTagName(
+                                                        const imgEl =
+                                                            doc.querySelector(
                                                                 "img",
                                                             );
                                                         if (
-                                                            images.length > 0 &&
-                                                            images[0].src
+                                                            imgEl &&
+                                                            imgEl.getAttribute(
+                                                                "src",
+                                                            )
                                                         ) {
                                                             imgSrc =
-                                                                images[0].src;
+                                                                imgEl.getAttribute(
+                                                                    "src",
+                                                                );
                                                         }
                                                         // Check for actual text content within HTML too
                                                         if (
-                                                            tempDiv.textContent?.trim() !==
+                                                            doc.body.textContent?.trim() !==
                                                             ""
                                                         ) {
                                                             textFoundInHtml = true;
@@ -635,8 +643,12 @@ function MessageInput({
                                                 error,
                                             );
                                         }
-                                    } else {
-                                        // Remote URL
+                                    } else if (
+                                        potentialHtmlImageSrc.startsWith(
+                                            "https://",
+                                        )
+                                    ) {
+                                        // Remote URL - only fetch from trusted domains
                                         try {
                                             const response = await fetch(
                                                 potentialHtmlImageSrc,
@@ -720,38 +732,41 @@ function MessageInput({
                             spellCheck="true"
                             inputMode="text"
                         />
-                        {/* Voice button */}
-                        <div className="pb-2.5 flex items-end">
-                            <VoiceButton
-                                onClick={() => {
-                                    if (entityId && activeChatId) {
-                                        // Determine model: user preference > entity preference > default
-                                        const voiceModel =
-                                            user?.agentModel ||
-                                            entity?.preferredModel ||
-                                            null;
-                                        startVoiceSession({
-                                            entityId,
-                                            chatId: activeChatId,
-                                            userId: user?.userId,
-                                            contextId:
-                                                user?.contextId || entityId,
-                                            contextKey: user?.contextKey,
-                                            aiName: entityName,
-                                            userName: user?.name || user?.email,
-                                            model: voiceModel,
-                                        });
+                        {/* Voice button - only shown when voice services are configured */}
+                        {isVoiceAvailable && (
+                            <div className="pb-2.5 flex items-end">
+                                <VoiceButton
+                                    onClick={() => {
+                                        if (entityId && activeChatId) {
+                                            // Determine model: user preference > entity preference > default
+                                            const voiceModel =
+                                                user?.agentModel ||
+                                                entity?.preferredModel ||
+                                                null;
+                                            startVoiceSession({
+                                                entityId,
+                                                chatId: activeChatId,
+                                                userId: user?.userId,
+                                                contextId:
+                                                    user?.contextId || entityId,
+                                                contextKey: user?.contextKey,
+                                                aiName: entityName,
+                                                userName:
+                                                    user?.name || user?.email,
+                                                model: voiceModel,
+                                            });
+                                        }
+                                    }}
+                                    disabled={
+                                        !entityId ||
+                                        !activeChatId ||
+                                        viewingReadOnlyChat ||
+                                        isEntityUnavailable ||
+                                        isVoiceActive
                                     }
-                                }}
-                                disabled={
-                                    !entityId ||
-                                    !activeChatId ||
-                                    viewingReadOnlyChat ||
-                                    isEntityUnavailable ||
-                                    isVoiceActive
-                                }
-                            />
-                        </div>
+                                />
+                            </div>
+                        )}
                         <button
                             type={isStreaming || loading ? "button" : "submit"}
                             onClick={

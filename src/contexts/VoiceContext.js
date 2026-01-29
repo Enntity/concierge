@@ -7,6 +7,7 @@ import React, {
     useContext,
     useRef,
     useEffect,
+    useMemo,
 } from "react";
 
 /**
@@ -17,6 +18,9 @@ import React, {
  */
 
 const VoiceContext = createContext({
+    // Availability
+    isAvailable: false,
+
     // Session state
     isActive: false,
     isConnected: false,
@@ -67,6 +71,20 @@ const VoiceContext = createContext({
 });
 
 export function VoiceProvider({ children }) {
+    // Voice service availability
+    const [isAvailable, setIsAvailable] = useState(false);
+
+    // Check if voice services are configured on mount
+    useEffect(() => {
+        fetch("/api/voice/config")
+            .then((res) => {
+                setIsAvailable(res.ok);
+            })
+            .catch(() => {
+                setIsAvailable(false);
+            });
+    }, []);
+
     // Session state
     const [isActive, setIsActive] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
@@ -102,6 +120,11 @@ export function VoiceProvider({ children }) {
     // Extended session context
     const [sessionContext, setSessionContext] = useState(null);
 
+    const conversationHistoryRef = useRef(conversationHistory);
+    useEffect(() => {
+        conversationHistoryRef.current = conversationHistory;
+    }, [conversationHistory]);
+
     /**
      * Start a new voice session
      * @param {Object} options - Session options
@@ -113,7 +136,7 @@ export function VoiceProvider({ children }) {
      * @param {string} [options.userName] - The user's display name
      */
     const startSession = useCallback(
-        (options) => {
+        (options, chatIdArg) => {
             if (isActive) {
                 console.warn("Voice session already active");
                 return;
@@ -124,7 +147,7 @@ export function VoiceProvider({ children }) {
             if (typeof options === "string") {
                 sessionOpts = {
                     entityId: options,
-                    chatId: arguments[1],
+                    chatId: chatIdArg,
                 };
             }
 
@@ -158,7 +181,7 @@ export function VoiceProvider({ children }) {
         console.log("[VoiceContext] Ending voice session");
 
         // Capture history before clearing
-        const finalHistory = [...conversationHistory];
+        const finalHistory = [...conversationHistoryRef.current];
         const finalChatId = chatId;
         const finalEntityId = entityId;
 
@@ -195,7 +218,7 @@ export function VoiceProvider({ children }) {
         setAudioContext(null);
         setSourceNode(null);
         setAnalyserNode(null);
-    }, [isActive, conversationHistory, chatId, entityId]);
+    }, [isActive, chatId, entityId]);
 
     /**
      * Register a callback for when the session ends
@@ -242,61 +265,92 @@ export function VoiceProvider({ children }) {
         };
     }, []);
 
+    const contextValue = useMemo(
+        () => ({
+            // Availability
+            isAvailable,
+
+            // Session state
+            isActive,
+            isConnected,
+            state,
+            isMuted,
+
+            // Transcripts
+            liveUserTranscript,
+            liveAssistantTranscript,
+            conversationHistory,
+
+            // Tool execution
+            currentTool,
+
+            // Session info
+            sessionId,
+            entityId,
+            chatId,
+            sessionContext,
+
+            // Audio levels
+            inputLevel,
+            outputLevel,
+
+            // Audio nodes
+            audioContext,
+            sourceNode,
+            analyserNode,
+
+            // Actions
+            startSession,
+            endSession,
+            registerOnSessionEnd,
+            toggleMute,
+            setMuted: setIsMuted,
+
+            // Internal setters for useVoiceSession hook
+            _setIsConnected: setIsConnected,
+            _setState: setState,
+            _setLiveUserTranscript: setLiveUserTranscript,
+            _setLiveAssistantTranscript: setLiveAssistantTranscript,
+            _addToHistory: addToHistory,
+            _setCurrentTool: setCurrentTool,
+            _setInputLevel: setInputLevel,
+            _setOutputLevel: setOutputLevel,
+            _setAudioContext: setAudioContext,
+            _setSourceNode: setSourceNode,
+            _setAnalyserNode: setAnalyserNode,
+            _setSessionId: setSessionId,
+            _registerCleanup: registerCleanup,
+        }),
+        [
+            isAvailable,
+            isActive,
+            isConnected,
+            state,
+            isMuted,
+            liveUserTranscript,
+            liveAssistantTranscript,
+            conversationHistory,
+            currentTool,
+            sessionId,
+            entityId,
+            chatId,
+            sessionContext,
+            inputLevel,
+            outputLevel,
+            audioContext,
+            sourceNode,
+            analyserNode,
+            startSession,
+            endSession,
+            registerOnSessionEnd,
+            toggleMute,
+            addToHistory,
+            registerCleanup,
+        ],
+    );
+
     return (
-        <VoiceContext.Provider
-            value={{
-                // Session state
-                isActive,
-                isConnected,
-                state,
-                isMuted,
-
-                // Transcripts
-                liveUserTranscript,
-                liveAssistantTranscript,
-                conversationHistory,
-
-                // Tool execution
-                currentTool,
-
-                // Session info
-                sessionId,
-                entityId,
-                chatId,
-                sessionContext,
-
-                // Audio levels
-                inputLevel,
-                outputLevel,
-
-                // Audio nodes
-                audioContext,
-                sourceNode,
-                analyserNode,
-
-                // Actions
-                startSession,
-                endSession,
-                registerOnSessionEnd,
-                toggleMute,
-                setMuted: setIsMuted,
-
-                // Internal setters for useVoiceSession hook
-                _setIsConnected: setIsConnected,
-                _setState: setState,
-                _setLiveUserTranscript: setLiveUserTranscript,
-                _setLiveAssistantTranscript: setLiveAssistantTranscript,
-                _addToHistory: addToHistory,
-                _setCurrentTool: setCurrentTool,
-                _setInputLevel: setInputLevel,
-                _setOutputLevel: setOutputLevel,
-                _setAudioContext: setAudioContext,
-                _setSourceNode: setSourceNode,
-                _setAnalyserNode: setAnalyserNode,
-                _setSessionId: setSessionId,
-                _registerCleanup: registerCleanup,
-            }}
-        >
+        <VoiceContext.Provider value={contextValue}>
             {children}
         </VoiceContext.Provider>
     );

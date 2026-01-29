@@ -16,7 +16,9 @@ export async function GET(request) {
 
     if (!session?.user) {
         // Not authenticated - redirect to app with error
-        return NextResponse.redirect("enntityvoice://auth?error=not_authenticated");
+        return NextResponse.redirect(
+            "enntityvoice://auth?error=not_authenticated",
+        );
     }
 
     // Get full user info from database
@@ -24,17 +26,21 @@ export async function GET(request) {
     const user = await getCurrentUser();
 
     if (!user?.contextId) {
-        return NextResponse.redirect("enntityvoice://auth?error=user_not_found");
+        return NextResponse.redirect(
+            "enntityvoice://auth?error=user_not_found",
+        );
     }
 
     // Create a signed JWT for mobile
     console.log("[mobile-callback] Creating token for user:", user.userId);
-    console.log("[mobile-callback] AUTH_SECRET exists:", !!process.env.AUTH_SECRET);
+    console.log(
+        "[mobile-callback] AUTH_SECRET exists:",
+        !!process.env.AUTH_SECRET,
+    );
     const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
     const token = await new SignJWT({
         userId: user.userId,
         contextId: user.contextId,
-        contextKey: user.contextKey,
         email: session.user.email,
         name: user.name || session.user.name,
         image: session.user.image,
@@ -45,7 +51,6 @@ export async function GET(request) {
         .sign(secret);
 
     console.log("[mobile-callback] Token created, length:", token.length);
-    console.log("[mobile-callback] Token preview:", token.substring(0, 50) + "...");
 
     // Redirect to app with token
     return NextResponse.redirect(`enntityvoice://auth?token=${token}`);

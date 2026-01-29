@@ -69,7 +69,8 @@ export default function EntityContactsModal({
     const [toolsEditorEntityTools, setToolsEditorEntityTools] = useState([]);
     const [voiceEditorEntityId, setVoiceEditorEntityId] = useState(null);
     const [voiceEditorEntityName, setVoiceEditorEntityName] = useState(null);
-    const [voiceEditorCurrentVoice, setVoiceEditorCurrentVoice] = useState(null);
+    const [voiceEditorCurrentVoice, setVoiceEditorCurrentVoice] =
+        useState(null);
     const [optionsEntity, setOptionsEntity] = useState(null);
     const pendingOptionsEntityRef = useRef(null);
     const firstEntityRef = useRef(null);
@@ -601,7 +602,9 @@ export default function EntityContactsModal({
                     );
                     const result = await response.json();
                     if (!result.success) {
-                        throw new Error(result.error || "Failed to save voice settings");
+                        throw new Error(
+                            result.error || "Failed to save voice settings",
+                        );
                     }
 
                     // Fetch fresh entity data after save

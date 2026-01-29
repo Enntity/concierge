@@ -42,7 +42,7 @@ export async function GET() {
             );
             return NextResponse.json(
                 { error: "Failed to fetch voices from ElevenLabs" },
-                { status: response.status },
+                { status: 502 },
             );
         }
 

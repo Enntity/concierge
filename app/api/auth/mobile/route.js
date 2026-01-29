@@ -16,26 +16,30 @@ export async function GET(request) {
         if (!authHeader?.startsWith("Bearer ")) {
             return NextResponse.json(
                 { error: "Missing or invalid authorization header" },
-                { status: 401 }
+                { status: 401 },
             );
         }
 
         const token = authHeader.substring(7);
-        console.log("[mobile/auth] Token length:", token.length);
-        console.log("[mobile/auth] Token preview:", token.substring(0, 50) + "...");
-        console.log("[mobile/auth] AUTH_SECRET exists:", !!process.env.AUTH_SECRET);
+        console.log("[mobile/auth] Token present:", !!token);
         const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
 
         let payload;
         try {
             const result = await jwtVerify(token, secret);
             payload = result.payload;
-            console.log("[mobile/auth] Token verified, userId:", payload.userId);
+            console.log(
+                "[mobile/auth] Token verified, userId:",
+                payload.userId,
+            );
         } catch (err) {
-            console.error("[mobile/auth] Token verification failed:", err.message);
+            console.error(
+                "[mobile/auth] Token verification failed:",
+                err.message,
+            );
             return NextResponse.json(
                 { error: "Invalid or expired token" },
-                { status: 401 }
+                { status: 401 },
             );
         }
 
@@ -46,14 +50,13 @@ export async function GET(request) {
         if (!user) {
             return NextResponse.json(
                 { error: "User not found" },
-                { status: 404 }
+                { status: 404 },
             );
         }
 
         return NextResponse.json({
             userId: user.userId,
             contextId: user.contextId,
-            contextKey: user.contextKey,
             email: payload.email,
             name: user.name,
             image: payload.image,
@@ -64,7 +67,7 @@ export async function GET(request) {
         console.error("Mobile auth error:", error);
         return NextResponse.json(
             { error: "Internal server error" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

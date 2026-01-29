@@ -274,7 +274,11 @@ export class WavStreamPlayer {
             requestId,
         });
         let trackSampleOffset;
+        const startTime = Date.now();
         while (!trackSampleOffset) {
+            if (Date.now() - startTime > 5000) {
+                return null; // Timeout - return null instead of hanging forever
+            }
             trackSampleOffset = this.trackSampleOffsets[requestId];
             await new Promise((r) => setTimeout(() => r(null), 1));
         }

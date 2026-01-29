@@ -47,6 +47,8 @@ export function useVoiceSession() {
     const speechTimeoutRef = useRef(null); // fallback timeout when VAD fails to detect speech end
     const speechEndDelayRef = useRef(null); // the 150ms delay before processing speech end
     const lastAudioFrameTimeRef = useRef(0); // track when we last sent audio
+    const micAudioContextRef = useRef(null);
+    const isMutedRef = useRef(false);
 
     const {
         isActive,
@@ -69,6 +71,10 @@ export function useVoiceSession() {
         _setSessionId,
         _registerCleanup,
     } = voice;
+
+    useEffect(() => {
+        isMutedRef.current = isMuted;
+    }, [isMuted]);
 
     /**
      * Convert Float32Array to base64 PCM16 string
@@ -361,7 +367,7 @@ export function useVoiceSession() {
                 _setInputLevel(level);
 
                 // Stream audio to server (unless muted)
-                if (!isMuted) {
+                if (!isMutedRef.current) {
                     const base64Audio = float32ToBase64PCM16(audioFrame);
                     socketRef.current.emit("audio:input", {
                         data: base64Audio,
@@ -413,6 +419,7 @@ export function useVoiceSession() {
 
         // Set audio context for visualizers using our stream
         const audioContext = new AudioContext();
+        micAudioContextRef.current = audioContext;
         const source = audioContext.createMediaStreamSource(stream);
         _setAudioContext(audioContext);
         _setSourceNode(source);
@@ -426,7 +433,6 @@ export function useVoiceSession() {
         _setState,
         _setInputLevel,
         _setLiveAssistantTranscript,
-        isMuted,
         float32ToBase64PCM16,
     ]);
 
@@ -456,21 +462,28 @@ export function useVoiceSession() {
             socket.on("connect", () => {
                 console.log("[useVoiceSession] Connected to voice server");
                 const currentEntity = entityRef.current;
-                console.log("[useVoiceSession] Entity voice config:", currentEntity?.voice);
+                console.log(
+                    "[useVoiceSession] Entity voice config:",
+                    currentEntity?.voice,
+                );
 
                 // Build voice settings from entity's voice configuration
-                const voiceSettings = currentEntity?.voice?.settings ? {
-                    stability: currentEntity.voice.settings.stability,
-                    similarity: currentEntity.voice.settings.similarity,
-                    style: currentEntity.voice.settings.style,
-                    speakerBoost: currentEntity.voice.settings.speakerBoost,
-                } : undefined;
+                const voiceSettings = currentEntity?.voice?.settings
+                    ? {
+                          stability: currentEntity.voice.settings.stability,
+                          similarity: currentEntity.voice.settings.similarity,
+                          style: currentEntity.voice.settings.style,
+                          speakerBoost:
+                              currentEntity.voice.settings.speakerBoost,
+                      }
+                    : undefined;
 
                 socket.emit("session:start", {
                     entityId,
                     chatId,
                     // Use entity's voice configuration if available, otherwise default
-                    voiceId: currentEntity?.voice?.voiceId || "tnSpp4vdxKPjI9w0GnoV",
+                    voiceId:
+                        currentEntity?.voice?.voiceId || "tnSpp4vdxKPjI9w0GnoV",
                     voiceSettings,
                     userId: sessionContext?.userId,
                     contextId: sessionContext?.contextId || entityId,
@@ -523,7 +536,9 @@ export function useVoiceSession() {
             });
 
             // State events
-            socket.on("state:change", (state) => {
+            socket.on("state:change", (data) => {
+                if (!data || typeof data.state !== "string") return;
+                const state = data.state;
                 console.log("[useVoiceSession] State change:", state);
                 const stateMap = {
                     idle: "idle",
@@ -563,6 +578,7 @@ export function useVoiceSession() {
 
             // Transcript events
             socket.on("transcript", (data) => {
+                if (!data || typeof data.content !== "string") return;
                 console.log("[useVoiceSession] Transcript:", data);
                 if (data.type === "user") {
                     _setLiveUserTranscript(data.content || "");
@@ -581,6 +597,7 @@ export function useVoiceSession() {
 
             // Audio events
             socket.on("audio:output", (data) => {
+                if (!data || typeof data.data !== "string") return;
                 if (data.data && playerRef.current) {
                     // Block audio if:
                     // 1. User is currently speaking, OR
@@ -690,6 +707,7 @@ export function useVoiceSession() {
 
             // Media events (for EntityOverlay integration)
             socket.on("media", (data) => {
+                if (!data || !Array.isArray(data.items)) return;
                 console.log("[useVoiceSession] Media event:", data);
                 showOverlay({
                     items: data.items || data.files,
@@ -748,6 +766,23 @@ export function useVoiceSession() {
                 );
             }
             streamRef.current = null;
+        }
+
+        // Close AudioContexts
+        if (micAudioContextRef.current) {
+            try {
+                micAudioContextRef.current.close();
+            } catch (e) {
+                // Ignore close errors
+            }
+            micAudioContextRef.current = null;
+        }
+        if (playerRef.current?.context) {
+            try {
+                playerRef.current.context.close();
+            } catch (e) {
+                // Ignore close errors
+            }
         }
 
         // Stop player

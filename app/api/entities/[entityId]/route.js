@@ -61,7 +61,7 @@ export async function GET(req, { params }) {
     } catch (error) {
         console.error("Error fetching entity:", error);
         return NextResponse.json(
-            { error: error.message || "Failed to fetch entity" },
+            { error: "Failed to fetch entity" },
             { status: 500 },
         );
     }
@@ -181,20 +181,45 @@ export async function PATCH(req, { params }) {
         }
 
         // Handle voice fields
+        const ALLOWED_VOICE_PROVIDERS = ["elevenlabs"];
+
         if (voiceProvider !== undefined) {
+            if (
+                typeof voiceProvider !== "string" ||
+                !ALLOWED_VOICE_PROVIDERS.includes(voiceProvider)
+            ) {
+                return NextResponse.json(
+                    { error: "Invalid voice provider" },
+                    { status: 400 },
+                );
+            }
             variables.voiceProvider = voiceProvider;
         }
         if (voiceId !== undefined) {
+            if (typeof voiceId !== "string" || voiceId.length > 200) {
+                return NextResponse.json(
+                    { error: "Invalid voice ID" },
+                    { status: 400 },
+                );
+            }
             variables.voiceId = voiceId;
         }
         if (voiceName !== undefined) {
+            if (typeof voiceName !== "string" || voiceName.length > 200) {
+                return NextResponse.json(
+                    { error: "Invalid voice name" },
+                    { status: 400 },
+                );
+            }
             variables.voiceName = voiceName;
         }
         if (voiceStability !== undefined) {
             const stability = parseFloat(voiceStability);
             if (isNaN(stability) || stability < 0 || stability > 1) {
                 return NextResponse.json(
-                    { error: "voiceStability must be a number between 0 and 1" },
+                    {
+                        error: "voiceStability must be a number between 0 and 1",
+                    },
                     { status: 400 },
                 );
             }
@@ -204,7 +229,9 @@ export async function PATCH(req, { params }) {
             const similarity = parseFloat(voiceSimilarity);
             if (isNaN(similarity) || similarity < 0 || similarity > 1) {
                 return NextResponse.json(
-                    { error: "voiceSimilarity must be a number between 0 and 1" },
+                    {
+                        error: "voiceSimilarity must be a number between 0 and 1",
+                    },
                     { status: 400 },
                 );
             }
@@ -221,7 +248,8 @@ export async function PATCH(req, { params }) {
             variables.voiceStyle = style;
         }
         if (voiceSpeakerBoost !== undefined) {
-            variables.voiceSpeakerBoost = voiceSpeakerBoost === true || voiceSpeakerBoost === "true";
+            variables.voiceSpeakerBoost =
+                voiceSpeakerBoost === true || voiceSpeakerBoost === "true";
         }
 
         // Check if there are any properties to update (besides entityId and contextId)
