@@ -52,7 +52,10 @@ export function AudioVisualizer({
 
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
-            const maxRadius = Math.min(centerX, centerY) - 10;
+            // Outer waveform at full amplitude reaches maxRadius * 1.2,
+            // plus ~20px for stroke width and shadow blur (15px).
+            // Divide available space by 1.2 so the peak fits inside the canvas.
+            const maxRadius = (Math.min(centerX, centerY) - 20) / 1.2;
 
             // Hue oscillates through cyan → blue → purple range
             const sin = Math.sin(colorShiftRef.current);

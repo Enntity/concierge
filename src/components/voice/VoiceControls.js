@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { Mic, MicOff, Square, Minus } from "lucide-react";
+import { Mic, MicOff, Square, Minus, Captions, CaptionsOff } from "lucide-react";
 import { useVoice } from "../../contexts/VoiceContext";
 
 /**
@@ -10,7 +10,7 @@ import { useVoice } from "../../contexts/VoiceContext";
  * Mic button uses a CSS box-shadow ring that scales with inputLevel
  * (replaces the canvas-based MicrophoneVisualizer).
  */
-export function VoiceControls({ onMinimize }) {
+export function VoiceControls({ onMinimize, showTranscript, onToggleTranscript }) {
     const { isMuted, toggleMute, endSession, inputLevel } = useVoice();
     const smoothedRef = useRef(0);
     const frameRef = useRef(null);
@@ -72,6 +72,25 @@ export function VoiceControls({ onMinimize }) {
             >
                 <Square className="w-4 h-4 text-white" />
             </button>
+
+            {/* Transcript toggle button (optional) */}
+            {onToggleTranscript && (
+                <button
+                    onClick={onToggleTranscript}
+                    className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
+                        showTranscript
+                            ? "bg-white/15 ring-1 ring-white/20"
+                            : "bg-white/10 hover:bg-white/15"
+                    }`}
+                    title={showTranscript ? "Hide transcript" : "Show transcript"}
+                >
+                    {showTranscript ? (
+                        <Captions className="w-4 h-4 text-gray-300" />
+                    ) : (
+                        <CaptionsOff className="w-4 h-4 text-gray-300" />
+                    )}
+                </button>
+            )}
 
             {/* Minimize button (optional) */}
             {onMinimize && (
