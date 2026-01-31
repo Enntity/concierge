@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../utils/auth";
 import { getEntitiesCollection, isValidEntityId } from "../_lib";
 import { getClient, MUTATIONS } from "../../../../src/graphql";
+import { triggerPulseReschedule } from "../_pulse";
 
 /**
  * GET /api/entities/[entityId]
@@ -117,6 +118,16 @@ export async function PATCH(req, { params }) {
             voiceSimilarity,
             voiceStyle,
             voiceSpeakerBoost,
+            // Pulse fields
+            pulseEnabled,
+            pulseWakeIntervalMinutes,
+            pulseMaxChainDepth,
+            pulseModel,
+            pulseDailyBudgetWakes,
+            pulseDailyBudgetTokens,
+            pulseActiveHoursStart,
+            pulseActiveHoursEnd,
+            pulseActiveHoursTimezone,
         } = body;
 
         // Validate reasoningEffort if provided
@@ -252,6 +263,89 @@ export async function PATCH(req, { params }) {
                 voiceSpeakerBoost === true || voiceSpeakerBoost === "true";
         }
 
+        // Handle pulse fields
+        if (pulseEnabled !== undefined) {
+            variables.pulseEnabled =
+                pulseEnabled === true || pulseEnabled === "true";
+        }
+        if (pulseWakeIntervalMinutes !== undefined) {
+            const interval = parseInt(pulseWakeIntervalMinutes, 10);
+            if (isNaN(interval) || interval < 5 || interval > 1440) {
+                return NextResponse.json(
+                    {
+                        error: "pulseWakeIntervalMinutes must be between 5 and 1440",
+                    },
+                    { status: 400 },
+                );
+            }
+            variables.pulseWakeIntervalMinutes = interval;
+        }
+        if (pulseMaxChainDepth !== undefined) {
+            const depth = parseInt(pulseMaxChainDepth, 10);
+            if (isNaN(depth) || depth < 1 || depth > 50) {
+                return NextResponse.json(
+                    { error: "pulseMaxChainDepth must be between 1 and 50" },
+                    { status: 400 },
+                );
+            }
+            variables.pulseMaxChainDepth = depth;
+        }
+        if (pulseModel !== undefined) {
+            variables.pulseModel = pulseModel;
+        }
+        if (pulseDailyBudgetWakes !== undefined) {
+            const wakes = parseInt(pulseDailyBudgetWakes, 10);
+            if (isNaN(wakes) || wakes < 1 || wakes > 500) {
+                return NextResponse.json(
+                    {
+                        error: "pulseDailyBudgetWakes must be between 1 and 500",
+                    },
+                    { status: 400 },
+                );
+            }
+            variables.pulseDailyBudgetWakes = wakes;
+        }
+        if (pulseDailyBudgetTokens !== undefined) {
+            const tokens = parseInt(pulseDailyBudgetTokens, 10);
+            if (isNaN(tokens) || tokens < 10000) {
+                return NextResponse.json(
+                    {
+                        error: "pulseDailyBudgetTokens must be at least 10000",
+                    },
+                    { status: 400 },
+                );
+            }
+            variables.pulseDailyBudgetTokens = tokens;
+        }
+        if (pulseActiveHoursStart !== undefined) {
+            if (
+                pulseActiveHoursStart &&
+                !/^\d{2}:\d{2}$/.test(pulseActiveHoursStart)
+            ) {
+                return NextResponse.json(
+                    { error: "pulseActiveHoursStart must be in HH:MM format" },
+                    { status: 400 },
+                );
+            }
+            variables.pulseActiveHoursStart = pulseActiveHoursStart || null;
+        }
+        if (pulseActiveHoursEnd !== undefined) {
+            if (
+                pulseActiveHoursEnd &&
+                !/^\d{2}:\d{2}$/.test(pulseActiveHoursEnd)
+            ) {
+                return NextResponse.json(
+                    { error: "pulseActiveHoursEnd must be in HH:MM format" },
+                    { status: 400 },
+                );
+            }
+            variables.pulseActiveHoursEnd = pulseActiveHoursEnd || null;
+        }
+        if (pulseActiveHoursTimezone !== undefined) {
+            variables.pulseActiveHoursTimezone =
+                pulseActiveHoursTimezone || "UTC";
+        }
+
         // Check if there are any properties to update (besides entityId and contextId)
         const propertyKeys = Object.keys(variables).filter(
             (k) => k !== "entityId" && k !== "contextId",
@@ -368,6 +462,20 @@ export async function PATCH(req, { params }) {
                 }
 
                 const { _id, ...entityData } = updatedEntity;
+
+                // Trigger pulse reschedule if any pulse fields were updated
+                const pulseFieldsUpdated = parsed.updatedProperties?.some((p) =>
+                    p.startsWith("pulse"),
+                );
+                if (pulseFieldsUpdated) {
+                    triggerPulseReschedule().catch((err) =>
+                        console.error(
+                            "Failed to trigger pulse reschedule:",
+                            err.message,
+                        ),
+                    );
+                }
+
                 return NextResponse.json({
                     success: true,
                     entity: entityData,

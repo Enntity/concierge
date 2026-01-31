@@ -181,9 +181,7 @@ export function useVoiceSession() {
                 }
             },
             onCancelled: () => {
-                console.log(
-                    "[InterruptManager] Cancelled - was echo or noise",
-                );
+                console.log("[InterruptManager] Cancelled - was echo or noise");
             },
         });
         interruptManagerRef.current = interruptManager;

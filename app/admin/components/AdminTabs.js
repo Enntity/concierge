@@ -9,6 +9,7 @@ import {
     UserPlus,
     Package,
     MessageSquare,
+    Heart,
     Loader2,
 } from "lucide-react";
 
@@ -26,6 +27,12 @@ const TABS = [
         label: "Entities",
         icon: Package,
         path: "/admin/entities",
+    },
+    {
+        value: "pulse",
+        label: "Pulse",
+        icon: Heart,
+        path: "/admin/pulse",
     },
     {
         value: "feedback",

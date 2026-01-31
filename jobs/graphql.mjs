@@ -24,6 +24,11 @@ const getClient = async (serverUrl) => {
 
     const httpLink = new HttpLink({
         uri: graphqlEndpoint,
+        fetch: (uri, options) =>
+            fetch(uri, {
+                ...options,
+                signal: AbortSignal.timeout(10 * 60 * 1000), // 10 min — agent loop can run 50+ tool calls
+            }),
     });
 
     const wsLink = new GraphQLWsLink(
@@ -126,6 +131,9 @@ const SYS_ENTITY_AGENT = gql`
         $researchMode: Boolean
         $model: String
         $userInfo: String
+        $useMemory: Boolean
+        $invocationType: String
+        $pulseContext: String
     ) {
         sys_entity_agent(
             chatHistory: $chatHistory
@@ -140,6 +148,9 @@ const SYS_ENTITY_AGENT = gql`
             researchMode: $researchMode
             model: $model
             userInfo: $userInfo
+            useMemory: $useMemory
+            invocationType: $invocationType
+            pulseContext: $pulseContext
         ) {
             result
             contextId

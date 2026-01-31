@@ -26,7 +26,10 @@ export function VoiceModeContent() {
     useVoiceSession();
 
     const [showTranscript, setShowTranscript] = useState(true);
-    const toggleTranscript = useCallback(() => setShowTranscript(prev => !prev), []);
+    const toggleTranscript = useCallback(
+        () => setShowTranscript((prev) => !prev),
+        [],
+    );
 
     const showOverlayContent = overlayVisible;
 
@@ -88,24 +91,27 @@ export function VoiceModeContent() {
                     {/* Bottom panel content */}
                     <div className="relative w-full flex flex-col items-center">
                         {/* Transcript — fixed height on mobile prevents visualizer from jumping */}
-                        <div className={`w-full max-w-2xl overflow-hidden transition-all duration-300 ease-out ${
-                            showTranscript
-                                ? 'h-44 sm:h-auto opacity-100 pointer-events-auto'
-                                : 'h-0 opacity-0 pointer-events-none'
-                        }`}>
+                        <div
+                            className={`w-full max-w-2xl overflow-hidden transition-all duration-300 ease-out ${
+                                showTranscript
+                                    ? "h-44 sm:h-auto opacity-100 pointer-events-auto"
+                                    : "h-0 opacity-0 pointer-events-none"
+                            }`}
+                        >
                             <FloatingTranscript />
                         </div>
 
                         {/* Tool status */}
                         <div className="h-8 mt-2 flex items-center justify-center pointer-events-auto">
-                            {currentTool && currentTool.status === "running" && (
-                                <div className="flex items-center gap-2 px-4 py-1 bg-gray-800/60 rounded-full transition-opacity duration-300">
-                                    <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-                                    <span className="text-xs text-gray-400 truncate max-w-xs">
-                                        {currentTool.message}
-                                    </span>
-                                </div>
-                            )}
+                            {currentTool &&
+                                currentTool.status === "running" && (
+                                    <div className="flex items-center gap-2 px-4 py-1 bg-gray-800/60 rounded-full transition-opacity duration-300">
+                                        <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                                        <span className="text-xs text-gray-400 truncate max-w-xs">
+                                            {currentTool.message}
+                                        </span>
+                                    </div>
+                                )}
                         </div>
 
                         {/* Controls */}

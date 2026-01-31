@@ -11,6 +11,7 @@ import {
     Unlock,
     Wrench,
     Mic,
+    Heart,
 } from "lucide-react";
 import {
     Dialog,
@@ -51,6 +52,13 @@ export default function EntityOptionsDialog({
     const [isSaving, setIsSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
 
+    // Pulse state
+    const [pulseEnabled, setPulseEnabled] = useState(false);
+    const [pulseInterval, setPulseInterval] = useState(15);
+    const [pulseActiveStart, setPulseActiveStart] = useState("");
+    const [pulseActiveEnd, setPulseActiveEnd] = useState("");
+    const [pulseTimezone, setPulseTimezone] = useState("");
+
     // Reset state when entity changes
     useEffect(() => {
         if (entity) {
@@ -64,6 +72,12 @@ export default function EntityOptionsDialog({
             );
             setForceModel(hasOverride);
             setReasoningEffort(entity.reasoningEffort || "medium");
+            // Pulse
+            setPulseEnabled(entity.pulse?.enabled || false);
+            setPulseInterval(entity.pulse?.wakeIntervalMinutes || 15);
+            setPulseActiveStart(entity.pulse?.activeHours?.start || "");
+            setPulseActiveEnd(entity.pulse?.activeHours?.end || "");
+            setPulseTimezone(entity.pulse?.activeHours?.tz || "");
             setHasChanges(false);
         }
     }, [entity]);
@@ -79,9 +93,38 @@ export default function EntityOptionsDialog({
         const forceChanged = forceModel !== !!entity.modelOverride;
         const effortChanged =
             reasoningEffort !== (entity.reasoningEffort || "medium");
+        const pulseEnabledChanged =
+            pulseEnabled !== (entity.pulse?.enabled || false);
+        const pulseIntervalChanged =
+            pulseInterval !== (entity.pulse?.wakeIntervalMinutes || 15);
+        const pulseStartChanged =
+            pulseActiveStart !== (entity.pulse?.activeHours?.start || "");
+        const pulseEndChanged =
+            pulseActiveEnd !== (entity.pulse?.activeHours?.end || "");
+        const pulseTzChanged =
+            pulseTimezone !== (entity.pulse?.activeHours?.tz || "");
 
-        setHasChanges(modelChanged || forceChanged || effortChanged);
-    }, [preferredModel, forceModel, reasoningEffort, entity]);
+        setHasChanges(
+            modelChanged ||
+                forceChanged ||
+                effortChanged ||
+                pulseEnabledChanged ||
+                pulseIntervalChanged ||
+                pulseStartChanged ||
+                pulseEndChanged ||
+                pulseTzChanged,
+        );
+    }, [
+        preferredModel,
+        forceModel,
+        reasoningEffort,
+        pulseEnabled,
+        pulseInterval,
+        pulseActiveStart,
+        pulseActiveEnd,
+        pulseTimezone,
+        entity,
+    ]);
 
     const handleSave = async () => {
         if (!entity?.id || !hasChanges) return;
@@ -97,6 +140,12 @@ export default function EntityOptionsDialog({
                     preferredModel: forceModel ? null : preferredModel,
                     modelOverride: forceModel ? preferredModel : null,
                     reasoningEffort,
+                    // Pulse fields
+                    pulseEnabled,
+                    pulseWakeIntervalMinutes: pulseInterval,
+                    pulseActiveHoursStart: pulseActiveStart || null,
+                    pulseActiveHoursEnd: pulseActiveEnd || null,
+                    pulseActiveHoursTimezone: pulseTimezone || null,
                 }),
             });
 
@@ -145,7 +194,7 @@ export default function EntityOptionsDialog({
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent
-                className="sm:max-w-md"
+                className="sm:max-w-md max-h-[85vh] flex flex-col"
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <DialogHeader>
@@ -166,7 +215,7 @@ export default function EntityOptionsDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-6 mt-4">
+                <div className="space-y-6 mt-4 overflow-y-auto flex-1 min-h-0 pr-1">
                     {/* Preferred Model */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -321,10 +370,153 @@ export default function EntityOptionsDialog({
                             <span className="text-gray-400">→</span>
                         </button>
                     </div>
+
+                    {/* Life Loop (Pulse) */}
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between mb-3">
+                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <Heart className="w-4 h-4 text-rose-500" />
+                                {t("Life Loop")}
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => setPulseEnabled(!pulseEnabled)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                    pulseEnabled
+                                        ? "bg-rose-500"
+                                        : "bg-gray-300 dark:bg-gray-600"
+                                }`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                        pulseEnabled
+                                            ? "translate-x-6"
+                                            : "translate-x-1"
+                                    }`}
+                                />
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                            {t(
+                                "When enabled, this entity wakes periodically to think, create, and act autonomously.",
+                            )}
+                        </p>
+
+                        {pulseEnabled && (
+                            <div className="space-y-3 pl-1">
+                                {/* Wake Interval */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                        {t("Wake every")}
+                                    </label>
+                                    <select
+                                        value={pulseInterval}
+                                        onChange={(e) =>
+                                            setPulseInterval(
+                                                parseInt(e.target.value, 10),
+                                            )
+                                        }
+                                        className="w-full px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                                    >
+                                        <option value={5}>5 minutes</option>
+                                        <option value={10}>10 minutes</option>
+                                        <option value={15}>15 minutes</option>
+                                        <option value={30}>30 minutes</option>
+                                        <option value={60}>1 hour</option>
+                                        <option value={120}>2 hours</option>
+                                        <option value={240}>4 hours</option>
+                                        <option value={480}>8 hours</option>
+                                        <option value={720}>12 hours</option>
+                                        <option value={1440}>24 hours</option>
+                                    </select>
+                                </div>
+
+                                {/* Active Hours */}
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                        {t("Active hours (optional)")}
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="time"
+                                            value={pulseActiveStart}
+                                            onChange={(e) =>
+                                                setPulseActiveStart(
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="08:00"
+                                            className="flex-1 px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                                        />
+                                        <span className="text-xs text-gray-500">
+                                            {t("to")}
+                                        </span>
+                                        <input
+                                            type="time"
+                                            value={pulseActiveEnd}
+                                            onChange={(e) =>
+                                                setPulseActiveEnd(
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="22:00"
+                                            className="flex-1 px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                                        />
+                                    </div>
+                                    {(pulseActiveStart || pulseActiveEnd) && (
+                                        <div className="mt-1">
+                                            <select
+                                                value={pulseTimezone}
+                                                onChange={(e) =>
+                                                    setPulseTimezone(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                                            >
+                                                <option value="">
+                                                    {t("UTC (default)")}
+                                                </option>
+                                                <option value="America/New_York">
+                                                    Eastern
+                                                </option>
+                                                <option value="America/Chicago">
+                                                    Central
+                                                </option>
+                                                <option value="America/Denver">
+                                                    Mountain
+                                                </option>
+                                                <option value="America/Los_Angeles">
+                                                    Pacific
+                                                </option>
+                                                <option value="Europe/London">
+                                                    London
+                                                </option>
+                                                <option value="Europe/Paris">
+                                                    Paris
+                                                </option>
+                                                <option value="Asia/Tokyo">
+                                                    Tokyo
+                                                </option>
+                                                <option value="Australia/Sydney">
+                                                    Sydney
+                                                </option>
+                                            </select>
+                                        </div>
+                                    )}
+                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                        {t(
+                                            "Leave empty for always-on. Entity only wakes during these hours.",
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Save Button */}
-                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 shrink-0">
                     <button
                         onClick={onClose}
                         className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"

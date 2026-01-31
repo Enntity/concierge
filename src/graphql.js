@@ -995,6 +995,15 @@ const SYS_UPDATE_ENTITY = gql`
         $voiceSimilarity: Float
         $voiceStyle: Float
         $voiceSpeakerBoost: Boolean
+        $pulseEnabled: Boolean
+        $pulseWakeIntervalMinutes: Float
+        $pulseMaxChainDepth: Float
+        $pulseModel: String
+        $pulseDailyBudgetWakes: Float
+        $pulseDailyBudgetTokens: Float
+        $pulseActiveHoursStart: String
+        $pulseActiveHoursEnd: String
+        $pulseActiveHoursTimezone: String
     ) {
         sys_update_entity(
             entityId: $entityId
@@ -1017,6 +1026,15 @@ const SYS_UPDATE_ENTITY = gql`
             voiceSimilarity: $voiceSimilarity
             voiceStyle: $voiceStyle
             voiceSpeakerBoost: $voiceSpeakerBoost
+            pulseEnabled: $pulseEnabled
+            pulseWakeIntervalMinutes: $pulseWakeIntervalMinutes
+            pulseMaxChainDepth: $pulseMaxChainDepth
+            pulseModel: $pulseModel
+            pulseDailyBudgetWakes: $pulseDailyBudgetWakes
+            pulseDailyBudgetTokens: $pulseDailyBudgetTokens
+            pulseActiveHoursStart: $pulseActiveHoursStart
+            pulseActiveHoursEnd: $pulseActiveHoursEnd
+            pulseActiveHoursTimezone: $pulseActiveHoursTimezone
         ) {
             result
         }

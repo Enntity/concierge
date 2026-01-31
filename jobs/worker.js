@@ -3,6 +3,7 @@ import "dotenv/config";
 import Redis from "ioredis";
 import cortexRequestWorker from "./cortex-request-worker.js";
 import { buildDigestsForAllUsers } from "./digest-build.js";
+import { initializePulseSystem, schedulePulseJobs } from "./pulse-worker.js";
 import { Logger } from "./logger.js";
 
 const queueName = "digest-build";
@@ -25,6 +26,10 @@ const connection = new Redis(
 const digestBuild = new Queue(queueName, {
     connection,
 });
+
+// Initialize pulse system
+const { queue: pulseQueue, worker: pulseWorker } =
+    initializePulseSystem(connection);
 
 const nHourlyRepeat = {
     pattern: `0 0/${DIGEST_REBUILD_INTERVAL_HOURS} * * *`,
@@ -56,25 +61,17 @@ const PERIODIC_BUILD_JOB = "periodic-build";
     );
 })();
 
+// NOTE: Do NOT call connectToDatabase()/closeDatabaseConnection() per-job.
+// The shared mongoose connection is established once by startWorkers() via
+// ensureDbConnection().  Per-job disconnect kills concurrent workers (pulse, etc.).
 const worker = new Worker(
     queueName,
     async (job) => {
-        const connectToDatabase = (await import("../src/db.mjs"))
-            .connectToDatabase;
-        const closeDatabaseConnection = (await import("../src/db.mjs"))
-            .closeDatabaseConnection;
+        const logger = new Logger(job, digestBuild);
 
-        try {
-            await connectToDatabase();
-
-            const logger = new Logger(job, digestBuild);
-
-            if (job.name === PERIODIC_BUILD_JOB) {
-                logger.log("building digests for all users");
-                await buildDigestsForAllUsers(logger, job);
-            }
-        } finally {
-            await closeDatabaseConnection();
+        if (job.name === PERIODIC_BUILD_JOB) {
+            logger.log("building digests for all users");
+            await buildDigestsForAllUsers(logger, job);
         }
     },
     {
@@ -174,6 +171,9 @@ const cleanupAndExit = async () => {
         await worker.close();
         console.log("Digest worker stopped");
 
+        await pulseWorker.close();
+        console.log("Pulse worker stopped");
+
         // Close database connection
         if (dbInitialized) {
             const closeDatabaseConnection = (await import("../src/db.mjs"))
@@ -205,6 +205,10 @@ async function startWorkers() {
         console.log("Starting workers...");
         await cortexRequestWorker.run();
         worker.run();
+        pulseWorker.run();
+
+        // Schedule pulse jobs after DB is connected
+        await schedulePulseJobs(pulseQueue);
 
         console.log("All workers are running");
     } catch (error) {

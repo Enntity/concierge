@@ -1,7 +1,12 @@
 import { InterruptManager } from "./InterruptManager";
 
-const { State, CONFIRM_FRAMES, CONFIRM_THRESHOLD, CANCEL_FRAMES, CANCEL_THRESHOLD } =
-    InterruptManager;
+const {
+    State,
+    CONFIRM_FRAMES,
+    CONFIRM_THRESHOLD,
+    CANCEL_FRAMES,
+    CANCEL_THRESHOLD,
+} = InterruptManager;
 
 function createManager(overrides = {}) {
     const callbacks = {
@@ -32,7 +37,8 @@ describe("InterruptManager", () => {
         });
 
         it("does not process frames in IDLE state", () => {
-            const { manager, onInterruptConfirmed, onCancelled } = createManager();
+            const { manager, onInterruptConfirmed, onCancelled } =
+                createManager();
             manager.onSpeechStart(false);
             sendFrames(manager, 20, 0.9);
             expect(onInterruptConfirmed).not.toHaveBeenCalled();
@@ -62,7 +68,8 @@ describe("InterruptManager", () => {
         });
 
         it("cancels after enough low-confidence frames (echo)", () => {
-            const { manager, onCancelled, onDuck, onInterruptConfirmed } = createManager();
+            const { manager, onCancelled, onDuck, onInterruptConfirmed } =
+                createManager();
             manager.onSpeechStart(true);
             onDuck.mockClear();
 
@@ -90,7 +97,8 @@ describe("InterruptManager", () => {
         });
 
         it("does not count mid-range frames toward either threshold", () => {
-            const { manager, onInterruptConfirmed, onCancelled } = createManager();
+            const { manager, onInterruptConfirmed, onCancelled } =
+                createManager();
             manager.onSpeechStart(true);
 
             // Frames between CANCEL_THRESHOLD and CONFIRM_THRESHOLD
@@ -185,7 +193,8 @@ describe("InterruptManager", () => {
 
     describe("full scenarios", () => {
         it("echo from speakers: PENDING → cancel → no disruption", () => {
-            const { manager, onInterruptConfirmed, onCancelled, onDuck } = createManager();
+            const { manager, onInterruptConfirmed, onCancelled, onDuck } =
+                createManager();
 
             // AI is playing, echo triggers VAD
             const emitNow = manager.onSpeechStart(true);
@@ -234,7 +243,8 @@ describe("InterruptManager", () => {
         });
 
         it("multiple cycles work correctly", () => {
-            const { manager, onInterruptConfirmed, onCancelled } = createManager();
+            const { manager, onInterruptConfirmed, onCancelled } =
+                createManager();
 
             // First: echo (cancel)
             manager.onSpeechStart(true);
