@@ -207,10 +207,22 @@ function convertMessageToMarkdown(
         cd_source(props) {
             const { children } = props;
             if (children) {
-                // Normalize children to string (children can be array or string)
-                const childrenString = Array.isArray(children)
-                    ? children.join("")
-                    : String(children);
+                // Normalize children to string.
+                // GFM autolink may wrap URLs in <a> elements, so we
+                // extract text recursively from React children.
+                const extractText = (node) => {
+                    if (typeof node === "string") return node;
+                    if (typeof node === "number") return String(node);
+                    if (Array.isArray(node))
+                        return node.map(extractText).join("");
+                    if (node?.props) {
+                        if (node.props.href) return node.props.href;
+                        if (node.props.children)
+                            return extractText(node.props.children);
+                    }
+                    return "";
+                };
+                const childrenString = extractText(children);
 
                 // Try to parse as integer first
                 const sourceIndex = parseInt(childrenString);

@@ -40,6 +40,7 @@ export const DOC_EXTENSIONS = [
     ".pptm",
     ".heic",
     ".heif",
+    ".zip",
 ];
 
 export const IMAGE_EXTENSIONS = [

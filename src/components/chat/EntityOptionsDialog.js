@@ -218,7 +218,7 @@ export default function EntityOptionsDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-3 mt-3 overflow-y-auto flex-1 min-h-0 pr-1">
+                <div className="space-y-3 mt-3 overflow-y-auto flex-1 min-h-0 px-1">
                     {/* Preferred Model */}
                     <div>
                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
