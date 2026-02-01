@@ -131,14 +131,14 @@ export async function PATCH(req, { params }) {
         } = body;
 
         // Validate reasoningEffort if provided
-        const validReasoningEfforts = ["low", "medium", "high"];
+        const validReasoningEfforts = ["none", "low", "medium", "high"];
         if (
             reasoningEffort &&
             !validReasoningEfforts.includes(reasoningEffort)
         ) {
             return NextResponse.json(
                 {
-                    error: "Invalid reasoning effort. Must be: low, medium, or high",
+                    error: "Invalid reasoning effort. Must be: none, low, medium, or high",
                 },
                 { status: 400 },
             );

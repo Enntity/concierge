@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Modal } from "@/components/ui/modal";
 import FilterInput from "../common/FilterInput";
@@ -20,7 +20,6 @@ const ToolsEditorContent = ({
     const [availableTools, setAvailableTools] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [saving, setSaving] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedTools, setSelectedTools] = useState(new Set());
 
@@ -119,15 +118,11 @@ const ToolsEditorContent = ({
     };
 
     const handleSave = async () => {
-        setSaving(true);
         try {
-            const toolsArray = Array.from(selectedTools);
-            await onSave(toolsArray);
+            await onSave(Array.from(selectedTools));
             onClose();
         } catch (err) {
             setError(err.message || "Failed to save tools");
-        } finally {
-            setSaving(false);
         }
     };
 
@@ -276,18 +271,13 @@ const ToolsEditorContent = ({
                         <button
                             onClick={onClose}
                             className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                            disabled={saving}
                         >
                             {t("Cancel")}
                         </button>
                         <button
                             onClick={handleSave}
-                            disabled={saving}
-                            className="px-4 py-2 text-sm rounded-lg bg-cyan-500 text-white hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                            className="px-4 py-2 text-sm rounded-lg bg-cyan-500 text-white hover:bg-cyan-600 transition-colors"
                         >
-                            {saving && (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            )}
                             {t("Save")}
                         </button>
                     </div>

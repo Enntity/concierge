@@ -71,8 +71,7 @@ const StreamingMessage = React.memo(function StreamingMessage({
     }, [ephemeralContent]);
 
     const calculateLoaderPosition = useCallback(() => {
-        // Constants for loader positioning
-        const LOADER_BASELINE_OFFSET = 6; // Offset needed to align loader with text baseline
+        const LOADER_ORB_SIZE = 12; // small loader is w-3 h-3 = 12px
 
         const containerNode = contentContainerRef.current;
         if (!containerNode) return;
@@ -119,10 +118,10 @@ const StreamingMessage = React.memo(function StreamingMessage({
 
             const textEndRect = range.getBoundingClientRect();
             const containerRect = containerNode.getBoundingClientRect();
-            const textContainer = lastTextNode.parentElement;
-            const computedStyle = window.getComputedStyle(textContainer);
+            const computedStyle = window.getComputedStyle(
+                lastTextNode.parentElement,
+            );
             const fontSize = parseFloat(computedStyle.fontSize);
-            const lineHeight = parseFloat(computedStyle.lineHeight);
 
             // Calculate position relative to the container
             const x =
@@ -130,11 +129,15 @@ const StreamingMessage = React.memo(function StreamingMessage({
                 containerRect.left +
                 Math.min(fontSize * 0.25, 4) +
                 5;
+            // Vertically center the loader orb with the text.
+            // lastNodeRect.height includes line-height padding and descenders,
+            // so we bias upward by ~15% of the line height to align with the
+            // visual center of the glyphs rather than the line box center.
             const y =
-                textEndRect.top -
+                lastNodeRect.top -
                 containerRect.top +
-                (lineHeight - fontSize) / 2 -
-                LOADER_BASELINE_OFFSET;
+                (lastNodeRect.height - LOADER_ORB_SIZE) / 2 -
+                lastNodeRect.height * 0.35;
 
             setLoaderPosition({ x, y });
         }

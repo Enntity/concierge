@@ -102,6 +102,8 @@ function convertMessageToMarkdown(
     const { payload, tool } = message;
     const citations = tool ? JSON.parse(tool).citations : null;
     let componentIndex = 0; // Counter for code blocks
+    let urlCitationIndex = 0; // Counter for URL-based citations
+    const citationsLength = citations?.length || 0;
 
     // Get translation function for use in components
     // Use i18next directly since we can't use hooks in the component mapping
@@ -241,6 +243,47 @@ function convertMessageToMarkdown(
                         );
                     }
                 }
+
+                // If it looks like a URL, build an ad-hoc citation
+                if (/^https?:\/\//i.test(childrenString)) {
+                    // Check if this URL already exists in the citations array
+                    if (Array.isArray(citations)) {
+                        const existing = citations.find(
+                            (c) => c.url === childrenString,
+                        );
+                        if (existing) {
+                            return (
+                                <TextWithCitations
+                                    index={citations.indexOf(existing) + 1}
+                                    citation={existing}
+                                    {...props}
+                                />
+                            );
+                        }
+                    }
+                    // Build ad-hoc citation from URL
+                    let hostname;
+                    try {
+                        hostname = new URL(childrenString).hostname.replace(
+                            /^www\./,
+                            "",
+                        );
+                    } catch {
+                        hostname = childrenString;
+                    }
+                    urlCitationIndex++;
+                    return (
+                        <TextWithCitations
+                            index={citationsLength + urlCitationIndex}
+                            citation={{
+                                url: childrenString,
+                                title: hostname,
+                            }}
+                            {...props}
+                        />
+                    );
+                }
+
                 return null;
             }
             return null;

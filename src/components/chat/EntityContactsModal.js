@@ -390,6 +390,8 @@ export default function EntityContactsModal({
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    // Blur before closing to avoid aria-hidden warning on focused element
+                                                    document.activeElement?.blur();
                                                     // Close contacts modal first to avoid focus trap conflicts
                                                     onClose();
                                                     // Then open options dialog
@@ -497,11 +499,8 @@ export default function EntityContactsModal({
                     if (updatedEntity) {
                         setOptionsEntity(updatedEntity);
                     }
-                    // Also refresh entities list in background
-                    if (refetchEntities) {
-                        refetchEntities();
-                    }
                 }}
+                refetchEntities={refetchEntities}
             />
 
             {/* Memory Editor */}
@@ -540,7 +539,6 @@ export default function EntityContactsModal({
                 entityName={toolsEditorEntityName}
                 entityTools={toolsEditorEntityTools}
                 onSave={async (tools) => {
-                    // Save tools via API
                     const response = await fetch(
                         `/api/entities/${toolsEditorEntityId}`,
                         {
@@ -553,23 +551,12 @@ export default function EntityContactsModal({
                     if (!result.success) {
                         throw new Error(result.error || "Failed to save tools");
                     }
-
-                    // Fetch fresh entity data after save
-                    const freshResponse = await fetch(
-                        `/api/entities?entityId=${toolsEditorEntityId}`,
+                    const currentEntity = entities.find(
+                        (e) => e.id === toolsEditorEntityId,
                     );
-                    const freshEntities = await freshResponse.json();
-                    const freshEntity = freshEntities?.[0];
-
-                    // Store fresh entity in ref for onClose to use
-                    if (freshEntity) {
-                        pendingOptionsEntityRef.current = freshEntity;
-                    }
-
-                    // Refresh entities list in background
-                    if (refetchEntities) {
-                        refetchEntities();
-                    }
+                    pendingOptionsEntityRef.current = result.entity ||
+                        (currentEntity ? { ...currentEntity, tools } : null);
+                    if (refetchEntities) refetchEntities();
                 }}
             />
 
@@ -591,7 +578,6 @@ export default function EntityContactsModal({
                 entityName={voiceEditorEntityName}
                 currentVoice={voiceEditorCurrentVoice}
                 onSave={async (voiceConfig) => {
-                    // Save voice settings via API
                     const response = await fetch(
                         `/api/entities/${voiceEditorEntityId}`,
                         {
@@ -606,23 +592,14 @@ export default function EntityContactsModal({
                             result.error || "Failed to save voice settings",
                         );
                     }
-
-                    // Fetch fresh entity data after save
-                    const freshResponse = await fetch(
-                        `/api/entities?entityId=${voiceEditorEntityId}`,
+                    const currentEntity = entities.find(
+                        (e) => e.id === voiceEditorEntityId,
                     );
-                    const freshEntities = await freshResponse.json();
-                    const freshEntity = freshEntities?.[0];
-
-                    // Store fresh entity in ref for onClose to use
-                    if (freshEntity) {
-                        pendingOptionsEntityRef.current = freshEntity;
-                    }
-
-                    // Refresh entities list in background
-                    if (refetchEntities) {
-                        refetchEntities();
-                    }
+                    pendingOptionsEntityRef.current = result.entity ||
+                        (currentEntity
+                            ? { ...currentEntity, voice: voiceConfig }
+                            : null);
+                    if (refetchEntities) refetchEntities();
                 }}
             />
         </>

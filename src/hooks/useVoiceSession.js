@@ -473,6 +473,7 @@ export function useVoiceSession() {
         _setInputLevel,
         _setLiveAssistantTranscript,
         float32ToBase64PCM16,
+        setAwaitingNewResponse,
     ]);
 
     /**
@@ -788,6 +789,7 @@ export function useVoiceSession() {
             _addToHistory,
             _setCurrentTool,
             showOverlay,
+            setAwaitingNewResponse,
         ],
     );
 
@@ -882,7 +884,7 @@ export function useVoiceSession() {
             wasConnectedRef.current = false;
         }
         console.log("[useVoiceSession] Cleanup complete");
-    }, []);
+    }, [setAwaitingNewResponse]);
 
     /**
      * Initialize session when voice becomes active, cleanup when inactive
