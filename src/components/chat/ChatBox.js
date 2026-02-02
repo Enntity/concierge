@@ -69,7 +69,8 @@ function ChatBox() {
         selectedEntityId && !entities.some((e) => e.id === selectedEntityId);
     const updateChatHook = useUpdateChat();
     const [showClearConfirm, setShowClearConfirm] = useState(false);
-    const [showFileCollectionDialog, setShowFileCollectionDialog] = useState(false);
+    const [showFileCollectionDialog, setShowFileCollectionDialog] =
+        useState(false);
 
     const handleClearChat = () => {
         if (activeChat?._id) {
@@ -401,7 +402,9 @@ function ChatBox() {
                                     contextId={user.contextId}
                                     contextKey={user.contextKey}
                                     chatId={
-                                        activeChat?._id ? String(activeChat._id) : null
+                                        activeChat?._id
+                                            ? String(activeChat._id)
+                                            : null
                                     }
                                     messages={activeChat?.messages || []}
                                     updateChatHook={updateChatHook}

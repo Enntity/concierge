@@ -554,7 +554,8 @@ export default function EntityContactsModal({
                     const currentEntity = entities.find(
                         (e) => e.id === toolsEditorEntityId,
                     );
-                    pendingOptionsEntityRef.current = result.entity ||
+                    pendingOptionsEntityRef.current =
+                        result.entity ||
                         (currentEntity ? { ...currentEntity, tools } : null);
                     if (refetchEntities) refetchEntities();
                 }}
@@ -595,7 +596,8 @@ export default function EntityContactsModal({
                     const currentEntity = entities.find(
                         (e) => e.id === voiceEditorEntityId,
                     );
-                    pendingOptionsEntityRef.current = result.entity ||
+                    pendingOptionsEntityRef.current =
+                        result.entity ||
                         (currentEntity
                             ? { ...currentEntity, voice: voiceConfig }
                             : null);

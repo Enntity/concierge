@@ -26,8 +26,7 @@ export async function POST(req, res) {
             );
         }
 
-        const { prompt, pathwayName, model, agentMode } =
-            promptData;
+        const { prompt, pathwayName, model, agentMode } = promptData;
 
         // Fetch workspace to get systemPrompt (workspace context)
         let workspaceSystemPrompt = systemPrompt;

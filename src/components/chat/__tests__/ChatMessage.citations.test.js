@@ -329,9 +329,7 @@ describe("ChatMessage URL Citations", () => {
         });
 
         it("should return null for an index with no citations", () => {
-            const { container } = renderMessage(
-                "Some :cd_source[5] here.",
-            );
+            const { container } = renderMessage("Some :cd_source[5] here.");
             const citation = container.querySelector(
                 '[data-testid="citation"]',
             );

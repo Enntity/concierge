@@ -252,8 +252,12 @@ export default function EntityOptionsDialog({
                                 }`}
                                 title={
                                     forceModel
-                                        ? t("Entity MUST use this model (click to unlock)")
-                                        : t("Entity prefers this model (click to lock)")
+                                        ? t(
+                                              "Entity MUST use this model (click to unlock)",
+                                          )
+                                        : t(
+                                              "Entity prefers this model (click to lock)",
+                                          )
                                 }
                             >
                                 {forceModel ? (
@@ -321,8 +325,7 @@ export default function EntityOptionsDialog({
                                     {t("Voice")}
                                 </span>
                                 <span className="text-xs text-gray-400 dark:text-gray-500">
-                                    {entity?.voice?.voiceName ||
-                                        t("Default")}
+                                    {entity?.voice?.voiceName || t("Default")}
                                 </span>
                             </div>
                             <span className="text-gray-400 text-xs">→</span>
@@ -480,7 +483,11 @@ export default function EntityOptionsDialog({
                         disabled={!hasChanges || isSaving}
                         className="px-4 py-2 text-sm rounded-lg bg-cyan-500 text-white hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[4rem]"
                     >
-                        {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : t("Save")}
+                        {isSaving ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />
+                        ) : (
+                            t("Save")
+                        )}
                     </button>
                 </div>
             </DialogContent>
