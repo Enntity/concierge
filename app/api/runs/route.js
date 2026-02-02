@@ -26,7 +26,7 @@ export async function POST(req, res) {
             );
         }
 
-        const { prompt, pathwayName, model, researchMode, agentMode } =
+        const { prompt, pathwayName, model, agentMode } =
             promptData;
 
         // Fetch workspace to get systemPrompt (workspace context)
@@ -68,13 +68,9 @@ export async function POST(req, res) {
         // Use agent query for agent pathways, regular query for non-agent
         let query;
         if (agentMode) {
-            // Pass researchMode for agent pathways
-            if (researchMode) {
-                variables.researchMode = true;
-            }
             query = getWorkspaceAgentQuery(pathwayName);
         } else {
-            // Non-agent pathways don't use agentContext or researchMode
+            // Non-agent pathways don't use agentContext
             delete variables.agentContext;
             query = getWorkspacePromptQuery(pathwayName);
         }

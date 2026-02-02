@@ -136,7 +136,7 @@ describe("Workspace Publishing Utils", () => {
             expect(mockPromptPopulate).toHaveBeenCalledWith("files");
 
             // Verify putPathway was called with correct data structure
-            // Note: researchMode is only included for agent pathways
+            // Verify putPathway was called with correct data structure
             expect(putPathway).toHaveBeenCalledWith(
                 null, // workspace.pathway is null initially
                 {
@@ -215,7 +215,7 @@ describe("Workspace Publishing Utils", () => {
             expect(mockPromptPopulate).toHaveBeenCalledWith("files");
 
             // Verify putPathway was called with correct format
-            // Note: researchMode is only included for agent pathways
+            // Verify putPathway was called with correct data structure
             expect(putPathway).toHaveBeenCalledWith(
                 "pathway123",
                 expect.objectContaining({

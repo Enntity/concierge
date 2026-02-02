@@ -126,10 +126,6 @@ const chatSchema = new mongoose.Schema(
             type: String,
             default: "",
         },
-        researchMode: {
-            type: Boolean,
-            default: false,
-        },
     },
     {
         timestamps: true,

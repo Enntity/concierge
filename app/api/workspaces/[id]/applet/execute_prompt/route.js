@@ -36,7 +36,6 @@ export async function POST(request, { params }) {
         let pathwayName;
         let model;
         let promptFiles = [];
-        let researchMode = false;
         let agentMode = false;
 
         if (promptId) {
@@ -53,7 +52,6 @@ export async function POST(request, { params }) {
             promptFiles = await filterValidFiles(promptData.prompt.files || []);
             pathwayName = promptData.pathwayName;
             model = promptData.model;
-            researchMode = promptData.researchMode || false;
             agentMode = promptData.agentMode || false;
         } else {
             // No promptId provided, get default agentic LLM
@@ -101,13 +99,9 @@ export async function POST(request, { params }) {
         // Use agent query for agent pathways, regular query for non-agent
         let query;
         if (agentMode) {
-            // Pass researchMode for agent pathways
-            if (researchMode) {
-                variables.researchMode = true;
-            }
             query = QUERIES.getWorkspaceAgentQuery(pathwayName);
         } else {
-            // Non-agent pathways don't use agentContext or researchMode
+            // Non-agent pathways don't use agentContext
             delete variables.agentContext;
             query = QUERIES.getWorkspacePromptQuery(pathwayName);
         }

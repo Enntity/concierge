@@ -264,7 +264,6 @@ export async function getChatById(chatId) {
         titleSetByUser,
         selectedEntityId,
         selectedEntityName,
-        researchMode,
     } = chat;
 
     // Sanitize messages to remove Mongoose metadata fields (createdAt, updatedAt)
@@ -282,7 +281,6 @@ export async function getChatById(chatId) {
         titleSetByUser,
         selectedEntityId,
         selectedEntityName,
-        researchMode,
     };
 
     if (isReadOnly) {

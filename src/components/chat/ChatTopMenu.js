@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { Microscope, FileText } from "lucide-react";
-import { useContext, useState, useEffect } from "react";
+import { FileText } from "lucide-react";
+import { useContext, useState } from "react";
 import { AuthContext } from "../../App";
 import { useGetActiveChat, useUpdateChat } from "../../../app/queries/chats";
 import {
@@ -18,54 +18,22 @@ function ChatTopMenu({ displayState = "full", readOnly = false }) {
     const { data: chat } = useGetActiveChat();
     const activeChatId = chat?._id;
     const updateChatHook = useUpdateChat();
-    const [isResearchMode, setIsResearchMode] = useState(false);
     const [showFileCollectionDialog, setShowFileCollectionDialog] =
         useState(false);
-
-    useEffect(() => {
-        if (chat?.researchMode !== undefined) {
-            setIsResearchMode(chat.researchMode);
-        }
-    }, [chat?.researchMode]);
-
-    const toggleResearchMode = () => {
-        const newMode = !isResearchMode;
-        setIsResearchMode(newMode);
-        updateChatHook.mutate({
-            chatId: activeChatId,
-            researchMode: newMode,
-        });
-    };
 
     return (
         <>
             <div className="flex items-center gap-1.5">
                 <button
-                    onClick={toggleResearchMode}
-                    disabled={readOnly}
-                    className={`flex items-center justify-center p-1.5 rounded-md transition-colors border ${
-                        isResearchMode
-                            ? "bg-sky-500 text-white border-sky-600 hover:bg-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500 dark:hover:text-white dark:border-sky-500"
-                            : "bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
-                    } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-700`}
-                    title={
-                        readOnly
-                            ? t("Read-only mode")
-                            : t("Toggle Research Mode")
-                    }
-                >
-                    <Microscope className="w-4 h-4" />
-                </button>
-
-                <button
                     onClick={() => setShowFileCollectionDialog(true)}
                     disabled={readOnly}
-                    className="flex items-center justify-center p-1.5 rounded-md transition-colors border bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-700"
+                    className="flex items-center gap-1.5 justify-center px-2.5 py-1.5 rounded-md transition-colors border bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-700"
                     title={
                         readOnly ? t("Read-only mode") : t("View Chat Files")
                     }
                 >
-                    <FileText className="w-4 h-4" />
+                    <FileText className="w-5 h-5" />
+                    <span className="text-sm font-medium">{t("Files")}</span>
                 </button>
             </div>
 

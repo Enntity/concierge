@@ -566,7 +566,6 @@ function PromptEditor({ selectedPrompt, onBack }) {
     const { data: llms } = useLLMs();
     const [llm, setLLM] = useState("");
     const [agentMode, setAgentMode] = useState(false);
-    const [researchMode, setResearchMode] = useState(false);
     const { t } = useTranslation();
 
     // Hash -> _id lookup for matching Cortex files to MongoDB files
@@ -577,7 +576,6 @@ function PromptEditor({ selectedPrompt, onBack }) {
             setTitle(selectedPrompt.title);
             setPrompt(selectedPrompt.text);
             setAgentMode(selectedPrompt.agentMode || false);
-            setResearchMode(selectedPrompt.researchMode || false);
             setLLM(
                 selectedPrompt?.llm &&
                     llms?.some((l) => l._id === selectedPrompt.llm)
@@ -631,8 +629,6 @@ function PromptEditor({ selectedPrompt, onBack }) {
                 setLLM={setLLM}
                 agentMode={agentMode}
                 setAgentMode={setAgentMode}
-                researchMode={researchMode}
-                setResearchMode={setResearchMode}
                 disabled={isPublished}
                 showPublishedWarning={isPublished}
             />
@@ -722,7 +718,6 @@ function PromptEditor({ selectedPrompt, onBack }) {
                                         text: prompt,
                                         llm,
                                         agentMode,
-                                        researchMode,
                                         files: fileIds,
                                     },
                                 });
@@ -735,7 +730,6 @@ function PromptEditor({ selectedPrompt, onBack }) {
                                         text: prompt,
                                         llm,
                                         agentMode,
-                                        researchMode,
                                         files: fileIds,
                                     },
                                 });

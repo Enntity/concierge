@@ -33,7 +33,6 @@ function SelectorDialog({ setIsOpen }) {
     const [text, setText] = useState("");
     const [llm, setLLM] = useState("");
     const [agentMode, setAgentMode] = useState(false);
-    const [researchMode, setResearchMode] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [showFilePicker, setShowFilePicker] = useState(false);
     const { t } = useTranslation();
@@ -77,8 +76,6 @@ function SelectorDialog({ setIsOpen }) {
                     setLLM={setLLM}
                     agentMode={agentMode}
                     setAgentMode={setAgentMode}
-                    researchMode={researchMode}
-                    setResearchMode={setResearchMode}
                 />
 
                 <div className="mb-6">
@@ -133,7 +130,6 @@ function SelectorDialog({ setIsOpen }) {
                                 text,
                                 llm,
                                 agentMode,
-                                researchMode,
                                 files: fileIds,
                             },
                         });

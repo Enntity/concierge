@@ -510,7 +510,6 @@ function ChatContent({
                         aiName: currentEntity?.name || aiName,
                         title: chat?.title,
                         entityId: currentSelectedEntityId,
-                        researchMode: chat?.researchMode ? true : false,
                         // Model priority: user override > entity preferred > default
                         // (entity modelOverride is handled server-side in cortex)
                         model:

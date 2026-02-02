@@ -128,7 +128,6 @@ const SYS_ENTITY_AGENT = gql`
         $stream: Boolean
         $entityId: String
         $chatId: String
-        $researchMode: Boolean
         $model: String
         $userInfo: String
         $useMemory: Boolean
@@ -145,7 +144,6 @@ const SYS_ENTITY_AGENT = gql`
             stream: $stream
             entityId: $entityId
             chatId: $chatId
-            researchMode: $researchMode
             model: $model
             userInfo: $userInfo
             useMemory: $useMemory
@@ -862,7 +860,7 @@ const getWorkspacePromptQuery = (pathwayName) => {
     `;
 };
 
-// Agent-specific query with agentContext and researchMode
+// Agent-specific query with agentContext
 const getWorkspaceAgentQuery = (pathwayName) => {
     return gql`
         query ${pathwayName}(
@@ -870,14 +868,12 @@ const getWorkspaceAgentQuery = (pathwayName) => {
             $async: Boolean
             $model: String
             $agentContext: [AgentContextInput]
-            $researchMode: Boolean
         ) {
             ${pathwayName}(
                 chatHistory: $chatHistory
                 async: $async
                 model: $model
                 agentContext: $agentContext
-                researchMode: $researchMode
             ) {
                 result
                 tool

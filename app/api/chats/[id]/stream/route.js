@@ -70,7 +70,6 @@ export async function POST(req, { params }) {
             aiName,
             title,
             entityId,
-            researchMode,
             model,
             userInfo,
         } = body;
@@ -136,7 +135,6 @@ export async function POST(req, { params }) {
                 chatId: id,
                 stream: true,
                 entityId: finalEntityId,
-                researchMode: researchMode || chat.researchMode || false,
                 // Model priority: request > user override > entity preferred > default
                 model:
                     model ||

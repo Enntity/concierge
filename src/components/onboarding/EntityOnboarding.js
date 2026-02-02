@@ -1004,7 +1004,6 @@ export default function EntityOnboarding({
                             aiName: onboardingEntity.name,
                             title: "Entity Onboarding",
                             entityId: onboardingEntity.id,
-                            researchMode: false,
                             // Model priority: user override > entity preferred > default
                             model:
                                 user.agentModel ||
@@ -1110,7 +1109,6 @@ export default function EntityOnboarding({
                                 aiName: createdEntity.name,
                                 title: createdEntity.name,
                                 entityId,
-                                researchMode: false,
                                 // Model priority: user override > entity preferred > default
                                 model:
                                     user.agentModel ||
@@ -1262,7 +1260,6 @@ export default function EntityOnboarding({
                             aiName: onboardingEntity.name,
                             title: "Entity Onboarding",
                             entityId: onboardingEntity.id,
-                            researchMode: false,
                             // Model priority: user override > entity preferred > default
                             model:
                                 user.agentModel ||

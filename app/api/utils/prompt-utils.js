@@ -10,7 +10,7 @@ const LEGACY_AGENT_IDENTIFIERS = ["enntityagent", "enntityresearchagent"];
  * Updates the prompt in the database and returns the migrated prompt with its LLM.
  *
  * @param {string} promptId - The prompt ID
- * @returns {Object} { prompt, llm, agentMode, researchMode, pathwayName, model }
+ * @returns {Object} { prompt, llm, agentMode, pathwayName, model }
  */
 export async function getPromptWithMigration(promptId) {
     let prompt = await Prompt.findById(promptId).populate("files");
@@ -30,7 +30,6 @@ export async function getPromptWithMigration(promptId) {
             const migrationUpdate = {
                 llm: defaultLLM._id,
                 agentMode: true,
-                researchMode: llm.identifier === "enntityresearchagent",
             };
 
             await Prompt.findByIdAndUpdate(promptId, migrationUpdate);
@@ -40,13 +39,11 @@ export async function getPromptWithMigration(promptId) {
     }
 
     const agentMode = prompt.agentMode || false;
-    const researchMode = prompt.researchMode || false;
 
     let pathwayName;
     let model;
 
     if (agentMode) {
-        // All agent modes use run_workspace_agent; researchMode is passed as a parameter
         pathwayName = "run_workspace_agent";
         model = llm.cortexModelName;
     } else {
@@ -58,7 +55,6 @@ export async function getPromptWithMigration(promptId) {
         prompt,
         llm,
         agentMode,
-        researchMode,
         pathwayName,
         model,
     };

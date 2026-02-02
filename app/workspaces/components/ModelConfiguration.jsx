@@ -10,8 +10,6 @@ export default function ModelConfiguration({
     setLLM,
     agentMode,
     setAgentMode,
-    researchMode,
-    setResearchMode,
     disabled = false,
     defaultModelIdentifier,
     showPublishedWarning = false,
@@ -46,13 +44,7 @@ export default function ModelConfiguration({
                         type="checkbox"
                         id="agentMode"
                         checked={agentMode}
-                        onChange={(e) => {
-                            const checked = e.target.checked;
-                            setAgentMode(checked);
-                            if (!checked) {
-                                setResearchMode(false);
-                            }
-                        }}
+                        onChange={(e) => setAgentMode(e.target.checked)}
                         disabled={disabled}
                         className="accent-sky-500"
                     />
@@ -61,26 +53,6 @@ export default function ModelConfiguration({
                         className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                     >
                         {t("Agent Mode")}
-                    </label>
-                </div>
-                <div className="flex items-center gap-2">
-                    <input
-                        type="checkbox"
-                        id="researchMode"
-                        checked={researchMode}
-                        onChange={(e) => setResearchMode(e.target.checked)}
-                        disabled={disabled || !agentMode}
-                        className="accent-sky-500"
-                    />
-                    <label
-                        htmlFor="researchMode"
-                        className={`text-sm cursor-pointer ${
-                            !agentMode
-                                ? "text-gray-400 dark:text-gray-600"
-                                : "text-gray-700 dark:text-gray-300"
-                        }`}
-                    >
-                        {t("Research Mode")}
                     </label>
                 </div>
             </div>

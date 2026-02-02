@@ -7,7 +7,7 @@ import {
     Maximize2,
     Minimize2,
     Square,
-    Microscope,
+    FileText,
     Trash2,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -30,6 +30,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
+import UserFileCollection from "@/app/workspaces/[id]/components/UserFileCollection";
 
 function ChatBox() {
     const { user } = useContext(AuthContext);
@@ -60,25 +68,8 @@ function ChatBox() {
     const isEntityUnavailable =
         selectedEntityId && !entities.some((e) => e.id === selectedEntityId);
     const updateChatHook = useUpdateChat();
-    const [isResearchMode, setIsResearchMode] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
-
-    useEffect(() => {
-        if (activeChat?.researchMode !== undefined) {
-            setIsResearchMode(activeChat.researchMode);
-        }
-    }, [activeChat?.researchMode]);
-
-    const toggleResearchMode = () => {
-        const newMode = !isResearchMode;
-        setIsResearchMode(newMode);
-        if (activeChat?._id) {
-            updateChatHook.mutate({
-                chatId: activeChat._id,
-                researchMode: newMode,
-            });
-        }
-    };
+    const [showFileCollectionDialog, setShowFileCollectionDialog] = useState(false);
 
     const handleClearChat = () => {
         if (activeChat?._id) {
@@ -322,17 +313,13 @@ function ChatBox() {
                         onClick={titleBarClick}
                     >
                         <div className="flex items-center gap-2">
-                            <Microscope
+                            <FileText
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    toggleResearchMode();
+                                    setShowFileCollectionDialog(true);
                                 }}
-                                className={`cursor-pointer ${
-                                    isResearchMode
-                                        ? "text-sky-600 dark:text-sky-400"
-                                        : ""
-                                }`}
-                                title={t("Toggle Research Mode")}
+                                className="cursor-pointer text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                                title={t("View Chat Files")}
                             />
                             <div className="">
                                 {`${t("Chat with")} ${t(aiName || config?.chat?.botName)}`}
@@ -395,6 +382,34 @@ function ChatBox() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+                <Dialog
+                    open={showFileCollectionDialog}
+                    onOpenChange={setShowFileCollectionDialog}
+                >
+                    <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] sm:w-full max-h-[85vh] flex flex-col overflow-hidden">
+                        <DialogHeader className="flex-shrink-0">
+                            <DialogTitle>{t("Chat Files")}</DialogTitle>
+                            <DialogDescription>
+                                {t(
+                                    "View and manage files that are available to this conversation.",
+                                )}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex-1 overflow-y-auto min-h-0">
+                            {user?.contextId && (
+                                <UserFileCollection
+                                    contextId={user.contextId}
+                                    contextKey={user.contextKey}
+                                    chatId={
+                                        activeChat?._id ? String(activeChat._id) : null
+                                    }
+                                    messages={activeChat?.messages || []}
+                                    updateChatHook={updateChatHook}
+                                />
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         );
     }

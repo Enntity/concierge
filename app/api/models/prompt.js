@@ -24,11 +24,6 @@ const promptSchema = new mongoose.Schema({
         required: false,
         default: false,
     },
-    researchMode: {
-        type: Boolean,
-        required: false,
-        default: false,
-    },
     files: [
         {
             type: mongoose.Schema.Types.ObjectId,
