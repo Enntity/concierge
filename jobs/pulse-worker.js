@@ -46,7 +46,11 @@ export function initializePulseSystem(connection) {
         PULSE_QUEUE_NAME,
         async (job) => {
             try {
-                const logger = new Logger(job, queue);
+                const logger = new Logger({
+                    id: job.id,
+                    name: job.name,
+                    queueName: PULSE_QUEUE_NAME,
+                });
 
                 if (job.name === PULSE_WAKE_JOB) {
                     await handlePulseWake(job, queue, logger);
@@ -73,12 +77,20 @@ export function initializePulseSystem(connection) {
     );
 
     worker.on("completed", (job) => {
-        const logger = new Logger(job, queue);
+        const logger = new Logger({
+            id: job.id,
+            name: job.name,
+            queueName: PULSE_QUEUE_NAME,
+        });
         logger.log("[Pulse Worker] job completed");
     });
 
     worker.on("failed", (job, error) => {
-        const logger = new Logger(job, queue);
+        const logger = new Logger({
+            id: job.id,
+            name: job.name,
+            queueName: PULSE_QUEUE_NAME,
+        });
         logger.log(`[Pulse Worker] job failed: ${error.message}`);
     });
 
@@ -198,13 +210,20 @@ async function handlePulseWake(job, queue, logger) {
 
         // Handle auto-continuation — keep lock held through the chain
         if (result.signal === "continue") {
-            shouldRelease = false;
-            await enqueueContinuation(
-                queue,
-                entity,
-                result.chainDepth,
-                result.taskContext,
-            );
+            try {
+                await enqueueContinuation(
+                    queue,
+                    entity,
+                    result.chainDepth,
+                    result.taskContext,
+                );
+                shouldRelease = false; // Only hold lock if enqueue succeeded
+            } catch (enqueueError) {
+                logger.log(
+                    `[Pulse] Failed to enqueue continuation for ${entityName}: ${enqueueError.message}`,
+                );
+                // shouldRelease stays true — lock will be released in finally
+            }
         }
     } finally {
         if (shouldRelease) {
@@ -248,13 +267,19 @@ async function handlePulseContinue(job, queue, logger) {
 
         // Continue the chain — keep lock held
         if (result.signal === "continue") {
-            shouldRelease = false;
-            await enqueueContinuation(
-                queue,
-                entity,
-                result.chainDepth,
-                result.taskContext,
-            );
+            try {
+                await enqueueContinuation(
+                    queue,
+                    entity,
+                    result.chainDepth,
+                    result.taskContext,
+                );
+                shouldRelease = false; // Only hold lock if enqueue succeeded
+            } catch (enqueueError) {
+                logger.log(
+                    `[Pulse] Failed to enqueue continuation for ${entity.name}: ${enqueueError.message}`,
+                );
+            }
         }
     } finally {
         if (shouldRelease) {

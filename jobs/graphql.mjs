@@ -3,7 +3,16 @@ import { gql } from "@apollo/client/index.js";
 const CORTEX_GRAPHQL_API_URL =
     process.env.CORTEX_GRAPHQL_API_URL || "http://localhost:4000/graphql";
 
+let cachedClient = null;
+let cachedUrl = null;
+
 const getClient = async (serverUrl) => {
+    const graphqlEndpoint = serverUrl || CORTEX_GRAPHQL_API_URL;
+
+    if (cachedClient && cachedUrl === graphqlEndpoint) {
+        return cachedClient;
+    }
+
     const apollo = await import("@apollo/client/index.js");
     const { ApolloClient, InMemoryCache, split, HttpLink } = apollo;
     const { GraphQLWsLink } = await import(
@@ -14,13 +23,6 @@ const getClient = async (serverUrl) => {
         "@apollo/client/utilities/index.js"
     );
     const WebSocket = await import("ws");
-
-    let graphqlEndpoint;
-    if (serverUrl) {
-        graphqlEndpoint = serverUrl;
-    } else {
-        graphqlEndpoint = CORTEX_GRAPHQL_API_URL;
-    }
 
     const httpLink = new HttpLink({
         uri: graphqlEndpoint,
@@ -58,12 +60,13 @@ const getClient = async (serverUrl) => {
         httpLink,
     );
 
-    const client = new ApolloClient({
+    cachedClient = new ApolloClient({
         link: splitLink,
         cache: new InMemoryCache(),
     });
+    cachedUrl = graphqlEndpoint;
 
-    return client;
+    return cachedClient;
 };
 
 const SUMMARY = gql`
@@ -132,7 +135,6 @@ const SYS_ENTITY_AGENT = gql`
         $userInfo: String
         $useMemory: Boolean
         $invocationType: String
-        $pulseContext: String
     ) {
         sys_entity_agent(
             chatHistory: $chatHistory
@@ -148,9 +150,9 @@ const SYS_ENTITY_AGENT = gql`
             userInfo: $userInfo
             useMemory: $useMemory
             invocationType: $invocationType
-            pulseContext: $pulseContext
         ) {
             result
+            resultData
             contextId
             tool
             warnings

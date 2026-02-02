@@ -498,11 +498,6 @@ async function runPulseWake(entity, options, logger) {
                 PULSE_DEFAULT_MODEL,
             useMemory: true,
             invocationType: "pulse",
-            pulseContext: JSON.stringify({
-                chainDepth,
-                maxChainDepth,
-                wakeType,
-            }),
         };
 
         const result = await client.query({
@@ -516,8 +511,36 @@ async function runPulseWake(entity, options, logger) {
         // Check for EndPulse signal (set by the tool in Redis)
         const endSignal = await getPulseEndSignal(entity.id);
 
-        // Increment budget
-        await incrementBudget(entity.id, 0); // Token count would come from cortex if tracked
+        // Extract token usage from cortex resultData and increment budget
+        let tokenCount = 0;
+        if (agentResult?.resultData) {
+            try {
+                const rd =
+                    typeof agentResult.resultData === "string"
+                        ? JSON.parse(agentResult.resultData)
+                        : agentResult.resultData;
+                const usageArr = Array.isArray(rd?.usage)
+                    ? rd.usage
+                    : rd?.usage
+                      ? [rd.usage]
+                      : [];
+                for (const u of usageArr) {
+                    if (!u) continue;
+                    tokenCount +=
+                        (u.prompt_tokens ||
+                            u.input_tokens ||
+                            u.promptTokenCount ||
+                            0) +
+                        (u.completion_tokens ||
+                            u.output_tokens ||
+                            u.candidatesTokenCount ||
+                            0);
+                }
+            } catch {
+                /* malformed resultData — count stays 0 */
+            }
+        }
+        await incrementBudget(entity.id, tokenCount);
 
         if (endSignal) {
             // Entity called EndPulse — resting

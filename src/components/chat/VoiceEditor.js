@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Play, Pause, Volume2 } from "lucide-react";
+import { Check, Play, Pause, Volume2, Loader2 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Modal } from "@/components/ui/modal";
 import FilterInput from "../common/FilterInput";
@@ -138,9 +138,12 @@ const VoiceEditorContent = ({ entityId, currentVoice, onClose, onSave }) => {
         };
     };
 
+    const [isSaving, setIsSaving] = useState(false);
+
     const handleSave = async () => {
         if (!selectedVoiceId) return;
 
+        setIsSaving(true);
         try {
             await onSave({
                 voiceProvider: "elevenlabs",
@@ -154,6 +157,8 @@ const VoiceEditorContent = ({ entityId, currentVoice, onClose, onSave }) => {
             onClose();
         } catch (err) {
             setError(err.message || "Failed to save voice settings");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -436,10 +441,16 @@ const VoiceEditorContent = ({ entityId, currentVoice, onClose, onSave }) => {
                         </button>
                         <button
                             onClick={handleSave}
-                            disabled={!selectedVoiceId || !hasChanges}
-                            className="px-4 py-2 text-sm rounded-lg bg-cyan-500 text-white hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            disabled={
+                                !selectedVoiceId || !hasChanges || isSaving
+                            }
+                            className="px-4 py-2 text-sm rounded-lg bg-cyan-500 text-white hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[4rem]"
                         >
-                            {t("Save")}
+                            {isSaving ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />
+                            ) : (
+                                t("Save")
+                            )}
                         </button>
                     </div>
                 </>

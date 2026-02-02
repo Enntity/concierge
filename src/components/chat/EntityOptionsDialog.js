@@ -55,6 +55,9 @@ export default function EntityOptionsDialog({
     const [hasChanges, setHasChanges] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
+    const pulseInputClass =
+        "px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/50";
+
     // Pulse state
     const [pulseEnabled, setPulseEnabled] = useState(false);
     const [pulseInterval, setPulseInterval] = useState(15);
@@ -151,6 +154,7 @@ export default function EntityOptionsDialog({
             const result = await response.json();
             if (result.success) {
                 if (onEntityUpdate) onEntityUpdate(result.entity);
+                if (refetchEntities) refetchEntities();
                 onClose();
             } else {
                 toast.error("Failed to save entity settings");
@@ -161,7 +165,6 @@ export default function EntityOptionsDialog({
         } finally {
             setIsSaving(false);
         }
-        if (refetchEntities) refetchEntities();
     };
 
     const handleOpenMemory = () => {
@@ -383,7 +386,7 @@ export default function EntityOptionsDialog({
                                                 parseInt(e.target.value, 10),
                                             )
                                         }
-                                        className="flex-1 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                                        className={`flex-1 ${pulseInputClass}`}
                                     >
                                         <option value={5}>5 min</option>
                                         <option value={10}>10 min</option>
@@ -410,7 +413,7 @@ export default function EntityOptionsDialog({
                                                     e.target.value,
                                                 )
                                             }
-                                            className="flex-1 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                                            className={`flex-1 ${pulseInputClass}`}
                                         />
                                         <span className="text-xs text-gray-400">
                                             –
@@ -423,7 +426,7 @@ export default function EntityOptionsDialog({
                                                     e.target.value,
                                                 )
                                             }
-                                            className="flex-1 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                                            className={`flex-1 ${pulseInputClass}`}
                                         />
                                         {(pulseActiveStart ||
                                             pulseActiveEnd) && (
@@ -434,7 +437,7 @@ export default function EntityOptionsDialog({
                                                         e.target.value,
                                                     )
                                                 }
-                                                className="w-24 px-1 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                                                className={`w-24 px-1 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-rose-500/50`}
                                             >
                                                 <option value="UTC">UTC</option>
                                                 <option value="America/New_York">

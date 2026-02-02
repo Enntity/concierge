@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Modal } from "@/components/ui/modal";
 import FilterInput from "../common/FilterInput";
@@ -117,12 +117,17 @@ const ToolsEditorContent = ({
         setSelectedTools(new Set());
     };
 
+    const [isSaving, setIsSaving] = useState(false);
+
     const handleSave = async () => {
+        setIsSaving(true);
         try {
             await onSave(Array.from(selectedTools));
             onClose();
         } catch (err) {
             setError(err.message || "Failed to save tools");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -276,9 +281,14 @@ const ToolsEditorContent = ({
                         </button>
                         <button
                             onClick={handleSave}
-                            className="px-4 py-2 text-sm rounded-lg bg-cyan-500 text-white hover:bg-cyan-600 transition-colors"
+                            disabled={isSaving}
+                            className="px-4 py-2 text-sm rounded-lg bg-cyan-500 text-white hover:bg-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[4rem]"
                         >
-                            {t("Save")}
+                            {isSaving ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />
+                            ) : (
+                                t("Save")
+                            )}
                         </button>
                     </div>
                 </>
