@@ -984,13 +984,7 @@ const SYS_UPDATE_ENTITY = gql`
         $avatarText: String
         $avatarDescription: String
         $avatarImageUrl: String
-        $voiceProvider: String
-        $voiceId: String
-        $voiceName: String
-        $voiceStability: Float
-        $voiceSimilarity: Float
-        $voiceStyle: Float
-        $voiceSpeakerBoost: Boolean
+        $voice: String
         $pulseEnabled: Boolean
         $pulseWakeIntervalMinutes: Float
         $pulseMaxChainDepth: Float
@@ -1015,13 +1009,7 @@ const SYS_UPDATE_ENTITY = gql`
             avatarText: $avatarText
             avatarDescription: $avatarDescription
             avatarImageUrl: $avatarImageUrl
-            voiceProvider: $voiceProvider
-            voiceId: $voiceId
-            voiceName: $voiceName
-            voiceStability: $voiceStability
-            voiceSimilarity: $voiceSimilarity
-            voiceStyle: $voiceStyle
-            voiceSpeakerBoost: $voiceSpeakerBoost
+            voice: $voice
             pulseEnabled: $pulseEnabled
             pulseWakeIntervalMinutes: $pulseWakeIntervalMinutes
             pulseMaxChainDepth: $pulseMaxChainDepth

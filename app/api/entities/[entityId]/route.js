@@ -78,13 +78,8 @@ export async function GET(req, { params }) {
  * - modelOverride: Forced model that always takes precedence over user preferences
  * - reasoningEffort: How much thinking time (low, medium, high)
  * - tools: Array of lowercase tool names the entity can use (empty array = no tools)
- * - voiceProvider: TTS provider (e.g., 'elevenlabs')
- * - voiceId: Provider-specific voice ID
- * - voiceName: Display name for the voice
- * - voiceStability: Voice stability setting (0.0 - 1.0)
- * - voiceSimilarity: Voice similarity setting (0.0 - 1.0)
- * - voiceStyle: Voice style setting (0.0 - 1.0)
- * - voiceSpeakerBoost: Enable speaker boost (boolean)
+ * - voice: Array of voice preferences, ordered by priority
+ *   Each entry: { provider, voiceId, name?, settings? }
  */
 export async function PATCH(req, { params }) {
     try {
@@ -110,14 +105,8 @@ export async function PATCH(req, { params }) {
             modelOverride,
             reasoningEffort,
             tools,
-            // Voice fields
-            voiceProvider,
-            voiceId,
-            voiceName,
-            voiceStability,
-            voiceSimilarity,
-            voiceStyle,
-            voiceSpeakerBoost,
+            // Voice preference array
+            voice,
             // Pulse fields
             pulseEnabled,
             pulseWakeIntervalMinutes,
@@ -191,76 +180,65 @@ export async function PATCH(req, { params }) {
             variables.tools = tools.map((t) => t.toLowerCase());
         }
 
-        // Handle voice fields
-        const ALLOWED_VOICE_PROVIDERS = ["elevenlabs"];
+        // Handle voice preference array
+        const ALLOWED_VOICE_PROVIDERS = [
+            "elevenlabs",
+            "deepgram",
+            "openai-tts",
+            "openai-realtime",
+            "inworld",
+        ];
 
-        if (voiceProvider !== undefined) {
-            if (
-                typeof voiceProvider !== "string" ||
-                !ALLOWED_VOICE_PROVIDERS.includes(voiceProvider)
-            ) {
+        if (voice !== undefined) {
+            if (!Array.isArray(voice)) {
                 return NextResponse.json(
-                    { error: "Invalid voice provider" },
+                    { error: "voice must be an array of voice preferences" },
                     { status: 400 },
                 );
             }
-            variables.voiceProvider = voiceProvider;
-        }
-        if (voiceId !== undefined) {
-            if (typeof voiceId !== "string" || voiceId.length > 200) {
+            if (voice.length > 10) {
                 return NextResponse.json(
-                    { error: "Invalid voice ID" },
+                    { error: "voice array cannot exceed 10 entries" },
                     { status: 400 },
                 );
             }
-            variables.voiceId = voiceId;
-        }
-        if (voiceName !== undefined) {
-            if (typeof voiceName !== "string" || voiceName.length > 200) {
-                return NextResponse.json(
-                    { error: "Invalid voice name" },
-                    { status: 400 },
-                );
+            for (const entry of voice) {
+                if (
+                    !entry.provider ||
+                    !ALLOWED_VOICE_PROVIDERS.includes(entry.provider)
+                ) {
+                    return NextResponse.json(
+                        {
+                            error: `Invalid voice provider: ${entry.provider}`,
+                        },
+                        { status: 400 },
+                    );
+                }
+                if (
+                    !entry.voiceId ||
+                    typeof entry.voiceId !== "string" ||
+                    entry.voiceId.length > 200
+                ) {
+                    return NextResponse.json(
+                        { error: "Each voice entry must have a valid voiceId" },
+                        { status: 400 },
+                    );
+                }
+                if (entry.name && typeof entry.name !== "string") {
+                    return NextResponse.json(
+                        { error: "Voice name must be a string" },
+                        { status: 400 },
+                    );
+                }
+                if (entry.settings && typeof entry.settings !== "object") {
+                    return NextResponse.json(
+                        { error: "Voice settings must be an object" },
+                        { status: 400 },
+                    );
+                }
             }
-            variables.voiceName = voiceName;
-        }
-        if (voiceStability !== undefined) {
-            const stability = parseFloat(voiceStability);
-            if (isNaN(stability) || stability < 0 || stability > 1) {
-                return NextResponse.json(
-                    {
-                        error: "voiceStability must be a number between 0 and 1",
-                    },
-                    { status: 400 },
-                );
-            }
-            variables.voiceStability = stability;
-        }
-        if (voiceSimilarity !== undefined) {
-            const similarity = parseFloat(voiceSimilarity);
-            if (isNaN(similarity) || similarity < 0 || similarity > 1) {
-                return NextResponse.json(
-                    {
-                        error: "voiceSimilarity must be a number between 0 and 1",
-                    },
-                    { status: 400 },
-                );
-            }
-            variables.voiceSimilarity = similarity;
-        }
-        if (voiceStyle !== undefined) {
-            const style = parseFloat(voiceStyle);
-            if (isNaN(style) || style < 0 || style > 1) {
-                return NextResponse.json(
-                    { error: "voiceStyle must be a number between 0 and 1" },
-                    { status: 400 },
-                );
-            }
-            variables.voiceStyle = style;
-        }
-        if (voiceSpeakerBoost !== undefined) {
-            variables.voiceSpeakerBoost =
-                voiceSpeakerBoost === true || voiceSpeakerBoost === "true";
+            // Pass as JSON string through the graphql mutation
+            variables.voice = JSON.stringify(voice);
         }
 
         // Handle pulse fields

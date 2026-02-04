@@ -116,32 +116,7 @@ class StreamProcessor extends AudioWorkletProcessor {
     }
   }
 
-  // Low-pass filter state for anti-aliasing after interpolation
-  // Simple 2-pole IIR filter tuned to cut frequencies above ~10kHz at 48kHz output
-  initLowPass() {
-    // Coefficients for ~10kHz cutoff at 48kHz (gentle roll-off to preserve clarity)
-    this.lpA1 = -1.3072850288;
-    this.lpA2 = 0.4918245861;
-    this.lpB0 = 0.0461348893;
-    this.lpB1 = 0.0922697786;
-    this.lpB2 = 0.0461348893;
-    this.lpX1 = 0; this.lpX2 = 0; // Input history
-    this.lpY1 = 0; this.lpY2 = 0; // Output history
-  }
-
-  lowPass(sample) {
-    if (this.lpB0 === undefined) this.initLowPass();
-
-    const output = this.lpB0 * sample + this.lpB1 * this.lpX1 + this.lpB2 * this.lpX2
-                   - this.lpA1 * this.lpY1 - this.lpA2 * this.lpY2;
-
-    this.lpX2 = this.lpX1; this.lpX1 = sample;
-    this.lpY2 = this.lpY1; this.lpY1 = output;
-
-    return output;
-  }
-
-  // Linear interpolation resampling with low-pass anti-aliasing filter
+  // Linear interpolation resampling with phase-continuous chunked processing
   resample(inputSamples) {
     if (this.resampleRatio === 1) {
       return inputSamples; // No resampling needed
@@ -152,32 +127,34 @@ class StreamProcessor extends AudioWorkletProcessor {
       this.resampleBuffer.push(inputSamples[i]);
     }
 
-    // Calculate how many output samples we can produce
-    const outputLength = Math.floor((this.resampleBuffer.length - 1) * this.resampleRatio);
+    const step = 1 / this.resampleRatio; // Step through input for each output sample
+    const maxPos = this.resampleBuffer.length - 1;
+
+    // Calculate how many output samples we can produce from current phase
+    const outputLength = Math.floor((maxPos - this.resamplePhase) / step);
     if (outputLength <= 0) {
       return new Float32Array(0);
     }
 
     const output = new Float32Array(outputLength);
-    const step = 1 / this.resampleRatio; // Step through input for each output sample
+    let pos = this.resamplePhase;
 
     for (let i = 0; i < outputLength; i++) {
-      const inputPos = i * step;
-      const inputIndex = Math.floor(inputPos);
-      const frac = inputPos - inputIndex;
+      const inputIndex = Math.floor(pos);
+      const frac = pos - inputIndex;
 
       // Linear interpolation between adjacent samples
       const sample1 = this.resampleBuffer[inputIndex] || 0;
       const sample2 = this.resampleBuffer[inputIndex + 1] || sample1;
-      const interpolated = sample1 + (sample2 - sample1) * frac;
-
-      // Apply low-pass filter to remove aliasing artifacts
-      output[i] = this.lowPass(interpolated);
+      output[i] = sample1 + (sample2 - sample1) * frac;
+      pos += step;
     }
 
-    // Keep last sample for continuity with next chunk
-    const samplesUsed = Math.floor((outputLength - 1) / this.resampleRatio) + 1;
-    this.resampleBuffer = this.resampleBuffer.slice(Math.max(0, samplesUsed - 1));
+    // Advance phase past all produced outputs so next chunk starts at the right position
+    const nextPos = this.resamplePhase + outputLength * step;
+    const consumed = Math.floor(nextPos);
+    this.resampleBuffer = this.resampleBuffer.slice(consumed);
+    this.resamplePhase = nextPos - consumed;
 
     return output;
   }
@@ -218,10 +195,9 @@ class StreamProcessor extends AudioWorkletProcessor {
   // Flush any remaining partial buffer (call at end of track)
   flushBuffer(trackId = null) {
     try {
-      // Clear resample buffer and filter state
+      // Clear resample buffer and phase
       this.resampleBuffer = [];
-      this.lpX1 = 0; this.lpX2 = 0;
-      this.lpY1 = 0; this.lpY2 = 0;
+      this.resamplePhase = 0;
 
       if (this.writeOffset > 0) {
         // Apply a quick fade-out to the partial buffer to avoid clicks

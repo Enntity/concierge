@@ -599,7 +599,7 @@ export default function EntityContactsModal({
                     pendingOptionsEntityRef.current =
                         result.entity ||
                         (currentEntity
-                            ? { ...currentEntity, voice: voiceConfig }
+                            ? { ...currentEntity, voice: voiceConfig.voice }
                             : null);
                     if (refetchEntities) refetchEntities();
                 }}

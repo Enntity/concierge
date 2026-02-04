@@ -510,25 +510,15 @@ export function useVoiceSession() {
                     currentEntity?.voice,
                 );
 
-                // Build voice settings from entity's voice configuration
-                const voiceSettings = currentEntity?.voice?.settings
-                    ? {
-                          stability: currentEntity.voice.settings.stability,
-                          similarity: currentEntity.voice.settings.similarity,
-                          style: currentEntity.voice.settings.style,
-                          speakerBoost:
-                              currentEntity.voice.settings.speakerBoost,
-                      }
+                // Build voice preferences from entity's voice configuration
+                const voicePreferences = Array.isArray(currentEntity?.voice)
+                    ? currentEntity.voice
                     : undefined;
 
                 socket.emit("session:start", {
                     entityId,
                     chatId,
-                    // Use entity's voice provider and ID if available
-                    provider: currentEntity?.voice?.voiceProvider || undefined,
-                    voiceId:
-                        currentEntity?.voice?.voiceId || "tnSpp4vdxKPjI9w0GnoV",
-                    voiceSettings,
+                    voicePreferences,
                     userId: sessionContext?.userId,
                     contextId: sessionContext?.contextId || entityId,
                     contextKey: sessionContext?.contextKey,
