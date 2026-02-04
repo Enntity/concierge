@@ -83,7 +83,8 @@ export async function GET(request) {
                 name: entity.name,
                 displayName: entity.displayName || entity.name,
                 avatarUrl: entity.avatar?.imageUrl || entity.avatarUrl,
-                voiceId: Array.isArray(entity.voice) && entity.voice.length > 0
+                voiceId:
+                    Array.isArray(entity.voice) && entity.voice.length > 0
                         ? entity.voice[0].voiceId
                         : entity.voiceId,
                 description: entity.description,

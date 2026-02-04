@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, {
+    useState,
+    useEffect,
+    useMemo,
+    useRef,
+    useCallback,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
     Check,
@@ -25,7 +31,13 @@ const PROVIDER_LABELS = {
 };
 
 // Provider tab order
-const PROVIDER_ORDER = ["elevenlabs", "deepgram", "openai-tts", "openai-realtime", "inworld"];
+const PROVIDER_ORDER = [
+    "elevenlabs",
+    "deepgram",
+    "openai-tts",
+    "openai-realtime",
+    "inworld",
+];
 
 /**
  * VoiceEditorContent - Content for the voice selection modal
@@ -34,7 +46,13 @@ const PROVIDER_ORDER = ["elevenlabs", "deepgram", "openai-tts", "openai-realtime
  * Drag priority list entries to reorder. Click a priority list entry
  * to edit its provider-specific settings (e.g. ElevenLabs stability).
  */
-const VoiceEditorContent = ({ entityId, entityName, currentVoice, onClose, onSave }) => {
+const VoiceEditorContent = ({
+    entityId,
+    entityName,
+    currentVoice,
+    onClose,
+    onSave,
+}) => {
     const { t } = useTranslation();
     const [providerData, setProviderData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -166,9 +184,7 @@ const VoiceEditorContent = ({ entityId, entityName, currentVoice, onClose, onSav
         if (selectedEntryIndex === null || !priorityList[selectedEntryIndex])
             return [];
         const entry = priorityList[selectedEntryIndex];
-        return (
-            providerData?.providers?.[entry.provider]?.settings || []
-        );
+        return providerData?.providers?.[entry.provider]?.settings || [];
     }, [selectedEntryIndex, priorityList, providerData]);
 
     // ── Voice toggle (click to add/remove from priority list) ────────
@@ -284,7 +300,10 @@ const VoiceEditorContent = ({ entityId, entityName, currentVoice, onClose, onSav
                     i === selectedEntryIndex
                         ? {
                               ...entry,
-                              settings: { ...(entry.settings || {}), [key]: value },
+                              settings: {
+                                  ...(entry.settings || {}),
+                                  [key]: value,
+                              },
                           }
                         : entry,
                 ),
@@ -295,17 +314,14 @@ const VoiceEditorContent = ({ entityId, entityName, currentVoice, onClose, onSav
 
     // ── Priority list management ─────────────────────────────────────
 
-    const handleRemoveFromPriority = useCallback(
-        (index) => {
-            setPriorityList((prev) => prev.filter((_, i) => i !== index));
-            setSelectedEntryIndex((prev) => {
-                if (prev === index) return null;
-                if (prev !== null && prev > index) return prev - 1;
-                return prev;
-            });
-        },
-        [],
-    );
+    const handleRemoveFromPriority = useCallback((index) => {
+        setPriorityList((prev) => prev.filter((_, i) => i !== index));
+        setSelectedEntryIndex((prev) => {
+            if (prev === index) return null;
+            if (prev !== null && prev > index) return prev - 1;
+            return prev;
+        });
+    }, []);
 
     const handleDragStart = useCallback((index) => {
         setDragIndex(index);
@@ -449,13 +465,12 @@ const VoiceEditorContent = ({ entityId, entityName, currentVoice, onClose, onSav
                                                 loadingPreviewId === voice.id;
                                             const labels =
                                                 getVoiceLabels(voice);
-                                            const isInList =
-                                                priorityList.some(
-                                                    (p) =>
-                                                        p.provider ===
-                                                            activeProvider &&
-                                                        p.voiceId === voice.id,
-                                                );
+                                            const isInList = priorityList.some(
+                                                (p) =>
+                                                    p.provider ===
+                                                        activeProvider &&
+                                                    p.voiceId === voice.id,
+                                            );
 
                                             return (
                                                 <div
@@ -580,8 +595,7 @@ const VoiceEditorContent = ({ entityId, entityName, currentVoice, onClose, onSav
                                             <div
                                                 key={`${entry.provider}-${entry.voiceId}-${index}`}
                                                 className={`flex items-center gap-2 p-2 rounded border text-sm cursor-pointer ${
-                                                    selectedEntryIndex ===
-                                                    index
+                                                    selectedEntryIndex === index
                                                         ? "border-cyan-400 bg-cyan-50 dark:bg-cyan-900/20"
                                                         : dragIndex === index
                                                           ? "border-cyan-300 bg-cyan-50/50 dark:bg-cyan-900/10"
@@ -645,9 +659,8 @@ const VoiceEditorContent = ({ entityId, entityName, currentVoice, onClose, onSav
                                     <div className="space-y-2 pt-2">
                                         {selectedEntrySettings.map((field) => {
                                             const entrySettings =
-                                                priorityList[
-                                                    selectedEntryIndex
-                                                ].settings || {};
+                                                priorityList[selectedEntryIndex]
+                                                    .settings || {};
                                             if (field.type === "range") {
                                                 const value =
                                                     entrySettings[field.key] ??
@@ -655,26 +668,51 @@ const VoiceEditorContent = ({ entityId, entityName, currentVoice, onClose, onSav
                                                 return (
                                                     <div key={field.key}>
                                                         <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-0.5">
-                                                            <span>{t(field.label)} {(Number(value) * 100).toFixed(0)}%</span>
+                                                            <span>
+                                                                {t(field.label)}{" "}
+                                                                {(
+                                                                    Number(
+                                                                        value,
+                                                                    ) * 100
+                                                                ).toFixed(0)}
+                                                                %
+                                                            </span>
                                                         </div>
                                                         <input
                                                             type="range"
                                                             min={field.min ?? 0}
                                                             max={field.max ?? 1}
-                                                            step={field.step ?? 0.05}
+                                                            step={
+                                                                field.step ??
+                                                                0.05
+                                                            }
                                                             value={value}
                                                             onChange={(e) =>
                                                                 handleSettingChange(
                                                                     field.key,
-                                                                    parseFloat(e.target.value),
+                                                                    parseFloat(
+                                                                        e.target
+                                                                            .value,
+                                                                    ),
                                                                 )
                                                             }
                                                             className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                                                         />
-                                                        {(field.lowLabel || field.highLabel) && (
+                                                        {(field.lowLabel ||
+                                                            field.highLabel) && (
                                                             <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500 -mt-0.5">
-                                                                <span>{t(field.lowLabel || "")}</span>
-                                                                <span>{t(field.highLabel || "")}</span>
+                                                                <span>
+                                                                    {t(
+                                                                        field.lowLabel ||
+                                                                            "",
+                                                                    )}
+                                                                </span>
+                                                                <span>
+                                                                    {t(
+                                                                        field.highLabel ||
+                                                                            "",
+                                                                    )}
+                                                                </span>
                                                             </div>
                                                         )}
                                                     </div>
@@ -690,12 +728,16 @@ const VoiceEditorContent = ({ entityId, entityName, currentVoice, onClose, onSav
                                                             type="checkbox"
                                                             id={`setting-${field.key}`}
                                                             checked={
-                                                                entrySettings[field.key] ?? field.default
+                                                                entrySettings[
+                                                                    field.key
+                                                                ] ??
+                                                                field.default
                                                             }
                                                             onChange={(e) =>
                                                                 handleSettingChange(
                                                                     field.key,
-                                                                    e.target.checked,
+                                                                    e.target
+                                                                        .checked,
                                                                 )
                                                             }
                                                             className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-cyan-500 focus:ring-cyan-500"

@@ -328,8 +328,10 @@ export default function EntityOptionsDialog({
                                     {t("Voice")}
                                 </span>
                                 <span className="text-xs text-gray-400 dark:text-gray-500">
-                                    {Array.isArray(entity?.voice) && entity.voice.length > 0
-                                        ? entity.voice[0].name || entity.voice[0].voiceId
+                                    {Array.isArray(entity?.voice) &&
+                                    entity.voice.length > 0
+                                        ? entity.voice[0].name ||
+                                          entity.voice[0].voiceId
                                         : t("Default")}
                                 </span>
                             </div>
