@@ -284,11 +284,7 @@ export default function Layout({ children }) {
                                             );
                                         }
                                     }}
-                                    className={`flex items-center justify-center rounded-full transition-all ${
-                                        overlayVisible
-                                            ? "ring-2 ring-cyan-300/90 shadow-[0_0_24px_rgba(34,211,238,0.6),0_0_40px_rgba(59,130,246,0.35)]"
-                                            : "ring-1 ring-gray-200/60 dark:ring-gray-700/60 hover:ring-gray-300 dark:hover:ring-gray-600"
-                                    }`}
+                                    className="flex items-center gap-2 cursor-pointer"
                                     aria-label="Open entity contacts"
                                     title={
                                         entityDisplayName ||
@@ -296,7 +292,11 @@ export default function Layout({ children }) {
                                         "Select entity"
                                     }
                                 >
-                                    <div className="rounded-full bg-white/70 dark:bg-gray-900/70 p-0.5">
+                                    <div className={`rounded-full bg-white/70 dark:bg-gray-900/70 p-0.5 transition-all ${
+                                        overlayVisible
+                                            ? "ring-2 ring-cyan-300/90 shadow-[0_0_24px_rgba(34,211,238,0.6),0_0_40px_rgba(59,130,246,0.35)]"
+                                            : "ring-1 ring-gray-200/60 dark:ring-gray-700/60 hover:ring-gray-300 dark:hover:ring-gray-600"
+                                    }`}>
                                         {currentEntity ? (
                                             <EntityIcon
                                                 entity={currentEntity}
@@ -308,27 +308,27 @@ export default function Layout({ children }) {
                                             </div>
                                         )}
                                     </div>
-                                </button>
-                                {/* Entity name */}
-                                {entityDisplayName && (
-                                    <span className="text-sm text-gray-500 dark:text-gray-400 font-light tracking-wide">
-                                        {pathname?.startsWith("/chat") && (
-                                            <span className="hidden sm:inline">
-                                                Chatting with{" "}
-                                            </span>
-                                        )}
-                                        <span
-                                            className={`font-medium ${isEntityUnavailable ? "text-gray-400 dark:text-gray-500 italic" : "text-gray-700 dark:text-gray-200"}`}
-                                        >
-                                            {entityDisplayName}
-                                            {isEntityUnavailable && (
-                                                <span className="text-amber-500 ml-1 text-xs">
-                                                    (offline)
+                                    {/* Entity name */}
+                                    {entityDisplayName && (
+                                        <span className="text-sm text-gray-500 dark:text-gray-400 font-light tracking-wide">
+                                            {pathname?.startsWith("/chat") && (
+                                                <span className="hidden sm:inline">
+                                                    Chatting with{" "}
                                                 </span>
                                             )}
+                                            <span
+                                                className={`font-medium ${isEntityUnavailable ? "text-gray-400 dark:text-gray-500 italic" : "text-gray-700 dark:text-gray-200"}`}
+                                            >
+                                                {entityDisplayName}
+                                                {isEntityUnavailable && (
+                                                    <span className="text-amber-500 ml-1 text-xs">
+                                                        (offline)
+                                                    </span>
+                                                )}
+                                            </span>
                                         </span>
-                                    </span>
-                                )}
+                                    )}
+                                </button>
                                 {/* Overlay button - replays last overlay */}
                                 {currentEntity &&
                                     hasLastOverlay(currentEntity.id) && (
