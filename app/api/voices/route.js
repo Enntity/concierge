@@ -27,7 +27,7 @@ export async function GET() {
         const response = await fetch(`${voiceServerUrl}/voices`, {
             headers: {
                 "Content-Type": "application/json",
-                "x-auth-secret": process.env.VOICE_AUTH_SECRET || "",
+                "x-auth-secret": process.env.VOICE_AUTH_SECRET || process.env.AUTH_SECRET || "",
             },
         });
 

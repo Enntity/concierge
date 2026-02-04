@@ -41,7 +41,7 @@ export async function GET(request) {
             `${voiceServerUrl}/voices/preview?${params.toString()}`,
             {
                 headers: {
-                    "x-auth-secret": process.env.VOICE_AUTH_SECRET || "",
+                    "x-auth-secret": process.env.VOICE_AUTH_SECRET || process.env.AUTH_SECRET || "",
                 },
             },
         );
