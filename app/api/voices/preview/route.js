@@ -39,6 +39,11 @@ export async function GET(request) {
         const params = new URLSearchParams({ provider, voiceId, text });
         const response = await fetch(
             `${voiceServerUrl}/voices/preview?${params.toString()}`,
+            {
+                headers: {
+                    "x-auth-secret": process.env.VOICE_AUTH_SECRET || "",
+                },
+            },
         );
 
         if (!response.ok) {

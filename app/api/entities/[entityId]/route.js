@@ -285,10 +285,10 @@ export async function PATCH(req, { params }) {
         }
         if (pulseDailyBudgetTokens !== undefined) {
             const tokens = parseInt(pulseDailyBudgetTokens, 10);
-            if (isNaN(tokens) || tokens < 10000) {
+            if (isNaN(tokens) || tokens < 10000 || tokens > 10000000) {
                 return NextResponse.json(
                     {
-                        error: "pulseDailyBudgetTokens must be at least 10000",
+                        error: "pulseDailyBudgetTokens must be between 10000 and 10000000",
                     },
                     { status: 400 },
                 );
