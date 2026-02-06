@@ -292,11 +292,13 @@ export default function Layout({ children }) {
                                         "Select entity"
                                     }
                                 >
-                                    <div className={`rounded-full bg-white/70 dark:bg-gray-900/70 p-0.5 transition-all ${
-                                        overlayVisible
-                                            ? "ring-2 ring-cyan-300/90 shadow-[0_0_24px_rgba(34,211,238,0.6),0_0_40px_rgba(59,130,246,0.35)]"
-                                            : "ring-1 ring-gray-200/60 dark:ring-gray-700/60 hover:ring-gray-300 dark:hover:ring-gray-600"
-                                    }`}>
+                                    <div
+                                        className={`rounded-full bg-white/70 dark:bg-gray-900/70 p-0.5 transition-all ${
+                                            overlayVisible
+                                                ? "ring-2 ring-cyan-300/90 shadow-[0_0_24px_rgba(34,211,238,0.6),0_0_40px_rgba(59,130,246,0.35)]"
+                                                : "ring-1 ring-gray-200/60 dark:ring-gray-700/60 hover:ring-gray-300 dark:hover:ring-gray-600"
+                                        }`}
+                                    >
                                         {currentEntity ? (
                                             <EntityIcon
                                                 entity={currentEntity}

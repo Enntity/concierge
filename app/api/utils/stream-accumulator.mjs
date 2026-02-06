@@ -10,6 +10,7 @@ export class StreamAccumulator {
         this.hasReceivedPersistent = false;
         this.accumulatedInfo = {};
         this.toolCallsMap = new Map(); // UI status tracking (icon, userMessage, status)
+        this.toolHistory = null;
         this.thinkingStartTime = null;
         this.accumulatedThinkingTime = 0;
         this.isThinking = false;
@@ -42,6 +43,12 @@ export class StreamAccumulator {
                         this.isThinking = true;
                     }
                 }
+            }
+
+            // Extract toolHistory before merging into accumulatedInfo
+            if (parsedInfo.toolHistory) {
+                this.toolHistory = parsedInfo.toolHistory;
+                delete parsedInfo.toolHistory;
             }
 
             // Store accumulated info
@@ -215,6 +222,7 @@ export class StreamAccumulator {
                 : undefined,
             thinkingDuration: this.getThinkingDuration(),
             toolCalls: hasToolCalls ? finalToolCalls : null,
+            toolHistory: this.toolHistory || null,
         };
     }
 
@@ -234,6 +242,7 @@ export class StreamAccumulator {
         this.hasReceivedPersistent = false;
         this.accumulatedInfo = {};
         this.toolCallsMap.clear();
+        this.toolHistory = null;
         this.thinkingStartTime = null;
         this.accumulatedThinkingTime = 0;
         this.isThinking = false;

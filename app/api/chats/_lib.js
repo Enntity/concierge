@@ -81,6 +81,7 @@ export function sanitizeMessage(msg) {
         thinkingDuration: msgObj.thinkingDuration || 0,
         // Preserve toolCalls if it's an array, otherwise set to null (never undefined)
         toolCalls: Array.isArray(msgObj.toolCalls) ? msgObj.toolCalls : null,
+        toolHistory: msgObj.toolHistory || null,
         task: msgObj.task || null,
         _id: msgObj._id, // Keep _id for client-side reference
     };

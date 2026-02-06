@@ -424,14 +424,39 @@ function ChatContent({
                             return true;
                         }
                     })
-                    .map((m) =>
-                        m.sender === "enntity"
-                            ? {
-                                  role: "assistant",
-                                  content: getMessagePayload(m),
-                              }
-                            : { role: "user", content: m.payload },
-                    );
+                    .flatMap((m) => {
+                        if (m.sender === "enntity") {
+                            const msgs = [];
+                            // Expand toolHistory into native format before the assistant text
+                            if (m.toolHistory && Array.isArray(m.toolHistory)) {
+                                for (const th of m.toolHistory) {
+                                    // Serialize tool_calls to strings for GraphQL schema compatibility
+                                    if (
+                                        th.tool_calls &&
+                                        Array.isArray(th.tool_calls)
+                                    ) {
+                                        msgs.push({
+                                            ...th,
+                                            tool_calls: th.tool_calls.map(
+                                                (tc) =>
+                                                    typeof tc === "string"
+                                                        ? tc
+                                                        : JSON.stringify(tc),
+                                            ),
+                                        });
+                                    } else {
+                                        msgs.push(th);
+                                    }
+                                }
+                            }
+                            msgs.push({
+                                role: "assistant",
+                                content: getMessagePayload(m),
+                            });
+                            return msgs;
+                        }
+                        return [{ role: "user", content: m.payload }];
+                    });
 
                 conversation.push({
                     role: "user",
