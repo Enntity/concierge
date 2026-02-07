@@ -994,6 +994,7 @@ const SYS_UPDATE_ENTITY = gql`
         $pulseActiveHoursStart: String
         $pulseActiveHoursEnd: String
         $pulseActiveHoursTimezone: String
+        $secrets: String
     ) {
         sys_update_entity(
             entityId: $entityId
@@ -1010,6 +1011,7 @@ const SYS_UPDATE_ENTITY = gql`
             avatarDescription: $avatarDescription
             avatarImageUrl: $avatarImageUrl
             voice: $voice
+            secrets: $secrets
             pulseEnabled: $pulseEnabled
             pulseWakeIntervalMinutes: $pulseWakeIntervalMinutes
             pulseMaxChainDepth: $pulseMaxChainDepth

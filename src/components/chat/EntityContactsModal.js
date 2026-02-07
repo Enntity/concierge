@@ -38,6 +38,7 @@ import { AuthContext } from "../../App";
 import ContinuityMemoryEditor from "../ContinuityMemoryEditor";
 import ToolsEditor from "./ToolsEditor";
 import VoiceEditor from "./VoiceEditor";
+import SecretsEditor from "./SecretsEditor";
 
 // Sort options
 const SORT_OPTIONS = {
@@ -71,6 +72,10 @@ export default function EntityContactsModal({
     const [voiceEditorEntityName, setVoiceEditorEntityName] = useState(null);
     const [voiceEditorCurrentVoice, setVoiceEditorCurrentVoice] =
         useState(null);
+    const [secretsEditorEntityId, setSecretsEditorEntityId] = useState(null);
+    const [secretsEditorEntityName, setSecretsEditorEntityName] =
+        useState(null);
+    const [secretsEditorKeys, setSecretsEditorKeys] = useState([]);
     const [optionsEntity, setOptionsEntity] = useState(null);
     const pendingOptionsEntityRef = useRef(null);
     const firstEntityRef = useRef(null);
@@ -494,6 +499,11 @@ export default function EntityContactsModal({
                     setVoiceEditorEntityName(entityName);
                     setVoiceEditorCurrentVoice(voice);
                 }}
+                onOpenSecretsEditor={(entityId, entityName, secretKeys) => {
+                    setSecretsEditorEntityId(entityId);
+                    setSecretsEditorEntityName(entityName);
+                    setSecretsEditorKeys(secretKeys);
+                }}
                 onEntityUpdate={(updatedEntity) => {
                     // Update local options entity state immediately
                     if (updatedEntity) {
@@ -601,6 +611,46 @@ export default function EntityContactsModal({
                         (currentEntity
                             ? { ...currentEntity, voice: voiceConfig.voice }
                             : null);
+                    if (refetchEntities) refetchEntities();
+                }}
+            />
+
+            {/* Secrets Editor */}
+            <SecretsEditor
+                show={!!secretsEditorEntityId}
+                onClose={() => {
+                    const freshEntity = pendingOptionsEntityRef.current;
+                    if (freshEntity) {
+                        setOptionsEntity(freshEntity);
+                        pendingOptionsEntityRef.current = null;
+                    }
+                    setSecretsEditorEntityId(null);
+                    setSecretsEditorEntityName(null);
+                    setSecretsEditorKeys([]);
+                }}
+                entityId={secretsEditorEntityId}
+                entityName={secretsEditorEntityName}
+                secretKeys={secretsEditorKeys}
+                onSave={async (secrets) => {
+                    const response = await fetch(
+                        `/api/entities/${secretsEditorEntityId}`,
+                        {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ secrets }),
+                        },
+                    );
+                    const result = await response.json();
+                    if (!result.success) {
+                        throw new Error(
+                            result.error || "Failed to save secrets",
+                        );
+                    }
+                    const currentEntity = entities.find(
+                        (e) => e.id === secretsEditorEntityId,
+                    );
+                    pendingOptionsEntityRef.current =
+                        result.entity || currentEntity;
                     if (refetchEntities) refetchEntities();
                 }}
             />

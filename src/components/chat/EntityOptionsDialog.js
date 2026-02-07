@@ -13,6 +13,7 @@ import {
     Mic,
     Heart,
     Loader2,
+    KeyRound,
 } from "lucide-react";
 import {
     Dialog,
@@ -41,6 +42,7 @@ export default function EntityOptionsDialog({
     onOpenMemoryEditor,
     onOpenToolsEditor,
     onOpenVoiceEditor,
+    onOpenSecretsEditor,
     onEntityUpdate,
     refetchEntities,
 }) {
@@ -188,6 +190,18 @@ export default function EntityOptionsDialog({
         onClose();
         if (onOpenVoiceEditor) {
             onOpenVoiceEditor(entity.id, entity.name, entity.voice);
+        }
+    };
+
+    const handleOpenSecrets = () => {
+        document.activeElement?.blur();
+        onClose();
+        if (onOpenSecretsEditor) {
+            onOpenSecretsEditor(
+                entity.id,
+                entity.name,
+                entity.secretKeys || [],
+            );
         }
     };
 
@@ -339,12 +353,29 @@ export default function EntityOptionsDialog({
                         </button>
                         <button
                             onClick={handleOpenMemory}
-                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors last:rounded-b-lg"
+                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                             <div className="flex items-center gap-2.5">
                                 <Brain className="w-4 h-4 text-purple-500" />
                                 <span className="text-sm text-gray-900 dark:text-gray-100">
                                     {t("Memory")}
+                                </span>
+                            </div>
+                            <span className="text-gray-400 text-xs">→</span>
+                        </button>
+                        <button
+                            onClick={handleOpenSecrets}
+                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors last:rounded-b-lg"
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <KeyRound className="w-4 h-4 text-amber-500" />
+                                <span className="text-sm text-gray-900 dark:text-gray-100">
+                                    {t("Secrets")}
+                                </span>
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
+                                    {entity?.secretKeys?.length > 0
+                                        ? entity.secretKeys.length
+                                        : t("None")}
                                 </span>
                             </div>
                             <span className="text-gray-400 text-xs">→</span>

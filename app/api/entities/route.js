@@ -132,6 +132,11 @@ async function getEntityFromMongoDB(entityId, contextId) {
         }
 
         const { _id, ...entityData } = entity;
+        // Strip encrypted secret values — only expose key names
+        if (entityData.secrets) {
+            entityData.secretKeys = Object.keys(entityData.secrets);
+            delete entityData.secrets;
+        }
         return NextResponse.json([entityData]); // Always return array for consistency
     } finally {
         if (client) {
@@ -180,6 +185,11 @@ async function getEntitiesFromMongoDB(contextId, includeSystem) {
         const entitiesArray = await collection.find(query).toArray();
         const entities = entitiesArray.map((e) => {
             const { _id, ...entityData } = e;
+            // Strip encrypted secret values — only expose key names
+            if (entityData.secrets) {
+                entityData.secretKeys = Object.keys(entityData.secrets);
+                delete entityData.secrets;
+            }
             return entityData;
         });
 

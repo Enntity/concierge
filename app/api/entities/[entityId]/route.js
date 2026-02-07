@@ -3,6 +3,7 @@ import { getCurrentUser } from "../../utils/auth";
 import { getEntitiesCollection, isValidEntityId } from "../_lib";
 import { getClient, MUTATIONS } from "../../../../src/graphql";
 import { triggerPulseReschedule } from "../_pulse";
+import { encrypt } from "../../utils/crypto";
 
 /**
  * GET /api/entities/[entityId]
@@ -53,6 +54,11 @@ export async function GET(req, { params }) {
             }
 
             const { _id, ...entityData } = entity;
+            // Strip encrypted secret values — only expose key names
+            if (entityData.secrets) {
+                entityData.secretKeys = Object.keys(entityData.secrets);
+                delete entityData.secrets;
+            }
             return NextResponse.json(entityData);
         } finally {
             if (client) {
@@ -107,6 +113,8 @@ export async function PATCH(req, { params }) {
             tools,
             // Voice preference array
             voice,
+            // Encrypted secrets
+            secrets,
             // Pulse fields
             pulseEnabled,
             pulseWakeIntervalMinutes,
@@ -239,6 +247,50 @@ export async function PATCH(req, { params }) {
             }
             // Pass as JSON string through the graphql mutation
             variables.voice = JSON.stringify(voice);
+        }
+
+        // Handle secrets — encrypt here so plaintext never travels over the wire
+        if (secrets !== undefined) {
+            if (
+                typeof secrets !== "object" ||
+                Array.isArray(secrets) ||
+                secrets === null
+            ) {
+                return NextResponse.json(
+                    { error: "secrets must be a {KEY: value} object" },
+                    { status: 400 },
+                );
+            }
+            const encryptionKey = process.env.REDIS_ENCRYPTION_KEY;
+            if (!encryptionKey) {
+                return NextResponse.json(
+                    { error: "Secret storage is not configured" },
+                    { status: 500 },
+                );
+            }
+            const encryptedSecrets = {};
+            for (const [k, v] of Object.entries(secrets)) {
+                if (!/^[A-Z_][A-Z0-9_]*$/i.test(k)) {
+                    return NextResponse.json(
+                        {
+                            error: `Invalid secret name: "${k}". Use UPPER_SNAKE_CASE.`,
+                        },
+                        { status: 400 },
+                    );
+                }
+                if (typeof v !== "string" && v !== null) {
+                    return NextResponse.json(
+                        {
+                            error: `Secret value for "${k}" must be a string or null (to delete)`,
+                        },
+                        { status: 400 },
+                    );
+                }
+                // null = delete, string = encrypt
+                encryptedSecrets[k] =
+                    v === null ? null : encrypt(v, encryptionKey);
+            }
+            variables.secrets = JSON.stringify(encryptedSecrets);
         }
 
         // Handle pulse fields
@@ -440,6 +492,12 @@ export async function PATCH(req, { params }) {
                 }
 
                 const { _id, ...entityData } = updatedEntity;
+
+                // Strip encrypted secret values — only expose key names
+                if (entityData.secrets) {
+                    entityData.secretKeys = Object.keys(entityData.secrets);
+                    delete entityData.secrets;
+                }
 
                 // Trigger pulse reschedule if any pulse fields were updated
                 const pulseFieldsUpdated = parsed.updatedProperties?.some((p) =>
