@@ -120,6 +120,10 @@ function buildWakePrompt(entity, options) {
 
     if (compass) {
         prompt += `[Your Internal Compass]\n${compass}\n\n`;
+        // Nudge when Current Focus has content (gracefully no-ops on old-format compasses)
+        if (/Current Focus:\s*\n\s*-/.test(compass)) {
+            prompt += `^ Your Current Focus is above. That's where your momentum is.\n\n`;
+        }
     }
 
     if (taskContext) {
