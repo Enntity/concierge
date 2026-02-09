@@ -127,6 +127,7 @@ const generateDigestBlockContent = async (
         const result = await client.query({
             query: QUERIES.SYS_ENTITY_AGENT,
             variables,
+            fetchPolicy: 'network-only',
         });
 
         tool = result.data.sys_entity_agent.tool;
