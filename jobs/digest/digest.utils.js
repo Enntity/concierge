@@ -6,10 +6,10 @@ const PROGRESS_UPDATE_INTERVAL = 3000;
 
 /**
  * Validates that an entityId is in the user's contact list
- * Returns the entityId if valid, null otherwise
+ * Returns { entityId, preferredModel } if valid, { entityId: null } otherwise
  */
 async function validateEntityAccess(entityId, userContextId, logger) {
-    if (!entityId || !userContextId) return null;
+    if (!entityId || !userContextId) return { entityId: null };
 
     let client;
     try {
@@ -21,12 +21,17 @@ async function validateEntityAccess(entityId, userContextId, logger) {
 
         if (!entity) {
             logger?.log(`Entity ${entityId} not found`);
-            return null;
+            return { entityId: null };
         }
+
+        const entityInfo = {
+            entityId,
+            preferredModel: entity.modelOverride || entity.preferredModel || null,
+        };
 
         // System entities are always accessible
         if (entity.isSystem) {
-            return entityId;
+            return entityInfo;
         }
 
         // Check if user has this entity in their contacts
@@ -35,16 +40,16 @@ async function validateEntityAccess(entityId, userContextId, logger) {
             Array.isArray(entity.assocUserIds) &&
             entity.assocUserIds.includes(userContextId)
         ) {
-            return entityId;
+            return entityInfo;
         }
 
         logger?.log(
             `User ${userContextId} no longer has access to entity ${entityId}`,
         );
-        return null;
+        return { entityId: null };
     } catch (e) {
         logger?.log(`Error validating entity access: ${e.message}`);
-        return null;
+        return { entityId: null };
     } finally {
         if (client) {
             await client.close().catch(() => {});
@@ -81,12 +86,15 @@ const generateDigestBlockContent = async (
     // Validate that the entityId is still accessible to the user
     // Falls back to user's default entity if not
     let resolvedEntityId = null;
+    let entityPreferredModel = null;
     if (entityId) {
-        resolvedEntityId = await validateEntityAccess(
+        const entityAccess = await validateEntityAccess(
             entityId,
             user?.contextId,
             logger,
         );
+        resolvedEntityId = entityAccess.entityId;
+        entityPreferredModel = entityAccess.preferredModel;
         if (!resolvedEntityId && entityId) {
             logger?.log(
                 `Entity ${entityId} no longer accessible, falling back to default`,
@@ -101,11 +109,15 @@ const generateDigestBlockContent = async (
         resolvedEntityId = user?.defaultEntityId || null;
     }
 
+    // Model priority: user override > entity preferred > default
+    // (matches ChatContent.js logic; entity modelOverride is handled server-side in cortex)
+    const model = user?.agentModel || entityPreferredModel || "gemini-flash-3-vision";
+
     const variables = {
         chatHistory: [systemMessage, { role: "user", content: [prompt] }],
         agentContext,
         aiName: user?.aiName,
-        model: user?.agentModel || "gemini-flash-3-vision",
+        model,
         useMemory: true,
         entityId: resolvedEntityId,
     };
