@@ -51,6 +51,7 @@ export function useVoiceSession() {
     const lastAudioFrameTimeRef = useRef(0); // track when we last sent audio
     const micAudioContextRef = useRef(null);
     const isMutedRef = useRef(false);
+    const wakeLockRef = useRef(null);
 
     const {
         isActive,
@@ -350,7 +351,7 @@ export function useVoiceSession() {
                 // Check if AI is currently playing audio
                 const timeSinceAi = Date.now() - lastAiActivityRef.current;
                 const aiRecentlyActive =
-                    lastAiActivityRef.current > 0 && timeSinceAi < 3000;
+                    lastAiActivityRef.current > 0 && timeSinceAi < 800;
                 const playerIsStreaming = playerRef.current?.stream != null;
                 const aiIsPlaying = aiRecentlyActive || playerIsStreaming;
 
@@ -462,6 +463,19 @@ export function useVoiceSession() {
         const source = audioContext.createMediaStreamSource(stream);
         _setAudioContext(audioContext);
         _setSourceNode(source);
+
+        // Request screen wake lock to prevent phone from sleeping during voice
+        try {
+            if ("wakeLock" in navigator) {
+                wakeLockRef.current = await navigator.wakeLock.request("screen");
+                console.log("[useVoiceSession] Screen wake lock acquired");
+                wakeLockRef.current.addEventListener("release", () => {
+                    console.log("[useVoiceSession] Screen wake lock released");
+                });
+            }
+        } catch (e) {
+            console.warn("[useVoiceSession] Wake lock request failed:", e);
+        }
 
         console.log("[useVoiceSession] Silero VAD initialized");
         return { vad, player };
@@ -651,7 +665,10 @@ export function useVoiceSession() {
                     }
 
                     // Ensure volume is normal when playing audio
-                    playerRef.current.unduck();
+                    // BUT don't fight the InterruptManager's ducking during evaluation
+                    if (!interruptManagerRef.current?.isPending()) {
+                        playerRef.current.unduck();
+                    }
 
                     // Track AI activity
                     lastAiActivityRef.current = Date.now();
@@ -856,6 +873,16 @@ export function useVoiceSession() {
             speechEndDelayRef.current = null;
         }
 
+        // Release wake lock
+        if (wakeLockRef.current) {
+            try {
+                wakeLockRef.current.release();
+            } catch (e) {
+                // Ignore release errors
+            }
+            wakeLockRef.current = null;
+        }
+
         isInitializedRef.current = false;
         userIsSpeakingRef.current = false;
         setAwaitingNewResponse(false);
@@ -960,6 +987,45 @@ export function useVoiceSession() {
             cleanup();
         };
     }, [cleanup]);
+
+    /**
+     * Re-acquire wake lock when page becomes visible again.
+     * Browsers release the wake lock when the page is hidden.
+     */
+    useEffect(() => {
+        if (!isActive) return;
+
+        const handleVisibilityChange = async () => {
+            if (
+                document.visibilityState === "visible" &&
+                isInitializedRef.current &&
+                !wakeLockRef.current
+            ) {
+                try {
+                    if ("wakeLock" in navigator) {
+                        wakeLockRef.current =
+                            await navigator.wakeLock.request("screen");
+                        console.log(
+                            "[useVoiceSession] Wake lock re-acquired on visibility change",
+                        );
+                    }
+                } catch (e) {
+                    console.warn(
+                        "[useVoiceSession] Wake lock re-acquire failed:",
+                        e,
+                    );
+                }
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => {
+            document.removeEventListener(
+                "visibilitychange",
+                handleVisibilityChange,
+            );
+        };
+    }, [isActive]);
 
     /**
      * Handle mute state changes

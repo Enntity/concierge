@@ -103,6 +103,13 @@ export class InterruptManager {
     }
 
     /**
+     * Returns true if the manager is currently evaluating a potential interrupt.
+     */
+    isPending() {
+        return this.state === State.PENDING;
+    }
+
+    /**
      * Resets the manager to idle state. Does not fire callbacks.
      */
     reset() {
