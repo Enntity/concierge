@@ -41,14 +41,15 @@ export function useVoiceSession() {
     // When AI is playing, it enters PENDING, ducks audio, and confirms only after
     // enough high-confidence speech frames accumulate.
     const userIsSpeakingRef = useRef(false); // true between speechStart and speechEnd/misfire
-    const awaitingNewResponseRef = useRef(false); // true after interrupt until new response starts
-    const awaitingTimeoutRef = useRef(null); // safety timeout to clear awaitingNewResponse
+    const generationIdRef = useRef(0); // monotonic counter — incremented on interrupt, stale audio is silently dropped
     const lastAiActivityRef = useRef(0); // timestamp for grace period during state bounces
     const interruptManagerRef = useRef(null); // InterruptManager instance (created in initializeAudio)
     const clientAudioPlayingRef = useRef(false); // true when client is playing audio (for filler suppression)
     const speechTimeoutRef = useRef(null); // fallback timeout when VAD fails to detect speech end
     const speechEndDelayRef = useRef(null); // the 150ms delay before processing speech end
     const lastAudioFrameTimeRef = useRef(0); // track when we last sent audio
+    const audioFrameRingBufferRef = useRef([]); // pre-speech context frames
+    const RING_BUFFER_SIZE = 5; // frames of pre-speech context
     const micAudioContextRef = useRef(null);
     const isMutedRef = useRef(false);
     const wakeLockRef = useRef(null);
@@ -78,33 +79,6 @@ export function useVoiceSession() {
     useEffect(() => {
         isMutedRef.current = isMuted;
     }, [isMuted]);
-
-    /**
-     * Set awaitingNewResponse with a safety timeout.
-     * If the flag isn't cleared by normal means (trackStart, state:change)
-     * within the timeout, force-clear it to prevent permanent audio block.
-     */
-    const setAwaitingNewResponse = useCallback((value) => {
-        awaitingNewResponseRef.current = value;
-        if (awaitingTimeoutRef.current) {
-            clearTimeout(awaitingTimeoutRef.current);
-            awaitingTimeoutRef.current = null;
-        }
-        if (value) {
-            awaitingTimeoutRef.current = setTimeout(() => {
-                if (awaitingNewResponseRef.current) {
-                    console.warn(
-                        "[useVoiceSession] awaitingNewResponse safety timeout - force clearing",
-                    );
-                    awaitingNewResponseRef.current = false;
-                    if (playerRef.current) {
-                        playerRef.current.interruptedTrackIds = {};
-                    }
-                }
-                awaitingTimeoutRef.current = null;
-            }, 5000);
-        }
-    }, []);
 
     /**
      * Convert Float32Array to base64 PCM16 string
@@ -171,8 +145,8 @@ export function useVoiceSession() {
                     clientAudioPlayingRef.current = false;
                     socketRef.current?.emit("audio:clientStopped");
                 }
-                // Block all audio until we get a fresh response
-                setAwaitingNewResponse(true);
+                // Increment generation so stale audio from old response is dropped
+                generationIdRef.current++;
             },
             onDuck: (shouldDuck) => {
                 if (shouldDuck) {
@@ -348,17 +322,17 @@ export function useVoiceSession() {
                 // Start fallback timeout
                 startSpeechTimeout();
 
-                // Check if AI is currently playing audio
-                const timeSinceAi = Date.now() - lastAiActivityRef.current;
-                const aiRecentlyActive =
-                    lastAiActivityRef.current > 0 && timeSinceAi < 800;
-                const playerIsStreaming = playerRef.current?.stream != null;
-                const aiIsPlaying = aiRecentlyActive || playerIsStreaming;
+                // Flush pre-speech ring buffer to server
+                const ringBuffer = audioFrameRingBufferRef.current;
+                for (const frame of ringBuffer) {
+                    socketRef.current.emit("audio:input", frame);
+                }
+                ringBuffer.length = 0;
+
+                // Check if AI is currently playing audio (ground truth from worklet)
+                const aiIsPlaying = playerRef.current?.isOutputActive === true;
 
                 console.log("[VAD] Interrupt check:", {
-                    timeSinceAi,
-                    aiRecentlyActive,
-                    playerIsStreaming,
                     aiIsPlaying,
                 });
 
@@ -414,10 +388,21 @@ export function useVoiceSession() {
                 // Stream audio to server (unless muted)
                 if (!isMutedRef.current) {
                     const base64Audio = float32ToBase64PCM16(audioFrame);
-                    socketRef.current.emit("audio:input", {
-                        data: base64Audio,
-                        sampleRate: 16000,
-                    });
+
+                    // Always maintain ring buffer for pre-speech context
+                    const ringBuffer = audioFrameRingBufferRef.current;
+                    ringBuffer.push({ data: base64Audio, sampleRate: 16000 });
+                    if (ringBuffer.length > RING_BUFFER_SIZE) {
+                        ringBuffer.shift();
+                    }
+
+                    // Only stream during active speech AND not during PENDING echo evaluation
+                    if (userIsSpeakingRef.current && !interruptManagerRef.current?.isPending()) {
+                        socketRef.current.emit("audio:input", {
+                            data: base64Audio,
+                            sampleRate: 16000,
+                        });
+                    }
 
                     // Reset speech timeout while actively sending audio with speech detected
                     if (
@@ -445,11 +430,6 @@ export function useVoiceSession() {
                     speechTimeoutRef.current = null;
                 }
                 userIsSpeakingRef.current = false;
-                // If we set awaitingNewResponse, clear it
-                if (awaitingNewResponseRef.current) {
-                    console.log("[VAD] Misfire - clearing await flag");
-                    setAwaitingNewResponse(false);
-                }
                 _setState("idle");
             },
         });
@@ -487,7 +467,6 @@ export function useVoiceSession() {
         _setInputLevel,
         _setLiveAssistantTranscript,
         float32ToBase64PCM16,
-        setAwaitingNewResponse,
     ]);
 
     /**
@@ -602,24 +581,6 @@ export function useVoiceSession() {
                     lastAiActivityRef.current = Date.now();
                 }
 
-                // When server starts speaking and user is done, allow audio
-                if (
-                    state === "speaking" &&
-                    awaitingNewResponseRef.current &&
-                    !userIsSpeakingRef.current
-                ) {
-                    console.log(
-                        "[state:change] New response starting, clearing await flag",
-                    );
-                    setAwaitingNewResponse(false);
-                    // Ensure volume is restored for new response
-                    playerRef.current?.unduck();
-                    // Clear interrupted track states
-                    if (playerRef.current) {
-                        playerRef.current.interruptedTrackIds = {};
-                    }
-                }
-
                 // Don't reset lastAiActivity on idle - let it age naturally
                 // Server may say idle before local audio finishes playing
             });
@@ -647,15 +608,10 @@ export function useVoiceSession() {
             socket.on("audio:output", (data) => {
                 if (!data || typeof data.data !== "string") return;
                 if (data.data && playerRef.current) {
-                    // Block audio if:
-                    // 1. User is currently speaking, OR
-                    // 2. We're awaiting a new response after an interrupt
-                    if (
-                        userIsSpeakingRef.current ||
-                        awaitingNewResponseRef.current
-                    ) {
-                        return;
-                    }
+                    // Block audio if user is currently speaking
+                    if (userIsSpeakingRef.current) return;
+                    // Drop stale audio from a previous generation (pre-interrupt)
+                    if (data.generationId != null && data.generationId < generationIdRef.current) return;
 
                     const trackId = data.trackId || "default";
 
@@ -691,13 +647,12 @@ export function useVoiceSession() {
 
             // Track start - queue transcript for display when audio plays
             socket.on("audio:trackStart", (data) => {
-                // A new track means fresh audio - clear interrupt gate
-                if (awaitingNewResponseRef.current) {
-                    setAwaitingNewResponse(false);
-                    if (playerRef.current) {
-                        playerRef.current.unduck();
-                        playerRef.current.interruptedTrackIds = {};
-                    }
+                // Drop stale track-start from a previous generation (pre-interrupt)
+                if (data.generationId != null && data.generationId < generationIdRef.current) return;
+                // Fresh generation - restore volume and clear interrupted states
+                playerRef.current?.unduck();
+                if (playerRef.current) {
+                    playerRef.current.interruptedTrackIds = {};
                 }
 
                 if (data.text && data.trackId) {
@@ -736,12 +691,17 @@ export function useVoiceSession() {
             });
 
             // Stop audio playback (server-initiated interruption)
-            socket.on("audio:stop", async () => {
+            socket.on("audio:stop", async (data) => {
                 console.log("[useVoiceSession] Server requested audio stop");
                 if (playerRef.current) {
                     await playerRef.current.interrupt();
                 }
-                setAwaitingNewResponse(true);
+                // Sync generation ID from server (or increment locally for legacy servers)
+                if (data?.generationId != null) {
+                    generationIdRef.current = Math.max(generationIdRef.current, data.generationId);
+                } else {
+                    generationIdRef.current++;
+                }
                 _setState("idle");
             });
 
@@ -796,7 +756,6 @@ export function useVoiceSession() {
             _addToHistory,
             _setCurrentTool,
             showOverlay,
-            setAwaitingNewResponse,
         ],
     );
 
@@ -885,7 +844,7 @@ export function useVoiceSession() {
 
         isInitializedRef.current = false;
         userIsSpeakingRef.current = false;
-        setAwaitingNewResponse(false);
+        generationIdRef.current = 0;
         if (interruptManagerRef.current) {
             interruptManagerRef.current.reset();
             interruptManagerRef.current = null;
@@ -893,6 +852,7 @@ export function useVoiceSession() {
         clientAudioPlayingRef.current = false;
         lastAiActivityRef.current = 0;
         lastAudioFrameTimeRef.current = 0;
+        audioFrameRingBufferRef.current = [];
         transcriptQueueRef.current = [];
         currentDisplayedTrackRef.current = null;
         // Only play disconnect sound if we actually connected
@@ -901,7 +861,7 @@ export function useVoiceSession() {
             wasConnectedRef.current = false;
         }
         console.log("[useVoiceSession] Cleanup complete");
-    }, [setAwaitingNewResponse]);
+    }, []);
 
     /**
      * Initialize session when voice becomes active, cleanup when inactive

@@ -13,6 +13,7 @@ class StreamProcessor extends AudioWorkletProcessor {
     this.lastErrorTime = 0;
     this.errorCount = 0;
     this.noBufferCount = 0;
+    this.wasOutputActive = false;
     this.maxNoBufferFrames = 100;
     this.lastUnderrunLog = 0;
     // Crossfade support - keep last sample for smoothing
@@ -68,6 +69,9 @@ class StreamProcessor extends AudioWorkletProcessor {
               this.outputBuffers = [];
               this.write = { buffer: new Float32Array(this.bufferLength), trackId: null };
               this.writeOffset = 0;
+              // Signal output stopped
+              this.wasOutputActive = false;
+              this.port.postMessage({ event: 'output_active', active: false });
             }
           } else {
             throw new Error(\`Unhandled event "\${payload.event}"\`);
@@ -250,6 +254,12 @@ class StreamProcessor extends AudioWorkletProcessor {
         this.noBufferCount = 0;
         this.lastUnderrunLog = 0;
 
+        // Edge-detect: signal when output becomes active
+        if (!this.wasOutputActive) {
+          this.wasOutputActive = true;
+          this.port.postMessage({ event: 'output_active', active: true });
+        }
+
         const { buffer, trackId } = outputBuffers.shift();
 
         // Apply crossfade at the start to smooth transition from previous buffer
@@ -285,6 +295,12 @@ class StreamProcessor extends AudioWorkletProcessor {
         return true;
       } else if (this.hasStarted) {
         this.noBufferCount++;
+
+        // Edge-detect: signal when output becomes inactive (3 frames ≈ 8ms)
+        if (this.wasOutputActive && this.noBufferCount >= 3) {
+          this.wasOutputActive = false;
+          this.port.postMessage({ event: 'output_active', active: false });
+        }
 
         if (this.noBufferCount >= 5 && currentTime - this.lastUnderrunLog > 1) {
           this.port.postMessage({

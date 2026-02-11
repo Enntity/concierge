@@ -25,6 +25,7 @@ export class WavStreamPlayer {
         this.isRestarting = false;
         this.currentTrackId = null;
         this.onTrackComplete = null;
+        this.isOutputActive = false;
     }
 
     /**
@@ -114,12 +115,15 @@ export class WavStreamPlayer {
                 if (event === "stop") {
                     streamNode.disconnect();
                     this.stream = null;
+                    this.isOutputActive = false;
                     this.isRestarting = false;
                     if (e.data.reason === "max_underruns_reached") {
                         console.warn(
                             `Audio stream stopped due to ${e.data.finalCount} consecutive underruns`,
                         );
                     }
+                } else if (event === "output_active") {
+                    this.isOutputActive = e.data.active;
                 } else if (event === "offset") {
                     const { requestId, trackId, offset } = e.data;
                     const currentTime = offset / this.sampleRate;
