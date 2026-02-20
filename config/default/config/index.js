@@ -30,6 +30,9 @@ const LLM_IDENTIFIERS = {
     gemini25pro: "gemini25pro",
     gemini30flash: "gemini30flash",
     gemini30pro: "gemini30pro",
+    claude46opus: "claude46opus",
+    claude46sonnet: "claude46sonnet",
+    gemini31pro: "gemini31pro",
 };
 
 // eslint-disable-next-line import/no-anonymous-default-export
@@ -163,6 +166,24 @@ export default {
                 name: "Gemini 3.0 Pro",
                 cortexPathwayName: "run_workspace_prompt",
                 cortexModelName: "gemini-pro-3-vision",
+            },
+            {
+                identifier: LLM_IDENTIFIERS.claude46opus,
+                name: "Claude 4.6 Opus",
+                cortexPathwayName: "run_workspace_prompt",
+                cortexModelName: "claude-46-opus",
+            },
+            {
+                identifier: LLM_IDENTIFIERS.claude46sonnet,
+                name: "Claude 4.6 Sonnet",
+                cortexPathwayName: "run_workspace_prompt",
+                cortexModelName: "claude-46-sonnet",
+            },
+            {
+                identifier: LLM_IDENTIFIERS.gemini31pro,
+                name: "Gemini 3.1 Pro",
+                cortexPathwayName: "run_workspace_prompt",
+                cortexModelName: "gemini-pro-31-vision",
             },
         ],
     },

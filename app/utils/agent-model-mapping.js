@@ -19,6 +19,16 @@ export const AGENT_MODEL_OPTIONS = [
         provider: "anthropic",
     },
     {
+        displayName: "Claude 4.6 Opus",
+        modelId: "claude-46-opus",
+        provider: "anthropic",
+    },
+    {
+        displayName: "Claude 4.6 Sonnet",
+        modelId: "claude-46-sonnet",
+        provider: "anthropic",
+    },
+    {
         displayName: "Grok 4.1 Fast Reasoning",
         modelId: "xai-grok-4-1-fast-reasoning",
         provider: "xai",
@@ -36,6 +46,11 @@ export const AGENT_MODEL_OPTIONS = [
     {
         displayName: "Gemini 3 Pro",
         modelId: "gemini-pro-3-vision",
+        provider: "google",
+    },
+    {
+        displayName: "Gemini 3.1 Pro",
+        modelId: "gemini-pro-31-vision",
         provider: "google",
     },
 ];
