@@ -87,8 +87,10 @@ export async function GET(request) {
                     Array.isArray(entity.voice) && entity.voice.length > 0
                         ? entity.voice[0].voiceId
                         : entity.voiceId,
+                voice: Array.isArray(entity.voice) ? entity.voice : null,
                 description: entity.description,
                 isSystem: entity.isSystem || false,
+                preferredModel: entity.preferredModel || null,
             }));
 
             console.log(

@@ -397,7 +397,10 @@ export function useVoiceSession() {
                     }
 
                     // Only stream during active speech AND not during PENDING echo evaluation
-                    if (userIsSpeakingRef.current && !interruptManagerRef.current?.isPending()) {
+                    if (
+                        userIsSpeakingRef.current &&
+                        !interruptManagerRef.current?.isPending()
+                    ) {
                         socketRef.current.emit("audio:input", {
                             data: base64Audio,
                             sampleRate: 16000,
@@ -447,7 +450,8 @@ export function useVoiceSession() {
         // Request screen wake lock to prevent phone from sleeping during voice
         try {
             if ("wakeLock" in navigator) {
-                wakeLockRef.current = await navigator.wakeLock.request("screen");
+                wakeLockRef.current =
+                    await navigator.wakeLock.request("screen");
                 console.log("[useVoiceSession] Screen wake lock acquired");
                 wakeLockRef.current.addEventListener("release", () => {
                     console.log("[useVoiceSession] Screen wake lock released");
@@ -611,7 +615,11 @@ export function useVoiceSession() {
                     // Block audio if user is currently speaking
                     if (userIsSpeakingRef.current) return;
                     // Drop stale audio from a previous generation (pre-interrupt)
-                    if (data.generationId != null && data.generationId < generationIdRef.current) return;
+                    if (
+                        data.generationId != null &&
+                        data.generationId < generationIdRef.current
+                    )
+                        return;
 
                     const trackId = data.trackId || "default";
 
@@ -648,7 +656,11 @@ export function useVoiceSession() {
             // Track start - queue transcript for display when audio plays
             socket.on("audio:trackStart", (data) => {
                 // Drop stale track-start from a previous generation (pre-interrupt)
-                if (data.generationId != null && data.generationId < generationIdRef.current) return;
+                if (
+                    data.generationId != null &&
+                    data.generationId < generationIdRef.current
+                )
+                    return;
                 // Fresh generation - restore volume and clear interrupted states
                 playerRef.current?.unduck();
                 if (playerRef.current) {
@@ -698,7 +710,10 @@ export function useVoiceSession() {
                 }
                 // Sync generation ID from server (or increment locally for legacy servers)
                 if (data?.generationId != null) {
-                    generationIdRef.current = Math.max(generationIdRef.current, data.generationId);
+                    generationIdRef.current = Math.max(
+                        generationIdRef.current,
+                        data.generationId,
+                    );
                 } else {
                     generationIdRef.current++;
                 }

@@ -26,7 +26,8 @@ async function validateEntityAccess(entityId, userContextId, logger) {
 
         const entityInfo = {
             entityId,
-            preferredModel: entity.modelOverride || entity.preferredModel || null,
+            preferredModel:
+                entity.modelOverride || entity.preferredModel || null,
         };
 
         // System entities are always accessible
@@ -111,7 +112,8 @@ const generateDigestBlockContent = async (
 
     // Model priority: user override > entity preferred > default
     // (matches ChatContent.js logic; entity modelOverride is handled server-side in cortex)
-    const model = user?.agentModel || entityPreferredModel || "gemini-flash-3-vision";
+    const model =
+        user?.agentModel || entityPreferredModel || "gemini-flash-3-vision";
 
     const variables = {
         chatHistory: [systemMessage, { role: "user", content: [prompt] }],
@@ -139,7 +141,7 @@ const generateDigestBlockContent = async (
         const result = await client.query({
             query: QUERIES.SYS_ENTITY_AGENT,
             variables,
-            fetchPolicy: 'network-only',
+            fetchPolicy: "network-only",
         });
 
         tool = result.data.sys_entity_agent.tool;
