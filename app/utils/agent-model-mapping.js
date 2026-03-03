@@ -44,11 +44,6 @@ export const AGENT_MODEL_OPTIONS = [
         provider: "google",
     },
     {
-        displayName: "Gemini 3 Pro",
-        modelId: "gemini-pro-3-vision",
-        provider: "google",
-    },
-    {
         displayName: "Gemini 3.1 Pro",
         modelId: "gemini-pro-31-vision",
         provider: "google",

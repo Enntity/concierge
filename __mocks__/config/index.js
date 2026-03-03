@@ -14,10 +14,7 @@ const LLM_IDENTIFIERS = {
     claude45sonnet: "claude45sonnet",
     claude45opus: "claude45opus",
     o3mini: "o3mini",
-    gemini25flash: "gemini25flash",
-    gemini25pro: "gemini25pro",
     gemini30flash: "gemini30flash",
-    gemini30pro: "gemini30pro",
 };
 
 const config = {
