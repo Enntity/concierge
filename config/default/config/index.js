@@ -30,6 +30,7 @@ const LLM_IDENTIFIERS = {
     claude46opus: "claude46opus",
     claude46sonnet: "claude46sonnet",
     gemini31pro: "gemini31pro",
+    gemini31flashlite: "gemini31flashlite",
 };
 
 // eslint-disable-next-line import/no-anonymous-default-export
@@ -163,6 +164,12 @@ export default {
                 name: "Gemini 3.1 Pro",
                 cortexPathwayName: "run_workspace_prompt",
                 cortexModelName: "gemini-pro-31-vision",
+            },
+            {
+                identifier: LLM_IDENTIFIERS.gemini31flashlite,
+                name: "Gemini 3.1 Flash Lite",
+                cortexPathwayName: "run_workspace_prompt",
+                cortexModelName: "gemini-flash-31-lite-vision",
             },
         ],
     },
