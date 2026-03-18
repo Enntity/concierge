@@ -23,7 +23,7 @@ import {
     XIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useContext, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import TimeAgo from "react-time-ago";
 import stringcase from "stringcase";
@@ -35,18 +35,8 @@ import {
     useRetryTask,
     useTasks,
 } from "../../../app/queries/notifications";
-import { LanguageContext } from "../../contexts/LanguageProvider";
 import { useNotificationsContext } from "../../contexts/NotificationContext";
 import { TASK_INFO } from "../../utils/task-info";
-const getLocaleShortName = (locale, usersLanguage) => {
-    try {
-        return new Intl.DisplayNames([usersLanguage], { type: "language" }).of(
-            locale?.split("-")[0],
-        );
-    } catch (e) {
-        return locale; // fallback to code if translation fails
-    }
-};
 
 // Add status icons/colors mapping
 export const StatusIndicator = ({ status }) => {
@@ -89,7 +79,6 @@ const NotificationItem = ({
     notification,
     handlerDisplayNames,
     isRetryable,
-    language,
     router,
     setIsNotificationOpen,
     handleCancelRequest,
@@ -129,7 +118,7 @@ const NotificationItem = ({
                                 notification.invokedFrom?.source ===
                                 "video_page"
                             ) {
-                                router.push("/video");
+                                router.push("/media");
                             } else if (
                                 notification.invokedFrom?.source ===
                                 "media_page"
@@ -143,62 +132,6 @@ const NotificationItem = ({
                                 notification.type,
                         )}
                     </span>
-                    {notification.metadata && (
-                        <div
-                            className="text-xs text-gray-600 dark:text-gray-400 truncate"
-                            title={notification.statusText}
-                        >
-                            {notification.type === "video-translate" && (
-                                <>
-                                    {t("{{from}} to {{to}}", {
-                                        from: getLocaleShortName(
-                                            notification.metadata.sourceLocale,
-                                            language,
-                                        ),
-                                        to: getLocaleShortName(
-                                            notification.metadata.targetLocale,
-                                            language,
-                                        ),
-                                    })}
-                                </>
-                            )}
-                            {notification.type === "transcribe" && (
-                                <>
-                                    {notification.metadata.url && (
-                                        <span
-                                            className="truncate block"
-                                            title={notification.metadata.url}
-                                        >
-                                            {new URL(
-                                                notification.metadata.url,
-                                            ).pathname
-                                                .split("/")
-                                                .pop() ||
-                                                notification.metadata.url}
-                                        </span>
-                                    )}
-                                    {notification.metadata.language && (
-                                        <span>
-                                            {t("Language")}:{" "}
-                                            {getLocaleShortName(
-                                                notification.metadata.language,
-                                                language,
-                                            )}
-                                        </span>
-                                    )}
-                                    {notification.metadata.responseFormat && (
-                                        <span>
-                                            {t("Format")}:{" "}
-                                            {notification.metadata
-                                                .responseFormat === "vtt"
-                                                ? t("Subtitles")
-                                                : t("Transcript")}
-                                        </span>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    )}
                     <span
                         className={`flex items-center gap-1 text-xs font-semibold ${getStatusColorClass(notification.status)}`}
                     >
@@ -294,7 +227,6 @@ export default function NotificationButton() {
     const dismissNotification = useDismissTask();
     const [dismissingIds, setDismissingIds] = useState(new Set());
     const [cancelRequestId, setCancelRequestId] = useState(null);
-    const { language } = useContext(LanguageContext);
     const router = useRouter();
     const cancelRequest = useCancelTask();
     const retryTask = useRetryTask();
@@ -385,7 +317,6 @@ export default function NotificationButton() {
                                                 TASK_INFO[notification.type]
                                                     ?.isRetryable
                                             }
-                                            language={language}
                                             router={router}
                                             setIsNotificationOpen={
                                                 setIsNotificationOpen

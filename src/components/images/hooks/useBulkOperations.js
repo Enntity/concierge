@@ -60,7 +60,7 @@ export const useBulkOperations = ({
                 if (selectedImagesObjects.length === 1) {
                     // Single file - download with proper filename
                     const img = selectedImagesObjects[0];
-                    const url = img.azureUrl || img.url;
+                    const url = img.url;
                     const filename = getFilename(img);
                     if (url) {
                         await downloadSingleFile(url, filename);

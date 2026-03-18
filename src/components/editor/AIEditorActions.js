@@ -4,7 +4,6 @@ import {
     FileText,
     Expand,
     Edit,
-    Languages,
     CheckCircle,
     List,
     FileText as Summarize,
@@ -15,7 +14,6 @@ import CopyButton from "../CopyButton";
 import ExpandStoryContent from "./ExpandStoryContent";
 import SuggestionInput from "./SuggestionInput";
 import { getTextSuggestionsComponent } from "./TextSuggestions";
-import TranslateModalContent from "./TranslateModalContent";
 import HeadlineModal from "./headline/HeadlineModal";
 import { getGrammarEndpoint } from "../../utils/languageDetection";
 
@@ -217,14 +215,6 @@ const actions = {
             OutputRenderer: ListRenderer,
             outputTitle: "Tags relevant to this article",
         }),
-    },
-    translate: {
-        Icon: Languages,
-        title: "Translate",
-        dialogClassName: "modal-narrow",
-        commitLabel: "Use Translated Text",
-        SuggestionsComponent: TranslateModalContent,
-        postApply: "clear-headline",
     },
     entities: {
         Icon: List,

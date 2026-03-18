@@ -38,8 +38,8 @@ const mediaItemSchema = new mongoose.Schema(
         },
         // Media URLs
         url: String,
-        azureUrl: String,
-        gcsUrl: String,
+        blobPath: String,
+        filename: String,
         // Video-specific fields
         duration: Number,
         generateAudio: Boolean,

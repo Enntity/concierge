@@ -114,12 +114,6 @@ jest.mock("../contexts/ThemeProvider", () => ({
     ),
 }));
 
-jest.mock("../contexts/AutoTranscribeContext", () => ({
-    AutoTranscribeProvider: ({ children }) => (
-        <div data-testid="auto-transcribe-provider">{children}</div>
-    ),
-}));
-
 jest.mock("../contexts/OnboardingContext", () => ({
     OnboardingProvider: ({ children }) => (
         <div data-testid="onboarding-provider">{children}</div>

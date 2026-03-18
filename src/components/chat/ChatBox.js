@@ -37,7 +37,7 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
-import UserFileCollection from "@/app/workspaces/[id]/components/UserFileCollection";
+import UserFileCollection from "@/src/components/files/UserFileCollection";
 
 function ChatBox() {
     const { user } = useContext(AuthContext);
@@ -387,7 +387,7 @@ function ChatBox() {
                     open={showFileCollectionDialog}
                     onOpenChange={setShowFileCollectionDialog}
                 >
-                    <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] sm:w-full max-h-[85vh] flex flex-col overflow-hidden">
+                    <DialogContent className="max-w-6xl w-[calc(100vw-2rem)] sm:w-full h-[85vh] flex flex-col overflow-hidden">
                         <DialogHeader className="flex-shrink-0">
                             <DialogTitle>{t("Chat Files")}</DialogTitle>
                             <DialogDescription>
@@ -408,6 +408,7 @@ function ChatBox() {
                                     }
                                     messages={activeChat?.messages || []}
                                     updateChatHook={updateChatHook}
+                                    containerHeight="100%"
                                 />
                             )}
                         </div>

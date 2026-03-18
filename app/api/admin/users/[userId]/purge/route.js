@@ -2,16 +2,10 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../../../utils/auth";
 import User from "../../../../models/user";
 import Chat from "../../../../models/chat";
-import Workspace from "../../../../models/workspace";
-import WorkspaceMembership from "../../../../models/workspace-membership";
 import Task from "../../../../models/task";
 import MediaItem from "../../../../models/media-item";
 import UserState from "../../../../models/user-state";
 import Digest from "../../../../models/digest";
-import Prompt from "../../../../models/prompt";
-import Applet from "../../../../models/applet";
-import AppletData from "../../../../models/applet-data";
-import AppletFile from "../../../../models/applet-file";
 import mongoose from "mongoose";
 import { connectToDatabase } from "../../../../../../src/db.mjs";
 
@@ -67,71 +61,35 @@ export async function DELETE(req, { params }) {
         const results = {
             user: null,
             chats: 0,
-            workspaces: 0,
-            memberships: 0,
             tasks: 0,
             mediaItems: 0,
             userState: 0,
             digest: 0,
             entities: 0,
             memories: 0,
-            prompts: 0,
-            applets: 0,
-            appletData: 0,
-            appletFiles: 0,
         };
 
         // 1. Delete all chats
         const chatResult = await Chat.deleteMany({ userId: userObjectId });
         results.chats = chatResult.deletedCount;
 
-        // 2. Delete workspaces and associated data
-        const userWorkspaces = await Workspace.find({ owner: userObjectId });
-        for (const workspace of userWorkspaces) {
-            // Delete prompts associated with workspace
-            if (workspace.prompts?.length > 0) {
-                const promptResult = await Prompt.deleteMany({
-                    _id: { $in: workspace.prompts },
-                });
-                results.prompts += promptResult.deletedCount;
-            }
-
-            // Delete applet and associated data
-            if (workspace.applet) {
-                await AppletData.deleteMany({ applet: workspace.applet });
-                await AppletFile.deleteMany({ applet: workspace.applet });
-                await Applet.findByIdAndDelete(workspace.applet);
-                results.applets += 1;
-            }
-        }
-        const workspaceResult = await Workspace.deleteMany({
-            owner: userObjectId,
-        });
-        results.workspaces = workspaceResult.deletedCount;
-
-        // 3. Delete workspace memberships
-        const membershipResult = await WorkspaceMembership.deleteMany({
-            user: userObjectId,
-        });
-        results.memberships = membershipResult.deletedCount;
-
-        // 4. Delete tasks
+        // 2. Delete tasks
         const taskResult = await Task.deleteMany({ owner: userObjectId });
         results.tasks = taskResult.deletedCount;
 
-        // 5. Delete media items
+        // 3. Delete media items
         const mediaResult = await MediaItem.deleteMany({ user: userObjectId });
         results.mediaItems = mediaResult.deletedCount;
 
-        // 6. Delete user state
+        // 4. Delete user state
         const stateResult = await UserState.deleteMany({ user: userObjectId });
         results.userState = stateResult.deletedCount;
 
-        // 7. Delete digest
+        // 5. Delete digest
         const digestResult = await Digest.deleteMany({ owner: userObjectId });
         results.digest = digestResult.deletedCount;
 
-        // 8. Remove user from entities' assocUserIds (Cortex entities)
+        // 6. Remove user from entities' assocUserIds (Cortex entities)
         if (contextId) {
             try {
                 const db = mongoose.connection.db;
@@ -148,7 +106,7 @@ export async function DELETE(req, { params }) {
                 // Continue with purge even if this fails
             }
 
-            // 9. Delete user's memories from continuity_memories
+            // 7. Delete user's memories from continuity_memories
             try {
                 const db = mongoose.connection.db;
                 const memoriesCollection = db.collection("continuity_memories");
@@ -164,7 +122,7 @@ export async function DELETE(req, { params }) {
             }
         }
 
-        // 10. Finally, delete the user
+        // 8. Finally, delete the user
         await User.findByIdAndDelete(userId);
         results.user = userToPurge.username;
 

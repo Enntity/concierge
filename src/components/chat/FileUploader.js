@@ -18,12 +18,13 @@ import {
     getVideoDuration,
     getFileIcon,
     getExtension,
-    hashMediaFile,
 } from "../../utils/mediaUtils";
+import { uploadFileToMediaHelper } from "../../utils/fileUploadUtils";
 import {
-    uploadFileToMediaHelper,
-    checkFileByHash,
-} from "../../utils/fileUploadUtils";
+    buildMediaHelperFileParams,
+    createChatStorageTarget,
+    extractBlobPathFromUrl,
+} from "../../utils/storageTargets";
 import {
     isYoutubeUrl,
     extractYoutubeVideoId,
@@ -249,6 +250,7 @@ export default function FileUploader({
     setFiles,
     setIsUploadingMedia,
     setUrlsData,
+    chatId = null,
 }) {
     const { t } = useTranslation();
     const { direction } = useContext(LanguageContext);
@@ -257,6 +259,10 @@ export default function FileUploader({
     const serverUrl = "/media-helper";
     // Use default user contextId for chat files
     const contextId = user?.contextId || null;
+    const storageTarget =
+        contextId && chatId
+            ? createChatStorageTarget(contextId, chatId)
+            : null;
     const [inputUrl, setInputUrl] = useState("");
     const [showUrlInput, setShowUrlInput] = useState(false);
     const fileInputRef = useRef(null);
@@ -439,7 +445,6 @@ export default function FileUploader({
             if (isYoutubeUrl(url)) {
                 const youtubeResponse = {
                     url: url,
-                    gcs: url,
                     type: "video/youtube",
                     filename: getFilename(url),
                     displayFilename: getFilename(url),
@@ -447,7 +452,6 @@ export default function FileUploader({
                         JSON.stringify({
                             type: "image_url",
                             url: url,
-                            gcs: url,
                         }),
                     ]),
                 };
@@ -470,9 +474,18 @@ export default function FileUploader({
             setIsUploadingMedia(true);
 
             try {
-                const response = await axios.get(
-                    `${serverUrl}&fetch=${encodeURIComponent(url)}`,
-                );
+                const fetchUrl = new URL(serverUrl, window.location.origin);
+                fetchUrl.searchParams.set("fetch", url);
+                const routingParams = buildMediaHelperFileParams({
+                    storageTarget,
+                    contextId,
+                    chatId,
+                });
+                for (const [key, value] of Object.entries(routingParams)) {
+                    fetchUrl.searchParams.set(key, value);
+                }
+
+                const response = await axios.get(fetchUrl.toString());
                 if (response.data && response.data.url) {
                     const urlFilename = url.split("/").pop().split("?")[0];
                     if (isFileRemoved(url) || isFileRemoved(urlFilename)) {
@@ -489,8 +502,13 @@ export default function FileUploader({
 
                     const responseWithFilename = {
                         ...response.data,
+                        url: response.data.url,
                         displayFilename:
                             response.data.displayFilename || urlFilename,
+                        blobPath:
+                            response.data.blobPath ||
+                            extractBlobPathFromUrl(response.data.url) ||
+                            null,
                     };
                     addUrl(responseWithFilename);
                     processingFilesRef.current.delete(fileId);
@@ -514,6 +532,9 @@ export default function FileUploader({
         [
             t,
             serverUrl,
+            storageTarget,
+            contextId,
+            chatId,
             isFileRemoved,
             updateFileStatus,
             addUrl,
@@ -583,60 +604,6 @@ export default function FileUploader({
                     progress: 0,
                 });
 
-                // Check if file exists using shared utility
-                const fileHash = await hashMediaFile(fileObj);
-                const existingFile = await checkFileByHash(fileHash, {
-                    contextId,
-                    serverUrl,
-                });
-
-                if (existingFile) {
-                    // File already exists
-                    if (isSupportedFileUrl(fileObj?.name)) {
-                        const hasAzureUrl =
-                            existingFile.url &&
-                            existingFile.url.includes("blob.core.windows.net");
-                        const hasGcsUrl = existingFile.gcs;
-
-                        if (!hasAzureUrl || !hasGcsUrl) {
-                            throw new Error(
-                                t(
-                                    "Media file upload failed: Missing required storage URLs",
-                                ),
-                            );
-                        }
-                    }
-
-                    const responseWithFilename = {
-                        ...existingFile,
-                        hash: existingFile.hash || fileHash,
-                    };
-
-                    if (
-                        isFileRemoved(fileObj.name) ||
-                        isFileRemoved(responseWithFilename.url) ||
-                        isFileRemoved(responseWithFilename.gcs)
-                    ) {
-                        processingFilesRef.current.delete(fileId);
-                        throw new Error(
-                            t(
-                                "File was removed before processing could complete.",
-                            ),
-                        );
-                    }
-
-                    processingFilesRef.current.delete(fileId);
-                    updateFileStatus(fileId, {
-                        status: "completed",
-                        progress: 100,
-                        serverId: responseWithFilename.url,
-                    });
-                    addUrl(responseWithFilename);
-                    setIsUploadingMedia(false);
-                    return;
-                }
-
-                // File doesn't exist, upload it with custom progress tracking
                 const startTimestamp = Date.now();
                 const totalBytes = fileObj.size;
                 let cloudProgressInterval;
@@ -645,8 +612,8 @@ export default function FileUploader({
                     const responseData = await uploadFileToMediaHelper(
                         fileObj,
                         {
+                            storageTarget,
                             contextId,
-                            checkHash: false, // Already checked above
                             serverUrl,
                             getXHR: (xhr) => {
                                 uploadAbortControllersRef.current.set(fileId, {
@@ -705,35 +672,30 @@ export default function FileUploader({
                         lastBytesPerMs = totalBytes / totalTime;
                     }
 
-                    if (isSupportedFileUrl(fileObj?.name)) {
-                        const hasAzureUrl =
-                            responseData.url &&
-                            responseData.url.includes("blob.core.windows.net");
-                        const hasGcsUrl = responseData.gcs;
-
-                        if (!hasAzureUrl || !hasGcsUrl) {
-                            processingFilesRef.current.delete(fileId);
-                            updateFileStatus(fileId, {
-                                status: "error",
-                                error: t(
-                                    "Media file upload failed: Missing required storage URLs",
-                                ),
-                            });
-                            setIsUploadingMedia(false);
-                            return;
-                        }
+                    if (isSupportedFileUrl(fileObj?.name) && !responseData.url) {
+                        processingFilesRef.current.delete(fileId);
+                        updateFileStatus(fileId, {
+                            status: "error",
+                            error: t(
+                                "Media file upload failed: Missing file URL",
+                            ),
+                        });
+                        setIsUploadingMedia(false);
+                        return;
                     }
 
                     const responseWithFilename = {
                         ...responseData,
                         displayFilename: fileObj.name,
-                        hash: responseData.hash || fileHash,
+                        blobPath:
+                            responseData.blobPath ||
+                            responseData.name ||
+                            null,
                     };
 
                     if (
                         isFileRemoved(fileObj.name) ||
-                        isFileRemoved(responseWithFilename.url) ||
-                        isFileRemoved(responseWithFilename.gcs)
+                        isFileRemoved(responseWithFilename.url)
                     ) {
                         processingFilesRef.current.delete(fileId);
                         updateFileStatus(fileId, {
@@ -787,6 +749,7 @@ export default function FileUploader({
             setIsUploadingMedia,
             processUrlFile,
             contextId,
+            storageTarget,
         ],
     );
 
@@ -801,7 +764,6 @@ export default function FileUploader({
         if (isYoutubeUrl(inputUrl)) {
             const youtubeResponse = {
                 url: inputUrl,
-                gcs: inputUrl,
                 type: "video/youtube",
                 filename: getFilename(inputUrl),
                 displayFilename: getFilename(inputUrl),
@@ -809,7 +771,6 @@ export default function FileUploader({
                     JSON.stringify({
                         type: "image_url",
                         url: inputUrl,
-                        gcs: inputUrl,
                     }),
                 ]),
             };
@@ -893,9 +854,6 @@ export default function FileUploader({
             if (file.source?.url) {
                 removedFilesRef.current.add(file.source.url);
             }
-            if (file.source?.gcs) {
-                removedFilesRef.current.add(file.source.gcs);
-            }
             if (typeof file.source === "string") {
                 removedFilesRef.current.add(file.source);
             }
@@ -933,7 +891,7 @@ export default function FileUploader({
                     prevUrls.filter(
                         (url) =>
                             url.url !== file.serverId &&
-                            url.gcs !== file.serverId &&
+                            url.blobPath !== file.blobPath &&
                             url.filename !== file.filename &&
                             url.displayFilename !== file.displayFilename,
                     ),

@@ -6,7 +6,7 @@ export async function POST(req, res) {
     const body = await req.json();
     const currentUser = await getCurrentUser();
 
-    let name = body.name || "New Workspace";
+    let name = body.name || "New Pathway";
     const pathway = await createPathway({
         pathwayName: name,
         ownerId: currentUser._id,

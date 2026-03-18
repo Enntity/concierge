@@ -39,7 +39,7 @@ function ImageTile({
     const [loadError, setLoadError] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
     const [showErrorDialog, setShowErrorDialog] = useState(false);
-    const url = image?.azureUrl || image?.url;
+    const url = image?.url;
     const hasValidUrl = url && url !== "null" && url !== "undefined";
     const { t } = useTranslation();
     const expired = image?.expires ? image.expires < Date.now() / 1000 : false;

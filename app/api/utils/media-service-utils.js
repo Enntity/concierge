@@ -1,83 +1,159 @@
 import { NextResponse } from "next/server";
-import xxhash from "xxhash-wasm";
 import config from "../../../config/index.js";
+import {
+    buildMediaHelperFileParams,
+    buildMediaHelperListParams,
+    extractBlobPathFromUrl,
+    getFilenameFromBlobPath,
+} from "../../../src/utils/storageTargets.js";
 
-/**
- * Hash a buffer using xxhash64
- * @param {Buffer} buffer - The buffer to hash
- * @returns {Promise<string>} - The hash as a hex string
- */
-export async function hashBuffer(buffer) {
-    const hasher = await xxhash();
-    const xxh64 = hasher.create64();
-    xxh64.update(buffer);
-    return xxh64.digest().toString(16);
+export function normalizeMediaServiceUpload(data, defaults = {}) {
+    const publicUrl =
+        (typeof data?.url === "string" ? data.url : null) ||
+        defaults.url ||
+        null;
+    const blobPath =
+        data?.blobPath ||
+        defaults.blobPath ||
+        extractBlobPathFromUrl(publicUrl);
+    const filename =
+        data?.filename ||
+        data?.displayFilename ||
+        defaults.filename ||
+        getFilenameFromBlobPath(blobPath);
+
+    return {
+        ...data,
+        url: publicUrl,
+        blobPath: blobPath || null,
+        filename: filename || null,
+        displayFilename:
+            data?.displayFilename || defaults.displayFilename || filename || null,
+    };
 }
 
-/**
- * Set file retention (temporary or permanent) via CFH API
- * @param {string} hash - File hash
- * @param {string} retention - 'temporary' or 'permanent'
- * @param {string} contextId - Context ID for scoping
- * @returns {Promise<Object|null>} Response data or null on error (best-effort)
- */
-export async function setFileRetention(hash, retention, contextId) {
-    try {
-        const mediaHelperUrl = config.endpoints.mediaHelperDirect();
-        if (!mediaHelperUrl) {
-            console.warn(
-                "Media helper URL not configured, skipping retention update",
-            );
-            return null;
-        }
+export async function deleteFileFromMediaService({
+    blobPath = null,
+    filename = null,
+    storageTarget = null,
+    contextId = null,
+} = {}) {
+    const resolvedFilename = filename || getFilenameFromBlobPath(blobPath);
+    if (!resolvedFilename) {
+        return false;
+    }
 
-        const setRetentionUrl = new URL(mediaHelperUrl);
-        setRetentionUrl.searchParams.set("hash", hash);
-        setRetentionUrl.searchParams.set("retention", retention);
-        setRetentionUrl.searchParams.set("setRetention", "true");
-        if (contextId) {
-            setRetentionUrl.searchParams.set("contextId", contextId);
-        }
+    const mediaHelperUrl = config.endpoints.mediaHelperDirect();
+    if (!mediaHelperUrl) {
+        throw new Error("Media helper URL is not defined");
+    }
 
-        const response = await fetch(setRetentionUrl.toString(), {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
+    const routingParams = buildMediaHelperFileParams({
+        storageTarget,
+        contextId,
+    });
+    const deleteUrl = new URL(mediaHelperUrl);
+    deleteUrl.searchParams.set("filename", resolvedFilename);
+    for (const [key, value] of Object.entries(routingParams)) {
+        deleteUrl.searchParams.set(key, value);
+    }
 
-        if (!response.ok) {
-            const errorBody = await response.text();
-            console.warn(
-                `Failed to set retention to ${retention} for file ${hash}: ${response.statusText}. Response: ${errorBody}`,
-            );
-            return null;
-        }
+    const response = await fetch(deleteUrl.toString(), {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json",
+        },
+    });
 
-        const result = await response.json();
-        console.log(
-            `Successfully set retention to ${retention} for file ${hash}`,
+    if (response.status === 404) {
+        return false;
+    }
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(
+            `Failed to delete file ${resolvedFilename}: ${response.statusText}. Response body: ${errorBody}`,
         );
-        return result;
-    } catch (error) {
-        console.error("Error setting file retention:", error);
+    }
+
+    return true;
+}
+
+export async function listFilesFromMediaService({
+    storageTarget = null,
+    userContextId = null,
+    contextId = null,
+    fileScope = "all",
+    chatId = null,
+} = {}) {
+    const mediaHelperUrl = config.endpoints.mediaHelperDirect();
+    if (!mediaHelperUrl) {
+        throw new Error("Media helper URL is not defined");
+    }
+
+    const listParams = buildMediaHelperListParams({
+        storageTarget,
+        userContextId,
+        contextId,
+        fileScope,
+        chatId,
+    });
+
+    const listUrl = new URL(mediaHelperUrl);
+    listUrl.searchParams.set("operation", "listFolder");
+    for (const [key, value] of Object.entries(listParams)) {
+        listUrl.searchParams.set(key, value);
+    }
+
+    const response = await fetch(listUrl.toString());
+    if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(
+            `Failed to list files: ${response.statusText}. Response body: ${errorBody}`,
+        );
+    }
+
+    const files = await response.json();
+    if (!Array.isArray(files)) {
+        throw new Error("Media helper returned an unexpected file listing");
+    }
+
+    return files.map((file) =>
+        normalizeMediaServiceUpload(file, {
+            blobPath: file?.blobPath || null,
+            filename: file?.filename || null,
+            displayFilename: file?.displayFilename || file?.filename || null,
+        }),
+    );
+}
+
+export function findMediaServiceFile(files, { blobPath = null, filename = null } = {}) {
+    if (!Array.isArray(files) || (!blobPath && !filename)) {
         return null;
     }
+
+    const normalizedFilename = filename ? String(filename).trim() : null;
+
+    return (
+        files.find(
+            (file) =>
+                (blobPath && file?.blobPath === blobPath) ||
+                (normalizedFilename && file?.filename === normalizedFilename),
+        ) || null
+    );
 }
 
 /**
  * Upload buffer to media service
  * @param {Buffer} fileBuffer - The file buffer
  * @param {Object} metadata - File metadata
- * @param {boolean} permanent - If true, file will be marked as permanent (via setRetention after upload)
- * @param {string} contextId - Optional context ID for per-user file scoping
+ * @param {Object} options - Upload options
  * @returns {Object} Upload result with data or error
  */
 export async function uploadBufferToMediaService(
     fileBuffer,
     metadata,
-    permanent = false,
-    contextId = null,
+    options = {},
 ) {
     try {
         const mediaHelperUrl = config.endpoints.mediaHelperDirect();
@@ -85,19 +161,17 @@ export async function uploadBufferToMediaService(
             throw new Error("Media helper URL is not defined");
         }
 
-        // Create a Blob from the buffer to send as FormData
+        const { storageTarget = null, contextId = null } = options || {};
+        const routingParams = buildMediaHelperFileParams({
+            storageTarget,
+            contextId,
+        });
+
         const blob = new Blob([fileBuffer], { type: metadata.mimeType });
         const uploadFormData = new FormData();
-        uploadFormData.append("file", blob, metadata.filename);
-
-        // Add hash to FormData if provided
-        if (metadata.hash) {
-            uploadFormData.append("hash", metadata.hash);
-        }
-
-        // Add contextId to FormData if provided
-        if (contextId) {
-            uploadFormData.append("contextId", contextId);
+        uploadFormData.append("file", blob, metadata.filename || "file");
+        for (const [key, value] of Object.entries(routingParams)) {
+            uploadFormData.append(key, value);
         }
 
         const uploadResponse = await fetch(mediaHelperUrl, {
@@ -112,16 +186,19 @@ export async function uploadBufferToMediaService(
             );
         }
 
-        const uploadData = await uploadResponse.json();
+        const uploadData = normalizeMediaServiceUpload(
+            await uploadResponse.json(),
+            {
+                filename: metadata.filename,
+                displayFilename: metadata.filename,
+                blobPath:
+                    metadata.blobPath ||
+                    extractBlobPathFromUrl(metadata.url),
+            },
+        );
 
-        // Validate upload response
         if (!uploadData.url) {
-            throw new Error("Media file upload failed: Missing URL");
-        }
-
-        // If permanent flag is set, call setRetention API (best-effort)
-        if (permanent && uploadData.hash) {
-            await setFileRetention(uploadData.hash, "permanent", contextId);
+            throw new Error("Media file upload failed: Missing file URL");
         }
 
         return { success: true, data: uploadData };

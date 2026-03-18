@@ -77,34 +77,17 @@ const userSchema = new mongoose.Schema(
             enum: ["user", "admin"],
             default: "user",
         },
-        apps: {
-            type: [
-                {
-                    appId: {
-                        type: mongoose.Schema.Types.ObjectId,
-                        ref: "App",
-                        required: true,
-                    },
-                    order: {
-                        type: Number,
-                        required: true,
-                        min: 0,
-                    },
-                    addedAt: {
-                        type: Date,
-                        default: Date.now,
-                    },
-                },
-            ],
-            required: false,
-            default: [],
-        },
         profilePicture: {
             type: String,
             required: false,
             trim: true,
         },
-        profilePictureHash: {
+        profilePictureBlobPath: {
+            type: String,
+            required: false,
+            trim: true,
+        },
+        profilePictureFilename: {
             type: String,
             required: false,
             trim: true,
@@ -152,7 +135,6 @@ userSchema.virtual("initials").get(function () {
 
 // Indexes
 userSchema.index({ createdAt: -1 });
-userSchema.index({ "apps.appId": 1 });
 userSchema.index({ contextId: 1 });
 
 // Create the User model from the schema

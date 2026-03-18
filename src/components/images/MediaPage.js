@@ -678,9 +678,9 @@ function MediaPage() {
             const key = image?.cortexRequestId || `temp-${index}`;
             // Check if URL is valid (not null, undefined, or "null" string)
             const hasValidUrl =
-                (image?.azureUrl || image?.url) &&
-                (image?.azureUrl || image?.url) !== "null" &&
-                (image?.azureUrl || image?.url) !== "undefined";
+                image?.url &&
+                image?.url !== "null" &&
+                image?.url !== "undefined";
 
             return (
                 <ImageTile
@@ -712,9 +712,7 @@ function MediaPage() {
                             // Regenerate modification with same input image and original model
                             await generateMedia(
                                 originalPrompt,
-                                image.azureUrl ||
-                                    image.inputImageUrl ||
-                                    image.url,
+                                image.inputImageUrl || image.url,
                                 originalModel,
                             );
                         } else {
@@ -860,9 +858,7 @@ function MediaPage() {
                                             )
                                             .slice(0, 3) // Show max 3 thumbnails
                                             .map((image) => {
-                                                const imageUrl =
-                                                    image?.azureUrl ||
-                                                    image?.url;
+                                                const imageUrl = image?.url;
                                                 if (
                                                     !imageUrl ||
                                                     imageUrl === "null" ||
@@ -1269,7 +1265,6 @@ function MediaPage() {
                                                         )
                                                         .map((image) => {
                                                             const imageUrl =
-                                                                image?.azureUrl ||
                                                                 image?.url;
                                                             if (
                                                                 !imageUrl ||
@@ -2281,14 +2276,14 @@ function ImageModal({ show, image, onHide }) {
                     {image?.type === "video" ? (
                         <video
                             className="rounded-md w-full"
-                            src={image?.azureUrl || image?.url}
+                            src={image?.url}
                             controls
                             preload="metadata"
                         />
                     ) : (
                         <ChatImage
                             className="rounded-md w-full"
-                            src={image?.azureUrl || image?.url}
+                            src={image?.url}
                             alt={image?.prompt}
                         />
                     )}
@@ -2470,68 +2465,50 @@ function ImageInfo({ data, type }) {
             <div className="mb-2">
                 <div>
                     <div className="font-semibold text-gray-500 dark:text-gray-400">
-                        {t("Azure URL")}
+                        {t("File URL")}
                     </div>
                 </div>
                 <div style={{ lineBreak: "anywhere" }}>
-                    {data?.azureUrl ? (
+                    {data?.url ? (
                         <a
-                            href={data.azureUrl}
+                            href={data.url}
                             target="_blank"
                             className="text-sky-500 dark:text-sky-400"
                             rel="noreferrer"
                         >
-                            {t("Azure Link")}
+                            {t("Open file")}
                         </a>
                     ) : (
                         <span className="text-gray-400 dark:text-gray-500">
-                            {t("Not uploaded")}
+                            {t("URL not found")}
                         </span>
                     )}
                 </div>
             </div>
-            {data?.gcsUrl && (
+            {data?.filename && (
                 <div className="mb-2">
                     <div>
                         <div className="font-semibold text-gray-500 dark:text-gray-400">
-                            {t("GCS URL")}
+                            {t("Filename")}
                         </div>
                     </div>
-                    <div style={{ lineBreak: "anywhere" }}>
-                        <a
-                            href={data.gcsUrl}
-                            target="_blank"
-                            className="text-sky-500 dark:text-sky-400"
-                            rel="noreferrer"
-                        >
-                            {t("GCS Link")}
-                        </a>
+                    <div className="text-gray-700 dark:text-gray-300">
+                        {data.filename}
                     </div>
                 </div>
             )}
-            {!data?.azureUrl && (
+            {data?.blobPath && (
                 <div className="mb-2">
                     <div>
                         <div className="font-semibold text-gray-500 dark:text-gray-400">
-                            {t("Original URL")}
+                            {t("Blob Path")}
                         </div>
                     </div>
                     <div
                         style={{ lineBreak: "anywhere" }}
                         className="text-gray-700 dark:text-gray-300"
                     >
-                        {data?.url ? (
-                            <a
-                                href={data.url}
-                                target="_blank"
-                                className="text-sky-500 dark:text-sky-400"
-                                rel="noreferrer"
-                            >
-                                {t("Original Link")}
-                            </a>
-                        ) : (
-                            t("URL not found")
-                        )}
+                        {data.blobPath}
                     </div>
                 </div>
             )}

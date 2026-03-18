@@ -1,8 +1,5 @@
 import {
     HelpCircle,
-    AppWindow,
-    Grid3X3,
-    EditIcon,
     Plus,
     Loader2,
 } from "lucide-react";
@@ -17,7 +14,6 @@ import {
     useGetActiveChats,
 } from "../../app/queries/chats";
 import { useCurrentUser } from "../../app/queries/users";
-import { useWorkspace } from "../../app/queries/workspaces";
 import { usePrefetchOnHover } from "../hooks/usePrefetch";
 import { useEntities } from "../hooks/useEntities";
 
@@ -28,19 +24,6 @@ import { LanguageContext } from "../contexts/LanguageProvider";
 import { ThemeContext } from "../contexts/ThemeProvider";
 import ChatNavigationItem from "./ChatNavigationItem";
 import { cn } from "@/lib/utils";
-
-// Helper function to get icon component
-const getIconComponent = (iconName) => {
-    if (!iconName) return AppWindow; // Default fallback
-
-    // Check if it's a Lucide icon
-    if (Icons[iconName]) {
-        return Icons[iconName];
-    }
-
-    // Fallback to default icon
-    return AppWindow;
-};
 
 // Subtle sparkles around the logo
 function LogoSparkles({ theme }) {
@@ -151,10 +134,6 @@ const appNavigationMap = {
         href: "/chat",
         children: [],
     },
-    translate: {
-        name: "Translate",
-        href: "/translate",
-    },
     media: {
         name: "Media",
         href: "/media",
@@ -163,35 +142,6 @@ const appNavigationMap = {
 
 // Legacy navigation for backward compatibility
 export const navigation = Object.values(appNavigationMap);
-
-const AppletEditButton = ({ workspaceId, router }) => {
-    const { t } = useTranslation();
-    const { data: currentUser } = useCurrentUser();
-    const { data: workspace } = useWorkspace(workspaceId);
-
-    // Check if user is the owner of the workspace
-    const isOwner =
-        currentUser?._id?.toString() === workspace?.owner?.toString();
-
-    if (!isOwner) {
-        return null;
-    }
-
-    const handleEditClick = (e) => {
-        e.stopPropagation();
-        if (workspaceId) {
-            router.push(`/workspaces/${workspaceId}`);
-        }
-    };
-
-    return (
-        <EditIcon
-            className="h-4 w-4 ml-auto text-gray-400 hover:text-sky-500 dark:hover:text-sky-400 cursor-pointer transition-colors invisible group-hover:visible"
-            onClick={handleEditClick}
-            title={t("Edit applet")}
-        />
-    );
-};
 
 export default React.forwardRef(function Sidebar({ isMobile }, ref) {
     const pathname = usePathname();
@@ -268,78 +218,11 @@ export default React.forwardRef(function Sidebar({ isMobile }, ref) {
         }
     };
 
-    // Create navigation based on user's apps
-    const getUserNavigation = () => {
-        // Always start with Home and Chat
-        const coreNavigation = [
-            { ...appNavigationMap.home, icon: Icons.HomeIcon },
-            { ...appNavigationMap.chat, icon: Icons.MessageCircleIcon },
-        ];
-
-        if (!currentUser?.apps || currentUser.apps.length === 0) {
-            // Fallback to default navigation if user has no apps
-            return coreNavigation;
-        }
-
-        // Sort user apps by order
-        const sortedUserApps = [...currentUser.apps].sort(
-            (a, b) => a.order - b.order,
-        );
-
-        // Create navigation items based on user's apps (excluding home and chat)
-        const userAppNavigation = sortedUserApps
-            .map((userApp) => {
-                const app = userApp.appId; // This is now populated with app details
-
-                if (!app) {
-                    return null;
-                }
-
-                // Skip home and chat as they're always included
-                if (app.slug === "home" || app.slug === "chat") {
-                    return null;
-                }
-
-                // Handle applet apps differently
-                if (app.type === "applet" && app.workspaceId) {
-                    return {
-                        name: app.name || "Applet",
-                        icon: Icons[app.icon] || AppWindow,
-                        href: app.slug
-                            ? `/apps/${app.slug}`
-                            : `/published/workspaces/${app.workspaceId}/applet`,
-                        appId: userApp.appId._id || userApp.appId,
-                        workspaceId: app.workspaceId,
-                        type: "applet",
-                    };
-                }
-
-                // Find the navigation item for this app
-                const navItem = appNavigationMap[app.slug];
-
-                if (!navItem) {
-                    return null;
-                }
-
-                // Use icon from database, fallback to default AppWindow icon
-                const iconComponent =
-                    app.icon && app.icon.trim()
-                        ? getIconComponent(app.icon)
-                        : AppWindow;
-
-                return {
-                    ...navItem,
-                    icon: iconComponent,
-                    appId: userApp.appId._id || userApp.appId,
-                };
-            })
-            .filter(Boolean); // Remove null items
-
-        // Combine core navigation with user apps
-        return [...coreNavigation, ...userAppNavigation];
-    };
-
-    const userNavigation = getUserNavigation();
+    const userNavigation = [
+        { ...appNavigationMap.home, icon: Icons.Home },
+        { ...appNavigationMap.chat, icon: Icons.MessageCircle },
+        { ...appNavigationMap.media, icon: Icons.Image },
+    ];
 
     const updatedNavigation = userNavigation.map((item) => {
         if (item.name === "Chat" && Array.isArray(chats)) {
@@ -418,7 +301,7 @@ export default React.forwardRef(function Sidebar({ isMobile }, ref) {
                                           "Complete the form to access your account",
                                       )
                                     : t(
-                                          "Please sign in to access your apps and chats",
+                                          "Please sign in to access your chats and media",
                                       )}
                             </p>
                             {!isOnLoginPage && (
@@ -484,15 +367,6 @@ export default React.forwardRef(function Sidebar({ isMobile }, ref) {
                                                             }}
                                                         />
                                                     ))}
-                                                {item.type === "applet" &&
-                                                    item.workspaceId && (
-                                                        <AppletEditButton
-                                                            workspaceId={
-                                                                item.workspaceId
-                                                            }
-                                                            router={router}
-                                                        />
-                                                    )}
                                             </div>
                                             {item.name === "Chat" &&
                                             chatsLoading ? (
@@ -586,17 +460,6 @@ export default React.forwardRef(function Sidebar({ isMobile }, ref) {
                                 </ul>
                             </li>
                             <li>
-                                <div className="pt-3 pb-2 bg-gray-50 dark:bg-gray-700 -mx-5 px-5 text-gray-700 dark:text-gray-200">
-                                    <button
-                                        className="flex gap-2 items-center text-xs w-full hover:opacity-80 transition-opacity"
-                                        onClick={() => router.push("/apps")}
-                                    >
-                                        <Grid3X3 className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-300" />
-                                        <span className="text-xs text-gray-500 dark:text-gray-300">
-                                            {t("Manage Apps")}
-                                        </span>
-                                    </button>
-                                </div>
                                 {currentUser?.role === "admin" && (
                                     <div className="pt-2 pb-2 bg-gray-50 dark:bg-gray-700 -mx-5 px-5 text-gray-700 dark:text-gray-200">
                                         <button

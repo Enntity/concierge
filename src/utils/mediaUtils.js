@@ -1,4 +1,3 @@
-import xxhash from "xxhash-wasm";
 import mime from "mime-types";
 import { isYoutubeUrl } from "./urlUtils.js";
 import {
@@ -9,16 +8,6 @@ import {
     FileVideo,
     FileAudio,
 } from "lucide-react";
-
-let xxhashInstance = null;
-
-// Initialize xxhash once and reuse the instance
-async function getXXHashInstance() {
-    if (!xxhashInstance) {
-        xxhashInstance = await xxhash();
-    }
-    return xxhashInstance;
-}
 
 // File type definitions
 export const DOC_EXTENSIONS = [
@@ -221,26 +210,6 @@ export function generateFilenameFromMimeType(file) {
     }
 
     return "pasted-file";
-}
-
-// Media file utilities
-export async function hashMediaFile(file) {
-    const hasher = await getXXHashInstance();
-    const xxh64 = hasher.create64();
-
-    const stream = file.stream();
-    const reader = stream.getReader();
-
-    try {
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            xxh64.update(value);
-        }
-        return xxh64.digest().toString(16);
-    } finally {
-        reader.releaseLock();
-    }
 }
 
 export const getVideoDuration = (file) => {

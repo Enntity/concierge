@@ -1,19 +1,49 @@
 import { getCurrentUser } from "../../utils/auth";
-import App, { APP_TYPES, APP_STATUS } from "../../models/app";
+import {
+    findMediaServiceFile,
+    listFilesFromMediaService,
+} from "../../utils/media-service-utils.js";
+import {
+    createProfileStorageTarget,
+    extractBlobPathFromUrl,
+    getFilenameFromBlobPath,
+} from "../../../../src/utils/storageTargets.js";
+
+async function serializeUser(user) {
+    const userJson = JSON.parse(JSON.stringify(user.toJSON()));
+    const blobPath =
+        user.profilePictureBlobPath ||
+        extractBlobPathFromUrl(user.profilePicture);
+    const filename =
+        user.profilePictureFilename || getFilenameFromBlobPath(blobPath);
+
+    if (!user.contextId || (!blobPath && !filename)) {
+        return userJson;
+    }
+
+    try {
+        const files = await listFilesFromMediaService({
+            storageTarget: createProfileStorageTarget(user.contextId),
+        });
+        const profileFile = findMediaServiceFile(files, {
+            blobPath,
+            filename,
+        });
+
+        if (profileFile?.url) {
+            userJson.profilePicture = profileFile.url;
+        }
+    } catch (error) {
+        console.warn("Failed to refresh profile picture URL:", error.message);
+    }
+
+    return userJson;
+}
 
 export async function GET() {
     const user = await getCurrentUser(false); // Get the mongoose object, not JSON
 
-    // Initialize user's apps if they don't have any
-    if (!user.apps || user.apps.length === 0) {
-        await initializeUserApps(user);
-    }
-
-    // Populate app details
-    await user.populate("apps.appId");
-
-    // Convert to JSON for response
-    const userJson = JSON.parse(JSON.stringify(user.toJSON()));
+    const userJson = await serializeUser(user);
     return Response.json(userJson);
 }
 
@@ -22,20 +52,13 @@ export async function PUT(request) {
         const user = await getCurrentUser(false);
         const data = await request.json();
 
-        // Update user fields
-        if (data.apps) {
-            user.apps = data.apps;
-        }
         if (data.profilePicture !== undefined) {
             user.profilePicture = data.profilePicture;
         }
 
         await user.save();
 
-        // Populate app details for response
-        await user.populate("apps.appId");
-
-        const userJson = JSON.parse(JSON.stringify(user.toJSON()));
+        const userJson = await serializeUser(user);
         return Response.json(userJson);
     } catch (error) {
         console.error("Error updating user:", error);
@@ -44,33 +67,6 @@ export async function PUT(request) {
             { status: 500 },
         );
     }
-}
-
-async function initializeUserApps(user) {
-    // Get the default apps (excluding Home and Chat as they're core navigation)
-    const defaultAppSlugs = ["translate", "media"];
-
-    // Find the active apps by slug
-    const apps = await App.find({
-        slug: { $in: defaultAppSlugs },
-        type: APP_TYPES.NATIVE,
-        status: APP_STATUS.ACTIVE,
-    });
-
-    // Create the apps array with order
-    const userApps = apps.map((app, index) => ({
-        appId: app._id,
-        order: index,
-        addedAt: new Date(),
-    }));
-
-    // Update the user with the default apps
-    user.apps = userApps;
-    await user.save();
-
-    console.log(
-        `Initialized ${userApps.length} default apps for user ${user.userId}`,
-    );
 }
 
 // don't want nextjs to cache this endpoint

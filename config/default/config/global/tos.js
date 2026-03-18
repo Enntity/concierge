@@ -33,11 +33,8 @@ export const getTosContent = (language) => {
                         content
                     </li>
                     <li>
-                        Workspaces for organizing projects and collaborating
-                        with your Entities
-                    </li>
-                    <li>
-                        File processing, transcription, and translation services
+                        File handling and media generation alongside your
+                        Entities
                     </li>
                 </ul>
             </section>

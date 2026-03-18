@@ -25,8 +25,7 @@ export const getPrivacyContent = (language) => {
                         </li>
                         <li>
                             <strong>Usage Data:</strong> Chat messages,
-                            workspace content, and interactions with our
-                            services
+                            media content, and interactions with our services
                         </li>
                         <li>
                             <strong>Technical Data:</strong> IP address, browser

@@ -54,7 +54,7 @@ import { Spinner } from "@/components/ui/spinner";
  */
 export function getFileUrl(file) {
     if (typeof file === "string") return file;
-    return file?.url || file?.gcs || null;
+    return file?.url || null;
 }
 
 /**
@@ -102,18 +102,17 @@ export function formatFileSize(bytes) {
 /**
  * Create a stable ID for a file
  * Uses WeakMap to ensure consistent IDs for the same object instance
- * Priority: hash (stable content hash, works across MongoDB and Cortex) > _id (stable DB ID) > id/url/gcs
+ * Priority: blobPath > _id > id > url
  */
 const fileIdMap = new WeakMap();
 let fileIdCounter = 0;
 
 export function createFileId(file) {
     if (typeof file === "object" && file !== null) {
-        if (file.hash) return `hash-${file.hash}`;
+        if (file.blobPath) return `bp-${file.blobPath}`;
         if (file._id) return `id-${file._id}`;
         if (file.id) return `id-${file.id}`;
         if (file.url) return `url-${file.url}`;
-        if (file.gcs) return `gcs-${file.gcs}`;
 
         // Use WeakMap for stable ID per object instance
         const existingId = fileIdMap.get(file);
@@ -318,22 +317,22 @@ export default function FileManager({
     }, [files]);
 
     // Get file ID helper
-    // Priority: hash (stable content hash, works across MongoDB and Cortex) > _id (stable DB ID) > id/url/gcs
+    // Priority: blobPath > _id > id > url
     const getFileId = useCallback(
         (file) => {
-            if (typeof file === "object" && file.hash)
-                return `hash-${file.hash}`;
+            if (typeof file === "object" && file.blobPath)
+                return `bp-${file.blobPath}`;
             if (typeof file === "object" && file._id) return `id-${file._id}`;
             if (typeof file === "object" && file.id) return `id-${file.id}`;
             if (typeof file === "object" && file.url) return `url-${file.url}`;
-            if (typeof file === "object" && file.gcs) return `gcs-${file.gcs}`;
             const filename = getFilename(file);
             const originalIndex = localFiles.findIndex((f) => {
                 if (typeof f === "object" && typeof file === "object") {
                     return (
-                        (f.url && file.url && f.url === file.url) ||
-                        (f.gcs && file.gcs && f.gcs === file.gcs) ||
-                        (f.hash && file.hash && f.hash === file.hash)
+                        (f.blobPath &&
+                            file.blobPath &&
+                            f.blobPath === file.blobPath) ||
+                        (f.url && file.url && f.url === file.url)
                     );
                 }
                 return f === file;

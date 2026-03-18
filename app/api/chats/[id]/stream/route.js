@@ -120,8 +120,8 @@ export async function POST(req, { params }) {
         const agentContext =
             requestAgentContext ||
             buildAgentContext({
-                userContextId: currentUser?.contextId || null,
-                userContextKey: currentUser?.contextKey || null,
+                contextId: currentUser?.contextId || null,
+                contextKey: currentUser?.contextKey || null,
             });
 
         // Make sys_entity_agent query to get subscriptionId

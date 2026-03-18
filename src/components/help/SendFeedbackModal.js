@@ -67,7 +67,6 @@ export default React.forwardRef(function SendFeedbackModal(
         try {
             const data = await uploadFileToMediaHelper(file, {
                 contextId: null, // Feedback files don't need contextId
-                checkHash: false, // No need to check hash for feedback files
                 serverUrl: config.endpoints.mediaHelper(serverUrl),
             });
             return data;

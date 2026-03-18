@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../utils/auth.js";
 import config from "../../../../config/index.js";
+import { resolveAuthorizedMediaRouting } from "../../utils/file-route-utils.js";
+import {
+    extractBlobPathFromUrl,
+    getFilenameFromBlobPath,
+} from "../../../../src/utils/storageTargets.js";
 
 /**
  * DELETE /api/files/delete
  * Delete a file from cloud storage using CFH (cortex-file-handler)
  *
  * Query parameters:
- * - hash: File hash to delete (required)
+ * - blobPath: Blob path within the folder tree (preferred identifier)
+ * - filename: Filename within the resolved folder (supported)
  * - contextId: Optional context ID for file scoping (e.g., user.contextId)
  *              If not provided, defaults to user.contextId
  */
@@ -23,12 +29,24 @@ export async function DELETE(request) {
         }
 
         const { searchParams } = new URL(request.url);
-        const hash = searchParams.get("hash");
-        const contextIdParam = searchParams.get("contextId");
+        const blobPath = searchParams.get("blobPath");
+        const filenameParam = searchParams.get("filename");
+        const routingInput = {
+            contextId: searchParams.get("contextId"),
+            userId: searchParams.get("userId"),
+            chatId: searchParams.get("chatId"),
+            fileScope: searchParams.get("fileScope"),
+        };
+        const filename =
+            filenameParam ||
+            getFilenameFromBlobPath(blobPath) ||
+            getFilenameFromBlobPath(extractBlobPathFromUrl(searchParams.get("url")));
 
-        if (!hash) {
+        if (!filename) {
             return NextResponse.json(
-                { error: "Hash parameter is required" },
+                {
+                    error: "filename or blobPath is required for deletion",
+                },
                 { status: 400 },
             );
         }
@@ -46,16 +64,16 @@ export async function DELETE(request) {
             );
         }
 
-        // Use provided contextId or fall back to user.contextId
-        // This allows deletion of user files or other scoped files
-        const contextId = contextIdParam || user.contextId;
+        const { routingParams } = await resolveAuthorizedMediaRouting({
+            user,
+            routingInput,
+        });
 
-        // Call CFH delete API
-        // According to CFH signature: DELETE with hash and contextId parameters
-        // Example: DELETE /file-handler?hash=xyz789&contextId=user-123
         const deleteUrl = new URL(mediaHelperUrl);
-        deleteUrl.searchParams.set("hash", hash);
-        deleteUrl.searchParams.set("contextId", contextId);
+        deleteUrl.searchParams.set("filename", filename);
+        for (const [key, value] of Object.entries(routingParams)) {
+            deleteUrl.searchParams.set(key, value);
+        }
 
         const deleteResponse = await fetch(deleteUrl.toString(), {
             method: "DELETE",
@@ -79,14 +97,21 @@ export async function DELETE(request) {
         }
 
         const deleteResult = await deleteResponse.json();
-        console.log(`Successfully deleted file ${hash}`);
+        const fileIdentifier = blobPath || filename;
+        console.log(`Successfully deleted file ${fileIdentifier}`);
 
         return NextResponse.json({
             success: true,
-            message: `File with hash ${hash} deleted successfully`,
+            message: `File ${fileIdentifier} deleted successfully`,
             deleted: deleteResult.deleted || deleteResult,
         });
     } catch (error) {
+        if (error.status) {
+            return NextResponse.json(
+                { error: error.message },
+                { status: error.status },
+            );
+        }
         console.error("Error deleting file:", error);
         return NextResponse.json(
             {
@@ -97,3 +122,5 @@ export async function DELETE(request) {
         );
     }
 }
+
+export const dynamic = "force-dynamic";

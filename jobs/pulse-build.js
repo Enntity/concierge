@@ -115,7 +115,7 @@ function buildWakePrompt(entity, options) {
     }
 
     if (entity.workspace?.url) {
-        prompt += `Your workspace is available at ${entity.workspace.url}.\n\n`;
+        prompt += `Your web interface is available at ${entity.workspace.url}.\n\n`;
     }
 
     if (compass) {

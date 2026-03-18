@@ -12,22 +12,6 @@ const QUEUES = {
 };
 
 const JOB_DATA_WHITELIST = {
-    transcribe: {
-        metadata: {
-            responseFormat: true,
-            modelOption: true,
-            language: true,
-        },
-    },
-    "video-translate": {
-        metadata: {
-            responseFormat: true,
-            modelOption: true,
-            sourceLocale: true,
-            targetLocale: true,
-            targetLocaleLabel: true,
-        },
-    },
     "media-generation": {
         metadata: {
             outputType: true,
@@ -38,13 +22,6 @@ const JOB_DATA_WHITELIST = {
     coding: {
         metadata: {
             codeRequestId: true,
-        },
-    },
-    "subtitle-translate": {
-        metadata: {
-            name: true,
-            to: true,
-            format: true,
         },
     },
     "deep-synthesis": {

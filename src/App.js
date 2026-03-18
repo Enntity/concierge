@@ -18,7 +18,6 @@ import classNames from "../app/utils/class-names";
 import StoreProvider from "./StoreProvider";
 import { LanguageContext, LanguageProvider } from "./contexts/LanguageProvider";
 import { ThemeProvider } from "./contexts/ThemeProvider";
-import { AutoTranscribeProvider } from "./contexts/AutoTranscribeContext";
 import { OnboardingProvider } from "./contexts/OnboardingContext";
 import { EntityOverlayProvider } from "./contexts/EntityOverlayContext";
 import { VoiceProvider } from "./contexts/VoiceContext";
@@ -139,32 +138,30 @@ const App = ({
                 value={{ graphQLPublicEndpoint, serverUrl, neuralspaceEnabled }}
             >
                 <StoreProvider>
-                    <AutoTranscribeProvider>
-                        <React.StrictMode>
-                            <AuthContext.Provider
-                                value={{
-                                    user: currentUser,
-                                    userState,
-                                    refetchUserState,
-                                    debouncedUpdateUserState,
-                                }}
-                            >
-                                <ThemeProvider savedTheme={theme}>
-                                    <LanguageProvider savedLanguage={language}>
-                                        <OnboardingProvider>
-                                            <EntityOverlayProvider>
-                                                <VoiceProvider>
-                                                    <Layout>
-                                                        <Body>{children}</Body>
-                                                    </Layout>
-                                                </VoiceProvider>
-                                            </EntityOverlayProvider>
-                                        </OnboardingProvider>
-                                    </LanguageProvider>
-                                </ThemeProvider>
-                            </AuthContext.Provider>
-                        </React.StrictMode>
-                    </AutoTranscribeProvider>
+                    <React.StrictMode>
+                        <AuthContext.Provider
+                            value={{
+                                user: currentUser,
+                                userState,
+                                refetchUserState,
+                                debouncedUpdateUserState,
+                            }}
+                        >
+                            <ThemeProvider savedTheme={theme}>
+                                <LanguageProvider savedLanguage={language}>
+                                    <OnboardingProvider>
+                                        <EntityOverlayProvider>
+                                            <VoiceProvider>
+                                                <Layout>
+                                                    <Body>{children}</Body>
+                                                </Layout>
+                                            </VoiceProvider>
+                                        </EntityOverlayProvider>
+                                    </OnboardingProvider>
+                                </LanguageProvider>
+                            </ThemeProvider>
+                        </AuthContext.Provider>
+                    </React.StrictMode>
                 </StoreProvider>
             </ServerContext.Provider>
         </ApolloNextAppProvider>

@@ -13,15 +13,6 @@ const clientSideCompletionHandlers = {
         const { chatId } = task.metadata;
         queryClient.invalidateQueries({ queryKey: ["chat", chatId] });
     },
-    "subtitle-translate": async ({ refetchUserState }) => {
-        refetchUserState();
-    },
-    transcribe: async ({ refetchUserState }) => {
-        refetchUserState();
-    },
-    "video-translate": async ({ refetchUserState }) => {
-        refetchUserState();
-    },
     "media-generation": async ({ refetchUserState }) => {
         refetchUserState();
     },
