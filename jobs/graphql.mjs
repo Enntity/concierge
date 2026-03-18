@@ -120,8 +120,8 @@ const CODE_HUMAN_INPUT = gql`
     }
 `;
 
-const SYS_ENTITY_AGENT = gql`
-    query StartAgent(
+const SYS_ENTITY_RUNTIME = gql`
+    query StartEntityRuntime(
         $chatHistory: [MultiMessage]!
         $agentContext: [AgentContextInput]
         $text: String
@@ -135,8 +135,9 @@ const SYS_ENTITY_AGENT = gql`
         $userInfo: String
         $useMemory: Boolean
         $invocationType: String
+        $requestedOutput: String
     ) {
-        sys_entity_agent(
+        sys_entity_runtime(
             chatHistory: $chatHistory
             agentContext: $agentContext
             text: $text
@@ -150,6 +151,7 @@ const SYS_ENTITY_AGENT = gql`
             userInfo: $userInfo
             useMemory: $useMemory
             invocationType: $invocationType
+            requestedOutput: $requestedOutput
         ) {
             result
             resultData
@@ -894,7 +896,7 @@ const QUERIES = {
     IMAGE_SEEDREAM4,
     VIDEO_VEO,
     VIDEO_SEEDANCE,
-    SYS_ENTITY_AGENT,
+    SYS_ENTITY_RUNTIME,
     EXPAND_STORY,
     FORMAT_PARAGRAPH_TURBO,
     SELECT_SERVICES,
@@ -942,7 +944,7 @@ export {
     AZURE_VIDEO_TRANSLATE,
     getClient,
     EXPAND_STORY,
-    SYS_ENTITY_AGENT,
+    SYS_ENTITY_RUNTIME,
     SELECT_SERVICES,
     SUMMARY,
     HASHTAGS,

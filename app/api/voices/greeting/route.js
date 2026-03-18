@@ -36,17 +36,22 @@ export async function POST(req) {
         const prompt = `Generate a very short, friendly one-sentence greeting introducing yourself.${nameClause} Be natural and match your personality. Just output the greeting text, nothing else. Keep it under 15 words.`;
 
         const result = await client.query({
-            query: QUERIES.SYS_ENTITY_AGENT,
+            query: QUERIES.SYS_ENTITY_RUNTIME,
             variables: {
                 chatHistory: [{ role: "user", content: prompt }],
                 message: "",
-                contextId: user.contextId,
+                agentContext: [
+                    {
+                        contextId: user.contextId,
+                        default: true,
+                    },
+                ],
                 entityId,
                 stream: false,
             },
         });
 
-        const text = result.data?.sys_entity_agent?.result;
+        const text = result.data?.sys_entity_runtime?.result;
 
         if (!text) {
             // Fallback if LLM fails

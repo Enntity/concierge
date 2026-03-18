@@ -130,13 +130,13 @@ Examples of good greetings:
 Be casual, warm, and natural. Vary your style. Keep it brief. Just output the greeting, nothing else.`;
 
         console.log(
-            "[Greeting] Calling SYS_ENTITY_AGENT with entityId:",
+            "[Greeting] Calling SYS_ENTITY_RUNTIME with entityId:",
             entityId,
             "contextId:",
             user.contextId,
         );
         const result = await client.query({
-            query: QUERIES.SYS_ENTITY_AGENT,
+            query: QUERIES.SYS_ENTITY_RUNTIME,
             variables: {
                 chatHistory: [
                     {
@@ -145,15 +145,20 @@ Be casual, warm, and natural. Vary your style. Keep it brief. Just output the gr
                     },
                 ],
                 message: "",
-                contextId: user.contextId,
+                agentContext: [
+                    {
+                        contextId: user.contextId,
+                        default: true,
+                    },
+                ],
                 entityId: entityId,
                 stream: false,
                 userInfo,
             },
         });
 
-        const greeting = result.data?.sys_entity_agent?.result;
-        const errors = result.data?.sys_entity_agent?.errors;
+        const greeting = result.data?.sys_entity_runtime?.result;
+        const errors = result.data?.sys_entity_runtime?.errors;
 
         if (errors?.length) {
             console.error("[Greeting] AI returned errors:", errors);
@@ -163,7 +168,7 @@ Be casual, warm, and natural. Vary your style. Keep it brief. Just output the gr
         if (!greeting) {
             console.log(
                 "[Greeting] AI returned null/empty, using fallback. Full result:",
-                JSON.stringify(result.data?.sys_entity_agent),
+                JSON.stringify(result.data?.sys_entity_runtime),
             );
             return NextResponse.json({ greeting: getFallbackGreeting(user) });
         }

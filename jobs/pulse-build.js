@@ -10,8 +10,7 @@ import { QUERIES, getClient } from "./graphql.mjs";
 import { MongoClient } from "mongodb";
 import Redis from "ioredis";
 
-const { REDIS_CONNECTION_STRING, PULSE_DEFAULT_MODEL = "oai-gpt41" } =
-    process.env;
+const { REDIS_CONNECTION_STRING } = process.env;
 
 const REDIS_NAMESPACE = "continuity"; // Must match cortex DEFAULT_CONFIG.redisNamespace
 
@@ -495,21 +494,17 @@ async function runPulseWake(entity, options, logger) {
             chatHistory: [{ role: "user", content: [wakePrompt] }],
             aiName: entity.name,
             entityId: entity.id,
-            model:
-                pulseConfig.model ||
-                entity.modelOverride ||
-                entity.preferredModel ||
-                PULSE_DEFAULT_MODEL,
+            model: pulseConfig.model || undefined,
             useMemory: true,
             invocationType: "pulse",
         };
 
         const result = await client.query({
-            query: QUERIES.SYS_ENTITY_AGENT,
+            query: QUERIES.SYS_ENTITY_RUNTIME,
             variables,
         });
 
-        const agentResult = result.data?.sys_entity_agent;
+        const agentResult = result.data?.sys_entity_runtime;
         const durationMs = Date.now() - startTime;
 
         // Check for EndPulse signal (set by the tool in Redis)

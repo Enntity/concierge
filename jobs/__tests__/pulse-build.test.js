@@ -43,7 +43,7 @@ jest.mock("../../app/api/models/pulseLog.mjs", () => ({
 
 jest.mock("../graphql.mjs", () => ({
     __esModule: true,
-    QUERIES: { SYS_ENTITY_AGENT: "mock-query" },
+    QUERIES: { SYS_ENTITY_RUNTIME: "mock-query" },
     getClient: jest.fn(),
 }));
 

@@ -122,6 +122,9 @@ const generateDigestBlockContent = async (
         model,
         useMemory: true,
         entityId: resolvedEntityId,
+        invocationType: "digest",
+        requestedOutput:
+            "Produce the finished digest block directly. The user cannot respond, so do not ask questions or defer work.",
     };
 
     const client = await getClient();
@@ -139,21 +142,21 @@ const generateDigestBlockContent = async (
 
     try {
         const result = await client.query({
-            query: QUERIES.SYS_ENTITY_AGENT,
+            query: QUERIES.SYS_ENTITY_RUNTIME,
             variables,
             fetchPolicy: "network-only",
         });
 
-        tool = result.data.sys_entity_agent.tool;
+        tool = result.data.sys_entity_runtime.tool;
 
         try {
             content = JSON.stringify({
-                payload: result.data.sys_entity_agent.result,
+                payload: result.data.sys_entity_runtime.result,
                 tool,
             });
         } catch (e) {
             logger.log(
-                `Error while parsing sys_entity_agent result: ${e.message}`,
+                `Error while parsing sys_entity_runtime result: ${e.message}`,
                 user?._id,
                 block?._id,
             );

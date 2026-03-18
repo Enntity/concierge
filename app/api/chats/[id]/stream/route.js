@@ -89,23 +89,6 @@ export async function POST(req, { params }) {
         // Determine entityId
         const finalEntityId = entityId || chat.selectedEntityId || "";
 
-        // Fetch entity to get preferred model if needed
-        let entityPreferredModel = null;
-        if (finalEntityId && !model && !currentUser.agentModel) {
-            try {
-                const { getEntitiesCollection } = await import(
-                    "../../../entities/_lib"
-                );
-                const { collection, client: mongoClient } =
-                    await getEntitiesCollection();
-                const entity = await collection.findOne({ id: finalEntityId });
-                entityPreferredModel = entity?.preferredModel || null;
-                await mongoClient.close().catch(() => {});
-            } catch (e) {
-                console.error("Error fetching entity for preferred model:", e);
-            }
-        }
-
         // Initialize accumulator and GraphQL client
         const accumulator = new StreamAccumulator();
         // Start thinking time tracking immediately when stream starts
@@ -124,9 +107,9 @@ export async function POST(req, { params }) {
                 userContextKey: currentUser?.contextKey || null,
             });
 
-        // Make sys_entity_agent query to get subscriptionId
+        // Make sys_entity_runtime query to get subscriptionId
         const queryResult = await graphqlClient.query({
-            query: QUERIES.SYS_ENTITY_AGENT,
+            query: QUERIES.SYS_ENTITY_RUNTIME,
             variables: {
                 chatHistory: conversation,
                 agentContext,
@@ -135,18 +118,13 @@ export async function POST(req, { params }) {
                 chatId: id,
                 stream: true,
                 entityId: finalEntityId,
-                // Model priority: request > user override > entity preferred > default
-                model:
-                    model ||
-                    currentUser.agentModel ||
-                    entityPreferredModel ||
-                    "gemini-flash-3-vision",
+                model: model || currentUser.agentModel || undefined,
                 userInfo,
             },
             fetchPolicy: "network-only",
         });
 
-        const subscriptionId = queryResult.data?.sys_entity_agent?.result;
+        const subscriptionId = queryResult.data?.sys_entity_runtime?.result;
         if (!subscriptionId) {
             // Clear loading state if it was set (shouldn't be set yet, but be safe)
             if (loadingWasSet) {

@@ -177,7 +177,7 @@ jest.mock("../../contexts/ChatEntityContext", () => ({
 jest.mock("../../graphql", () => ({
     CODE_HUMAN_INPUT: "CODE_HUMAN_INPUT",
     QUERIES: {
-        SYS_ENTITY_AGENT: "SYS_ENTITY_AGENT",
+        SYS_ENTITY_RUNTIME: "SYS_ENTITY_RUNTIME",
     },
 }));
 

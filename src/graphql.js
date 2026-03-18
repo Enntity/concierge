@@ -174,8 +174,8 @@ const CHAT_TITLE = gql`
     }
 `;
 
-const SYS_ENTITY_AGENT = gql`
-    query StartAgent(
+const SYS_ENTITY_RUNTIME = gql`
+    query StartEntityRuntime(
         $chatHistory: [MultiMessage]!
         $agentContext: [AgentContextInput]
         $text: String
@@ -187,8 +187,11 @@ const SYS_ENTITY_AGENT = gql`
         $chatId: String
         $model: String
         $userInfo: String
+        $useMemory: Boolean
+        $invocationType: String
+        $requestedOutput: String
     ) {
-        sys_entity_agent(
+        sys_entity_runtime(
             chatHistory: $chatHistory
             agentContext: $agentContext
             text: $text
@@ -200,8 +203,12 @@ const SYS_ENTITY_AGENT = gql`
             chatId: $chatId
             model: $model
             userInfo: $userInfo
+            useMemory: $useMemory
+            invocationType: $invocationType
+            requestedOutput: $requestedOutput
         ) {
             result
+            resultData
             contextId
             tool
             warnings
@@ -981,6 +988,10 @@ const SYS_UPDATE_ENTITY = gql`
         $preferredModel: String
         $modelOverride: String
         $reasoningEffort: String
+        $modelPolicy: String
+        $authorityProfile: String
+        $autonomyProfile: String
+        $defaultChildPolicy: String
         $avatarText: String
         $avatarDescription: String
         $avatarImageUrl: String
@@ -1007,6 +1018,10 @@ const SYS_UPDATE_ENTITY = gql`
             preferredModel: $preferredModel
             modelOverride: $modelOverride
             reasoningEffort: $reasoningEffort
+            modelPolicy: $modelPolicy
+            authorityProfile: $authorityProfile
+            autonomyProfile: $autonomyProfile
+            defaultChildPolicy: $defaultChildPolicy
             avatarText: $avatarText
             avatarDescription: $avatarDescription
             avatarImageUrl: $avatarImageUrl
@@ -1082,7 +1097,7 @@ const QUERIES = {
     VIDEO_SEEDANCE,
     SYS_READ_FILE_COLLECTION,
     SYS_UPDATE_FILE_METADATA,
-    SYS_ENTITY_AGENT,
+    SYS_ENTITY_RUNTIME,
     SYS_GET_TOOLS,
     SYS_GET_ENTITIES,
     SYS_TOOL_MERMAID,
@@ -1176,7 +1191,7 @@ export {
     EXPAND_STORY,
     SYS_READ_FILE_COLLECTION,
     SYS_UPDATE_FILE_METADATA,
-    SYS_ENTITY_AGENT,
+    SYS_ENTITY_RUNTIME,
     SYS_GET_TOOLS,
     SYS_GET_ENTITIES,
     SYS_UPDATE_ENTITY,
