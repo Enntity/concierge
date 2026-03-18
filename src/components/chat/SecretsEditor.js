@@ -154,7 +154,7 @@ const SecretsEditorContent = ({
         <div className="space-y-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
                 {t(
-                    "Store API keys and tokens securely. Secrets are encrypted and available in the workspace as environment variables.",
+                    "Store API keys and tokens securely. Secrets are encrypted and available to your entity at runtime as environment variables.",
                 )}
             </p>
 

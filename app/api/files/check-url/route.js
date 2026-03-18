@@ -23,7 +23,7 @@ function redactUrl(url) {
 /**
  * POST /api/files/check-url
  * Check if a file URL exists by making a server-side request
- * This avoids CORS issues and doesn't rely on hash database
+ * This avoids CORS issues and doesn't rely on stale client metadata
  * Uses POST to avoid logging sensitive URLs in server logs
  *
  * Body:

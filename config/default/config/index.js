@@ -22,6 +22,7 @@ const LLM_IDENTIFIERS = {
     gpt5chat: "gpt5chat",
     gpt51: "gpt51",
     gpt52: "gpt52",
+    gpt54: "gpt54",
     claude45sonnet: "claude45sonnet",
     claude45opus: "claude45opus",
     o3mini: "o3mini",
@@ -116,6 +117,12 @@ export default {
                 name: "GPT 5.2",
                 cortexPathwayName: "run_workspace_prompt",
                 cortexModelName: "oai-gpt52",
+            },
+            {
+                identifier: LLM_IDENTIFIERS.gpt54,
+                name: "GPT 5.4",
+                cortexPathwayName: "run_workspace_prompt",
+                cortexModelName: "oai-gpt54",
             },
             {
                 identifier: LLM_IDENTIFIERS.claude45sonnet,

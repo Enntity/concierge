@@ -2,6 +2,39 @@ import { getCurrentUser } from "../utils/auth.js";
 import MediaItem from "../models/media-item.mjs";
 import { parseSearchQuery } from "../utils/search-parser.js";
 import { escapeRegex } from "../utils/regex-utils.js";
+import {
+    findMediaServiceFile,
+    listFilesFromMediaService,
+} from "../utils/media-service-utils.js";
+import {
+    extractBlobPathFromUrl,
+    getFilenameFromBlobPath,
+} from "../../../src/utils/storageTargets.js";
+
+function normalizeMediaItemPayload(body = {}) {
+    const url = body.url || null;
+    const blobPath = body.blobPath || extractBlobPathFromUrl(url);
+    const filename = body.filename || getFilenameFromBlobPath(blobPath);
+
+    return {
+        ...body,
+        ...(url ? { url } : {}),
+        ...(blobPath ? { blobPath } : {}),
+        ...(filename ? { filename } : {}),
+    };
+}
+
+function hydrateMediaItem(record, files = []) {
+    const blobPath = record.blobPath || extractBlobPathFromUrl(record.url);
+    const filename = record.filename || getFilenameFromBlobPath(blobPath);
+    const liveFile = findMediaServiceFile(files, { blobPath, filename });
+    return {
+        ...record,
+        url: liveFile?.url || record.url,
+        blobPath: liveFile?.blobPath || blobPath || null,
+        filename: liveFile?.filename || filename || null,
+    };
+}
 
 export async function GET(req) {
     const user = await getCurrentUser();
@@ -97,8 +130,20 @@ export async function GET(req) {
             .limit(limit)
             .lean();
 
+        let mediaFiles = [];
+        try {
+            mediaFiles = await listFilesFromMediaService({
+                contextId: user.contextId,
+                fileScope: "all",
+            });
+        } catch (error) {
+            console.warn("Failed to refresh media item URLs:", error.message);
+        }
+
         return Response.json({
-            mediaItems,
+            mediaItems: mediaItems.map((item) =>
+                hydrateMediaItem(item, mediaFiles),
+            ),
             pagination: {
                 page,
                 limit,
@@ -132,24 +177,28 @@ export async function POST(req) {
     const body = await req.json();
 
     try {
+        const normalizedBody = normalizeMediaItemPayload(body);
         // Get inherited tags from input images if this is a derivative work
         const inputImageUrls = [
-            body.inputImageUrl,
-            body.inputImageUrl2,
-            body.inputImageUrl3,
+            normalizedBody.inputImageUrl,
+            normalizedBody.inputImageUrl2,
+            normalizedBody.inputImageUrl3,
         ].filter(Boolean);
 
         const inheritedTags = await getInheritedTags(
             user._id,
             inputImageUrls,
-            body.inputTags,
+            normalizedBody.inputTags,
         );
 
         const mediaItem = new MediaItem({
-            ...body,
+            ...normalizedBody,
             user: user._id,
             // Inherit tags from input images (only if no tags are explicitly provided)
-            tags: body.tags && body.tags.length > 0 ? body.tags : inheritedTags,
+            tags:
+                normalizedBody.tags && normalizedBody.tags.length > 0
+                    ? normalizedBody.tags
+                    : inheritedTags,
         });
 
         await mediaItem.save();

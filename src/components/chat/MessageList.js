@@ -34,7 +34,7 @@ import { useApolloClient } from "@apollo/client";
 import {
     purgeFile,
     createFilePlaceholder,
-} from "../../../app/workspaces/[id]/components/chatFileUtils";
+} from "../files/chatFileUtils";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -275,8 +275,7 @@ const MessageListContent = React.memo(function MessageListContent({
                         if (obj.type === "text") {
                             return obj.text;
                         } else if (obj.type === "image_url") {
-                            const src =
-                                obj?.url || obj?.image_url?.url || obj?.gcs;
+                            const src = obj?.url || obj?.image_url?.url;
                             const displayFilename =
                                 obj?.displayFilename || obj?.originalFilename;
 
@@ -770,7 +769,6 @@ const MessageList = React.memo(
                                 getFilename(
                                     fileObj?.url ||
                                         fileObj?.image_url?.url ||
-                                        fileObj?.gcs ||
                                         fileObj?.file,
                                 ),
                             );

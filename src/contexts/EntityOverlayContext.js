@@ -62,8 +62,8 @@ function normalizeOverlayData(data) {
     else if (Array.isArray(data.files) && data.files.length > 0) {
         items = data.files.map((file) =>
             normalizeItem({
-                type: isVideoUrl(file.url || file.gcs) ? "video" : "image",
-                url: file.url || file.gcs,
+                type: isVideoUrl(file.url) ? "video" : "image",
+                url: file.url,
                 label: file.label || file.filename,
                 duration: file.duration,
             }),

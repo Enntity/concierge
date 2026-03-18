@@ -4,10 +4,7 @@
  * provider indicates which icon to show
  */
 export const AGENT_MODEL_OPTIONS = [
-    { displayName: "GPT 5.2", modelId: "oai-gpt52", provider: "openai" },
-    { displayName: "GPT 5.1", modelId: "oai-gpt51", provider: "openai" },
-    { displayName: "GPT 4.1", modelId: "oai-gpt41", provider: "openai" },
-    { displayName: "O3", modelId: "oai-o3", provider: "openai" },
+    { displayName: "GPT 5.4", modelId: "oai-gpt54", provider: "openai" },
     {
         displayName: "Claude 4.5 Sonnet",
         modelId: "claude-45-sonnet",
@@ -46,6 +43,11 @@ export const AGENT_MODEL_OPTIONS = [
     {
         displayName: "Gemini 3.1 Pro",
         modelId: "gemini-pro-31-vision",
+        provider: "google",
+    },
+    {
+        displayName: "Gemini 3.1 Flash Lite",
+        modelId: "gemini-flash-31-lite-vision",
         provider: "google",
     },
 ];

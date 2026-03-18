@@ -64,14 +64,10 @@ const MemoizedMarkdownMessage = React.memo(
                         nextObj.type === "image_url"
                     ) {
                         const prevUrl = new URL(
-                            prevObj.url ||
-                                prevObj.image_url?.url ||
-                                prevObj.gcs,
+                            prevObj.url || prevObj.image_url?.url,
                         ).pathname;
                         const nextUrl = new URL(
-                            nextObj.url ||
-                                nextObj.image_url?.url ||
-                                nextObj.gcs,
+                            nextObj.url || nextObj.image_url?.url,
                         ).pathname;
                         return prevUrl === nextUrl;
                     }

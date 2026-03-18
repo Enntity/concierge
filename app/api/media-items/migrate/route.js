@@ -1,5 +1,9 @@
 import { getCurrentUser } from "../../utils/auth.js";
 import MediaItem from "../../models/media-item.mjs";
+import {
+    extractBlobPathFromUrl,
+    getFilenameFromBlobPath,
+} from "../../../../src/utils/storageTargets.js";
 
 export async function POST(req) {
     const user = await getCurrentUser();
@@ -57,6 +61,9 @@ export async function POST(req) {
                 }
 
                 // Create a new media item in MongoDB
+                const canonicalUrl = item.url;
+                const blobPath =
+                    item.blobPath || extractBlobPathFromUrl(canonicalUrl);
                 const mediaItemData = {
                     user: user._id,
                     taskId: item.taskId || item.cortexRequestId, // Use cortexRequestId as fallback
@@ -65,9 +72,15 @@ export async function POST(req) {
                     type: item.type || "image",
                     model: item.model || "unknown",
                     status: "completed", // Assume completed since they were in localStorage
-                    url: item.url,
-                    azureUrl: item.azureUrl,
-                    gcsUrl: item.gcsUrl,
+                    ...(canonicalUrl ? { url: canonicalUrl } : {}),
+                    ...(blobPath ? { blobPath } : {}),
+                    ...(item.filename || getFilenameFromBlobPath(blobPath)
+                        ? {
+                              filename:
+                                  item.filename ||
+                                  getFilenameFromBlobPath(blobPath),
+                          }
+                        : {}),
                     duration: duration,
                     generateAudio: generateAudio,
                     resolution: resolution,

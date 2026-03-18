@@ -1,54 +1,69 @@
-import { hashMediaFile } from "./mediaUtils";
+import {
+    buildMediaHelperFileParams,
+    buildMediaHelperListParams,
+    extractBlobPathFromUrl,
+    getStorageContextId,
+} from "./storageTargets";
 
-/**
- * Check if a file exists by hash
- * @param {string} fileHash - The file hash
- * @param {Object} options - Options
- * @param {string} options.contextId - Optional contextId for file scoping
- * @param {string} options.serverUrl - Server URL (default: "/media-helper")
- * @param {AbortSignal} options.signal - Optional abort signal
- * @returns {Promise<Object|null>} File data if exists, null otherwise
- */
-export async function checkFileByHash(fileHash, options = {}) {
+function normalizeUploadResult(data, defaults = {}) {
+    const publicUrl =
+        (typeof data?.url === "string" ? data.url : null) ||
+        null;
+
+    return {
+        ...data,
+        url: publicUrl,
+        blobPath:
+            data?.blobPath ||
+            extractBlobPathFromUrl(publicUrl),
+        displayFilename:
+            data?.displayFilename || data?.filename || defaults.filename || null,
+        filename: data?.filename || defaults.filename || null,
+    };
+}
+
+export async function listUserFolder(userId, options = {}) {
     const {
-        contextId = null,
         serverUrl = "/media-helper",
-        signal = null,
+        storageTarget = null,
+        fileScope = "all",
+        chatId = null,
     } = options;
+    const listParams = buildMediaHelperListParams({
+        storageTarget,
+        userContextId: userId,
+        contextId: userId,
+        fileScope,
+        chatId,
+    });
 
-    try {
-        const checkUrl = new URL(serverUrl, window.location.origin);
-        checkUrl.searchParams.set("hash", fileHash);
-        checkUrl.searchParams.set("checkHash", "true");
-        if (contextId) {
-            checkUrl.searchParams.set("contextId", contextId);
-        }
-
-        const checkResponse = await fetch(checkUrl.toString(), {
-            signal,
-        });
-
-        if (checkResponse.ok) {
-            const data = await checkResponse.json().catch(() => null);
-            if (data && data.url) {
-                return {
-                    ...data,
-                    hash: data.hash || fileHash,
-                };
-            }
-        }
-    } catch (error) {
-        // If it's an abort, rethrow
-        if (error.name === "AbortError") {
-            throw error;
-        }
-        // Otherwise, return null (file doesn't exist or check failed)
-        if (error.response?.status !== 404) {
-            console.error("Error checking file hash:", error);
-        }
+    const url = new URL(serverUrl, window.location.origin);
+    url.searchParams.set("operation", "listFolder");
+    for (const [key, value] of Object.entries(listParams)) {
+        url.searchParams.set(key, value);
     }
 
-    return null;
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+        throw new Error(`Failed to list folder: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+        throw new Error("CFH listFolder returned an unexpected payload");
+    }
+
+    return data.map((file) =>
+        normalizeUploadResult(
+            {
+                ...file,
+                blobPath: file?.blobPath || null,
+            },
+            {
+                filename: file?.filename || null,
+            },
+        ),
+    );
 }
 
 /**
@@ -56,51 +71,46 @@ export async function checkFileByHash(fileHash, options = {}) {
  * @param {File} file - The file to upload
  * @param {Object} options - Upload options
  * @param {string} options.contextId - Optional contextId for file scoping
- * @param {boolean} options.checkHash - Whether to check if file exists by hash first (default: true)
  * @param {Function} options.onProgress - Progress callback (percentage: number) => void
  * @param {AbortSignal} options.signal - Optional abort signal
  * @param {string} options.serverUrl - Server URL (default: "/media-helper")
  * @param {Function} options.getXHR - Optional callback to get the XHR object for custom handling
- * @returns {Promise<Object>} Upload result with url, gcs, hash, converted, displayFilename, etc.
+ * @returns {Promise<Object>} Upload result with url, blobPath, filename, displayFilename, etc.
  * @throws {Error} If upload fails
  */
 export async function uploadFileToMediaHelper(file, options = {}) {
     const {
-        contextId = null,
-        checkHash = true,
+        storageTarget = null,
         onProgress = null,
         signal = null,
         serverUrl = "/media-helper",
         getXHR = null,
     } = options;
+    const routingParams = buildMediaHelperFileParams({
+        storageTarget,
+        ...options,
+    });
+    const targetContextId =
+        storageTarget || routingParams.fileScope
+            ? getStorageContextId({
+                  storageTarget,
+                  ...options,
+              })
+            : options.contextId;
 
-    // Generate file hash
-    const fileHash = await hashMediaFile(file);
-
-    // Check if file already exists by hash
-    if (checkHash) {
-        const existingFile = await checkFileByHash(fileHash, {
-            contextId,
-            serverUrl,
-            signal,
-        });
-        if (existingFile) {
-            return existingFile;
-        }
-    }
-
-    // File doesn't exist or hash check disabled, proceed with upload
     const formData = new FormData();
-    formData.append("hash", fileHash);
-    formData.append("file", file, file.name);
-    if (contextId) {
-        formData.append("contextId", contextId);
+    if (targetContextId) {
+        formData.append("contextId", targetContextId);
     }
+    for (const [key, value] of Object.entries(routingParams)) {
+        if (key === "contextId") continue;
+        formData.append(key, value);
+    }
+    formData.append("file", file, file.name);
 
     const uploadUrl = new URL(serverUrl, window.location.origin);
-    uploadUrl.searchParams.set("hash", fileHash);
-    if (contextId) {
-        uploadUrl.searchParams.set("contextId", contextId);
+    for (const [key, value] of Object.entries(routingParams)) {
+        uploadUrl.searchParams.set(key, value);
     }
 
     return new Promise((resolve, reject) => {
@@ -138,10 +148,11 @@ export async function uploadFileToMediaHelper(file, options = {}) {
             if (xhr.status === 200) {
                 try {
                     const data = JSON.parse(xhr.responseText);
-                    resolve({
-                        ...data,
-                        hash: data.hash || fileHash,
-                    });
+                    resolve(
+                        normalizeUploadResult(data, {
+                            filename: file.name,
+                        }),
+                    );
                 } catch (error) {
                     reject(
                         new Error(

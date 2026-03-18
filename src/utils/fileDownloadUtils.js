@@ -2,13 +2,17 @@
  * Utility functions for downloading files, including bulk ZIP downloads
  */
 
+/** Characters that are invalid in filenames (cross-platform). */
+// eslint-disable-next-line no-control-regex
+export const INVALID_FILENAME_CHARS = /[<>:"|?*\x00-\x1f]/;
+
 /**
  * Get file URL from a file object
  * Supports multiple file formats: media items, user files, etc.
  */
 export function getFileUrl(file) {
     if (typeof file === "string") return file;
-    return file?.azureUrl || file?.url || file?.gcs || null;
+    return file?.url || null;
 }
 
 /**
@@ -95,7 +99,7 @@ export async function downloadSingleFile(url, filename) {
 
 /**
  * Download multiple files as a ZIP archive
- * @param {Array} files - Array of file objects with url/azureUrl/gcs properties
+ * @param {Array} files - Array of file objects with url properties
  * @param {Object} options - Optional configuration
  * @param {Function} options.onError - Optional error callback
  * @param {Function} options.onProgress - Optional progress callback (receives boolean: true when starting, false when done)

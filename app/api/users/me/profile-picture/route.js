@@ -4,12 +4,17 @@ import {
     parseStreamingMultipart,
     uploadBufferToMediaService,
 } from "../../../utils/upload-utils.js";
+import { deleteFileFromMediaService } from "../../../utils/media-service-utils.js";
 import { normalizeProfilePicture } from "../../../utils/image-utils.mjs";
-import config from "../../../../../config/index.js";
+import {
+    createProfileStorageTarget,
+    extractBlobPathFromUrl,
+    getFilenameFromBlobPath,
+} from "../../../../../src/utils/storageTargets.js";
 
 /**
  * POST /api/users/me/profile-picture
- * Upload a profile picture with permanent storage
+ * Upload a profile picture
  */
 export async function POST(request) {
     try {
@@ -21,8 +26,13 @@ export async function POST(request) {
             );
         }
 
-        // Store old profile picture info before upload
-        const oldProfilePictureHash = user.profilePictureHash;
+        const profileStorageTarget = createProfileStorageTarget(user.contextId);
+        const oldProfilePictureBlobPath =
+            user.profilePictureBlobPath ||
+            extractBlobPathFromUrl(user.profilePicture);
+        const oldProfilePictureFilename =
+            user.profilePictureFilename ||
+            getFilenameFromBlobPath(oldProfilePictureBlobPath);
 
         // Parse the streaming multipart data
         const result = await parseStreamingMultipart(request, user);
@@ -57,13 +67,12 @@ export async function POST(request) {
             size: normalizedBuffer.length,
         };
 
-        // Upload normalized image to permanent storage
-        // Note: uploadBufferToMediaService will call setRetention internally when permanent=true
         const uploadResult = await uploadBufferToMediaService(
             normalizedBuffer,
             normalizedMetadata,
-            true, // permanent = true
-            user.contextId, // Pass contextId for proper scoping
+            {
+                storageTarget: profileStorageTarget,
+            },
         );
 
         if (uploadResult.error) {
@@ -71,55 +80,38 @@ export async function POST(request) {
         }
 
         const { data } = uploadResult;
-        const { converted } = data;
-
-        let { url } = data;
-
-        if (converted) {
-            url = converted.url;
-        }
+        const nextBlobPath =
+            data.blobPath || extractBlobPathFromUrl(data.url);
+        const nextFilename =
+            data.filename || getFilenameFromBlobPath(nextBlobPath);
 
         // Update user with new profile picture
-        user.profilePicture = url;
-        user.profilePictureHash = uploadResult.data.hash || metadata.hash;
+        user.profilePicture = data.url;
+        user.profilePictureBlobPath = nextBlobPath || undefined;
+        user.profilePictureFilename = nextFilename || undefined;
         await user.save();
 
-        // Delete old profile picture from cloud storage if it exists
-        if (oldProfilePictureHash) {
+        // Delete the previous profile picture after the new one is saved.
+        if (
+            oldProfilePictureBlobPath &&
+            oldProfilePictureBlobPath !== nextBlobPath
+        ) {
             try {
-                const mediaHelperUrl = config.endpoints.mediaHelperDirect();
-                if (mediaHelperUrl) {
-                    const deleteUrl = new URL(mediaHelperUrl);
-                    deleteUrl.searchParams.set("hash", oldProfilePictureHash);
-                    deleteUrl.searchParams.set("contextId", user.contextId);
-
-                    const deleteResponse = await fetch(deleteUrl.toString(), {
-                        method: "DELETE",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                    });
-
-                    if (deleteResponse.ok) {
-                        console.log(
-                            `Deleted old profile picture ${oldProfilePictureHash}`,
-                        );
-                    } else {
-                        console.warn(
-                            `Failed to delete old profile picture: ${deleteResponse.statusText}`,
-                        );
-                    }
-                }
+                await deleteFileFromMediaService({
+                    blobPath: oldProfilePictureBlobPath,
+                    filename: oldProfilePictureFilename,
+                    storageTarget: profileStorageTarget,
+                });
             } catch (error) {
                 console.error("Error deleting old profile picture:", error);
-                // Continue even if deletion fails
             }
         }
 
         return NextResponse.json({
             success: true,
-            url: url,
-            hash: user.profilePictureHash,
+            url: data.url,
+            blobPath: user.profilePictureBlobPath,
+            filename: user.profilePictureFilename,
         });
     } catch (error) {
         console.error("Error uploading profile picture:", error);
@@ -144,44 +136,39 @@ export async function DELETE(request) {
             );
         }
 
-        const profilePictureHash = user.profilePictureHash;
+        const profilePictureBlobPath =
+            user.profilePictureBlobPath ||
+            extractBlobPathFromUrl(user.profilePicture);
+        const profilePictureFilename =
+            user.profilePictureFilename ||
+            getFilenameFromBlobPath(profilePictureBlobPath);
 
-        if (!profilePictureHash) {
+        if (!user.profilePicture && !profilePictureBlobPath) {
             return NextResponse.json(
                 { error: "No profile picture to delete" },
                 { status: 404 },
             );
         }
 
-        // Delete from cloud storage
-        try {
-            const mediaHelperUrl = config.endpoints.mediaHelperDirect();
-            if (mediaHelperUrl) {
-                const deleteUrl = new URL(mediaHelperUrl);
-                deleteUrl.searchParams.set("hash", profilePictureHash);
-                deleteUrl.searchParams.set("contextId", user.contextId);
-
-                const deleteResponse = await fetch(deleteUrl.toString(), {
-                    method: "DELETE",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+        if (profilePictureBlobPath || profilePictureFilename) {
+            try {
+                await deleteFileFromMediaService({
+                    blobPath: profilePictureBlobPath,
+                    filename: profilePictureFilename,
+                    storageTarget: createProfileStorageTarget(user.contextId),
                 });
-
-                if (!deleteResponse.ok) {
-                    console.warn(
-                        `Failed to delete profile picture: ${deleteResponse.statusText}`,
-                    );
-                }
+            } catch (error) {
+                console.error(
+                    "Error deleting profile picture from cloud:",
+                    error,
+                );
             }
-        } catch (error) {
-            console.error("Error deleting profile picture from cloud:", error);
-            // Continue with database update even if cloud deletion fails
         }
 
         // Update user model
         user.profilePicture = undefined;
-        user.profilePictureHash = undefined;
+        user.profilePictureBlobPath = undefined;
+        user.profilePictureFilename = undefined;
         await user.save();
 
         return NextResponse.json({

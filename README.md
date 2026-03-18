@@ -87,6 +87,24 @@ Your app is ready to be deployed!
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
+## Local Full-Stack Verification
+
+Run real local services for integration and browser verification. Do not rely on concierge fallbacks when testing file flows.
+
+1. Start Cortex File Handler:
+   Outside the sandbox so it picks up the `.env` in that folder.
+   `cd /Users/jmac/software/ml/enntity/cortex/helper-apps/cortex-file-handler && npm run dev`
+2. Start Cortex:
+   Outside the sandbox so it picks up the `.env` in the Cortex root.
+   `cd /Users/jmac/software/ml/enntity/cortex && npm start > run.log 2>&1`
+3. In concierge, build and run the focused test suite:
+   `npm run build`
+   `npm test -- --runInBand instrumentation.test.js src/__tests__/App.test.js src/components/chat/MessageInput.test.js src/components/common/UnifiedFileManager/__tests__/useUnifiedFileData.test.js src/components/common/UnifiedFileManager/__tests__/FileManager.fileId.test.js src/components/common/UnifiedFileManager/__tests__/FileContentArea.test.js src/components/common/UnifiedFileManager/__tests__/UnifiedFileManager.mobile.test.js src/components/common/UnifiedFileManager/__tests__/UnifiedFileManager.selection.test.js`
+4. Run the real smoke harness with local env loaded:
+   `set -a; source .env.local; set +a; node scripts/product-smoke.mjs`
+
+`scripts/product-smoke.mjs` now fails fast unless local Cortex GraphQL and the local file handler are both reachable.
+
 # Offline Tasks in Concierge
 
 The Concierge system includes a robust background task processing system that allows you to run time-consuming operations asynchronously. Here's how the offline task system works and how to define a new task.

@@ -564,14 +564,6 @@ export default function UserManagementClient({
                                                             {
                                                                 purgeResult
                                                                     .results
-                                                                    .workspaces
-                                                            }{" "}
-                                                            workspaces
-                                                        </div>
-                                                        <div>
-                                                            {
-                                                                purgeResult
-                                                                    .results
                                                                     .tasks
                                                             }{" "}
                                                             tasks
@@ -604,17 +596,17 @@ export default function UserManagementClient({
                                                             {
                                                                 purgeResult
                                                                     .results
-                                                                    .memberships
+                                                                    .userState
                                                             }{" "}
-                                                            memberships
+                                                            user state records
                                                         </div>
                                                         <div>
                                                             {
                                                                 purgeResult
                                                                     .results
-                                                                    .prompts
+                                                                    .digest
                                                             }{" "}
-                                                            prompts
+                                                            digests
                                                         </div>
                                                     </div>
                                                 </div>
@@ -657,7 +649,6 @@ export default function UserManagementClient({
                                         </div>
                                         <ul className="list-disc list-inside text-sm space-y-1 text-gray-600 dark:text-gray-400">
                                             <li>All chats and messages</li>
-                                            <li>All workspaces and applets</li>
                                             <li>All tasks and media items</li>
                                             <li>All entity associations</li>
                                             <li>All continuity memories</li>

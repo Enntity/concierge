@@ -29,6 +29,44 @@ const DynamicFileUploader = dynamic(() => import("./FileUploader"), {
     ssr: false,
 });
 
+export function getUrlDataIdentityKey(urlData = {}) {
+    return [
+        urlData.blobPath || "",
+        urlData.url || "",
+        urlData.displayFilename || urlData.filename || "",
+    ].join("::");
+}
+
+export function buildFileMessagePart(urlData = {}) {
+    const {
+        url,
+        converted,
+        displayFilename,
+        filename,
+        originalFilename,
+        blobPath,
+    } = urlData;
+    const fileUrl = converted?.url || url;
+    const stableFilename =
+        originalFilename || displayFilename || filename || null;
+    const obj = {
+        type: "image_url",
+        url: fileUrl,
+        image_url: { url: fileUrl },
+    };
+
+    if (blobPath) {
+        obj.blobPath = blobPath;
+    }
+    if (stableFilename) {
+        obj.originalFilename = stableFilename;
+        obj.filename = stableFilename;
+        obj.displayFilename = stableFilename;
+    }
+
+    return JSON.stringify(obj);
+}
+
 // Displays the list of messages and a message input box.
 function MessageInput({
     onSend,
@@ -114,34 +152,7 @@ function MessageInput({
             return textPart;
         }
 
-        const fileParts = urlsData.map(
-            ({ url, gcs, converted, displayFilename, hash }) => {
-                const obj = {
-                    type: "image_url",
-                };
-
-                const fileUrl = converted?.url || url;
-
-                obj.gcs = converted?.gcs || gcs;
-                obj.url = fileUrl;
-                obj.image_url = { url: fileUrl };
-
-                // Include hash if available
-                if (hash) {
-                    obj.hash = hash;
-                }
-
-                // Note: displayFilename is NOT included in payload sent to server
-                // It will be stored locally in the message object for display purposes
-                // For backward compatibility, we include it in the payload for now
-                // but the server will ignore it
-                if (displayFilename) {
-                    obj.displayFilename = displayFilename;
-                }
-
-                return JSON.stringify(obj);
-            },
-        );
+        const fileParts = urlsData.map((urlData) => buildFileMessagePart(urlData));
 
         return [...textPart, ...fileParts];
     };
@@ -218,14 +229,16 @@ function MessageInput({
         // Media urls, will be sent with active message
         if (isSupportedFileUrl(url)) {
             const currentUrlsData = urlsData;
+            const nextKey = getUrlDataIdentityKey(urlData);
             const isDuplicate = currentUrlsData.some(
-                (existingUrl) => existingUrl.hash === urlData.hash,
+                (existingUrl) =>
+                    getUrlDataIdentityKey(existingUrl) === nextKey,
             );
             if (!isDuplicate) {
                 console.log("Adding new URL data:", urlData);
                 setUrlsData((prevUrlsData) => [...prevUrlsData, urlData]);
             } else {
-                console.log("Skipping duplicate URL with hash:", urlData.hash);
+                console.log("Skipping duplicate URL data:", nextKey);
             }
         } else {
             console.log("URL is not supported:", url);
@@ -327,6 +340,7 @@ function MessageInput({
                             setFiles={setFiles}
                             setIsUploadingMedia={setIsUploadingMedia}
                             setUrlsData={setUrlsData}
+                            chatId={activeChatId ? String(activeChatId) : null}
                         />
                     </div>
                 )}

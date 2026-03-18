@@ -100,13 +100,7 @@ export const useMediaGeneration = ({
                 try {
                     const combinedPrompt = prompt;
 
-                    // For Veo and Gemini models, use GCS URL; for others, use Azure URL
-                    const isVeoModel = selectedModel.includes("veo");
-                    const isGeminiModel = selectedModel.includes("gemini");
-                    const inputImageUrl =
-                        isVeoModel || isGeminiModel
-                            ? image.gcsUrl || image.azureUrl || image.url
-                            : image.azureUrl || image.gcsUrl || image.url;
+                    const inputImageUrl = image.url;
 
                     // Collect tags from input image
                     const inputTags = image.tags || [];
@@ -198,18 +192,7 @@ export const useMediaGeneration = ({
             try {
                 const combinedPrompt = prompt;
 
-                // For Veo and Gemini models, use GCS URL; for others, use Azure URL
-                const isVeoModel = selectedModel.includes("veo");
-                const isGeminiModel = selectedModel.includes("gemini");
-                const useGcsUrl = isVeoModel || isGeminiModel;
-
-                // Helper function to get the appropriate URL
-                const getImageUrl = (image) => {
-                    if (useGcsUrl) {
-                        return image.gcsUrl || image.azureUrl || image.url;
-                    }
-                    return image.azureUrl || image.gcsUrl || image.url;
-                };
+                const getImageUrl = (image) => image.url;
 
                 // Collect tags from all input images
                 const allInputTags = new Set();

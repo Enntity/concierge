@@ -10,13 +10,7 @@ import axios from "../../app/utils/axios-client";
 const PREFETCH_ROUTES = [
     "/home",
     "/chat",
-    "/translate",
-    "/video",
-    "/write",
-    "/workspaces",
     "/media",
-    "/code/jira",
-    "/apps",
 ];
 
 // Public routes that don't require auth
@@ -29,7 +23,6 @@ const ROUTE_DATA_MAP = {
         { key: ["chats", { page: 1 }], url: "/api/chats?page=1" },
         { key: ["chatsCount"], url: "/api/chats/count" },
     ],
-    "/workspaces": [{ key: ["workspaces"], url: "/api/workspaces" }],
     "/home": [
         {
             key: ["tasks", { showDismissed: false }],
@@ -39,7 +32,6 @@ const ROUTE_DATA_MAP = {
     "/media": [
         { key: ["mediaItems", { page: 1 }], url: "/api/media-items?page=1" },
     ],
-    "/apps": [{ key: ["availableApps"], url: "/api/apps" }],
 };
 
 // Track which routes have been prefetched to avoid duplicate work

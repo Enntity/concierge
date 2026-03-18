@@ -84,6 +84,11 @@ jest.mock(
                     onClick={() =>
                         addUrl({
                             url: "https://example.com/doc.pdf",
+                            blobPath:
+                                "test-context-id/chats/test-chat-id/doc.pdf",
+                            displayFilename: "doc.pdf",
+                            filename: "doc.pdf",
+                            originalFilename: "doc.pdf",
                             type: "application/pdf",
                         })
                     }
@@ -1140,6 +1145,46 @@ describe("MessageInput", () => {
             expect(sendButton).not.toBeDisabled();
 
             React.useState.mockRestore(); // Restore original useState
+        });
+    });
+
+    describe("File payloads", () => {
+        it("sends file metadata that matches the current agent-facing contract", async () => {
+            jest.spyOn(
+                require("../../utils/mediaUtils"),
+                "isSupportedFileUrl",
+            ).mockImplementation(() => true);
+
+            renderMessageInput({
+                enableRag: true,
+                initialShowFileUpload: true,
+            });
+
+            fireEvent.click(screen.getByTestId("add-url-button"));
+
+            const input = screen.getByPlaceholderText("Send a message");
+            fireEvent.change(input, { target: { value: "Use this file" } });
+            fireEvent.click(screen.getByTestId("send-button"));
+
+            await waitFor(() => {
+                expect(mockOnSend).toHaveBeenCalledTimes(1);
+            });
+
+            const sentPayload = mockOnSend.mock.calls[0][0];
+            expect(sentPayload).toHaveLength(2);
+
+            const filePart = JSON.parse(sentPayload[1]);
+            expect(filePart).toEqual(
+                expect.objectContaining({
+                    type: "image_url",
+                    url: "https://example.com/doc.pdf",
+                    blobPath: "test-context-id/chats/test-chat-id/doc.pdf",
+                    filename: "doc.pdf",
+                    originalFilename: "doc.pdf",
+                    displayFilename: "doc.pdf",
+                    image_url: { url: "https://example.com/doc.pdf" },
+                }),
+            );
         });
     });
 

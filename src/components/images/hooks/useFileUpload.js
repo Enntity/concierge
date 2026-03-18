@@ -1,5 +1,6 @@
 import { useCallback, useContext } from "react";
 import { uploadFileToMediaHelper } from "../../../utils/fileUploadUtils";
+import { createMediaStorageTarget } from "../../../utils/storageTargets";
 import { AuthContext } from "../../../App";
 
 export const useFileUpload = ({
@@ -22,14 +23,13 @@ export const useFileUpload = ({
             try {
                 // Upload file using shared utility
                 const data = await uploadFileToMediaHelper(file, {
-                    contextId,
-                    checkHash: true,
+                    storageTarget: createMediaStorageTarget(contextId),
                     serverUrl,
                 });
 
-                if (data?.url) {
-                    // Create media item in database
-                    const mediaItemData = {
+                    if (data?.url) {
+                        // Create media item in database
+                        const mediaItemData = {
                         taskId: `upload-${Date.now()}`,
                         cortexRequestId: `upload-${Date.now()}`,
                         prompt: t("Uploaded image"),
@@ -42,10 +42,12 @@ export const useFileUpload = ({
                     // Only add URLs if they exist
                     if (data.url) {
                         mediaItemData.url = data.url;
-                        mediaItemData.azureUrl = data.url;
                     }
-                    if (data.gcs) {
-                        mediaItemData.gcsUrl = data.gcs;
+                    if (data.blobPath) {
+                        mediaItemData.blobPath = data.blobPath;
+                    }
+                    if (data.filename) {
+                        mediaItemData.filename = data.filename;
                     }
 
                     const mediaItem =

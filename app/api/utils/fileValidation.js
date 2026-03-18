@@ -5,7 +5,7 @@ export const FILE_VALIDATION_CONFIG = {
         ? parseInt(process.env.MAX_FILE_SIZE)
         : 10 * 1024 * 1024,
 
-    // Allowed MIME types - comprehensive list for applet files
+    // Allowed MIME types for user-uploaded files
     ALLOWED_MIME_TYPES: [
         // Images
         "image/jpeg",

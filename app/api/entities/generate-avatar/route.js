@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../utils/auth";
 import { getClient, IMAGE_FLUX } from "../../../../src/graphql";
-import {
-    hashBuffer,
-    uploadBufferToMediaService,
-} from "../../utils/media-service-utils";
+import { uploadBufferToMediaService } from "../../utils/media-service-utils";
+import { createMediaStorageTarget } from "../../../../src/utils/storageTargets.js";
 
 /**
  * POST /api/entities/generate-avatar
  * Generate an avatar image using Flux
- * Then fetch, hash, and upload properly to cloud storage
+ * Then fetch and upload properly to cloud storage
  */
 export async function POST(req) {
     try {
@@ -75,14 +73,13 @@ Photo-realistic, centered face, clean background, suitable for profile picture, 
         const imageResponse = await fetch(imageUrl);
         if (!imageResponse.ok) {
             console.error("[GenerateAvatar] Failed to fetch generated image");
-            return NextResponse.json({
-                success: true,
-                url: imageUrl, // Fall back to original URL
-            });
+            return NextResponse.json(
+                { error: "Failed to fetch generated image" },
+                { status: 502 },
+            );
         }
 
         const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-        const hash = await hashBuffer(imageBuffer);
 
         // Determine content type and filename
         const contentType =
@@ -92,35 +89,25 @@ Photo-realistic, centered face, clean background, suitable for profile picture, 
             : contentType.includes("png")
               ? "png"
               : "jpg";
-        const filename = `avatar-${hash.substring(0, 8)}.${extension}`;
+        const filename = `avatar-${Date.now()}.${extension}`;
 
-        console.log(
-            "[GenerateAvatar] Uploading with hash:",
-            hash.substring(0, 16),
-        );
-
-        // Upload properly with hash to media service
+        // Upload avatar to folder-backed media storage.
         const uploadResult = await uploadBufferToMediaService(
             imageBuffer,
             {
                 filename,
                 mimeType: contentType,
-                hash,
             },
-            false, // not permanent (entity avatars can be regenerated)
-            user.contextId,
+            {
+                storageTarget: createMediaStorageTarget(user.contextId),
+            },
         );
 
         if (uploadResult.error) {
-            // Fall back to the original URL if upload fails
-            console.warn("[GenerateAvatar] Upload failed, using direct URL");
-            return NextResponse.json({
-                success: true,
-                url: imageUrl,
-            });
+            return uploadResult.error;
         }
 
-        const finalUrl = uploadResult.data.url || imageUrl;
+        const finalUrl = uploadResult.data.url;
 
         console.log(
             "[GenerateAvatar] Success:",
@@ -130,7 +117,8 @@ Photo-realistic, centered face, clean background, suitable for profile picture, 
         return NextResponse.json({
             success: true,
             url: finalUrl,
-            hash: uploadResult.data.hash,
+            blobPath: uploadResult.data.blobPath,
+            filename: uploadResult.data.filename,
         });
     } catch (error) {
         console.error("[GenerateAvatar] Error:", error.message);

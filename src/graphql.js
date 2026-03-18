@@ -359,140 +359,6 @@ const EMBEDDINGS = gql`
     }
 `;
 
-const TRANSCRIBE = gql`
-    query Transcribe(
-        $file: String!
-        $text: String
-        $language: String
-        $wordTimestamped: Boolean
-        $maxLineCount: Int
-        $maxLineWidth: Int
-        $maxWordsPerLine: Int
-        $highlightWords: Boolean
-        $responseFormat: String
-        $async: Boolean
-    ) {
-        transcribe(
-            file: $file
-            text: $text
-            language: $language
-            wordTimestamped: $wordTimestamped
-            maxLineCount: $maxLineCount
-            maxLineWidth: $maxLineWidth
-            maxWordsPerLine: $maxWordsPerLine
-            highlightWords: $highlightWords
-            responseFormat: $responseFormat
-            async: $async
-        ) {
-            result
-        }
-    }
-`;
-
-const TRANSCRIBE_GEMINI = gql`
-    query TranscribeGemini(
-        $file: String!
-        $text: String
-        $language: String
-        $wordTimestamped: Boolean
-        $maxLineCount: Int
-        $maxLineWidth: Int
-        $maxWordsPerLine: Int
-        $highlightWords: Boolean
-        $responseFormat: String
-        $async: Boolean
-        $contextId: String
-    ) {
-        transcribe_gemini(
-            file: $file
-            text: $text
-            language: $language
-            wordTimestamped: $wordTimestamped
-            maxLineCount: $maxLineCount
-            maxLineWidth: $maxLineWidth
-            maxWordsPerLine: $maxWordsPerLine
-            highlightWords: $highlightWords
-            responseFormat: $responseFormat
-            async: $async
-            contextId: $contextId
-        ) {
-            result
-        }
-    }
-`;
-
-const TRANSCRIBE_NEURALSPACE = gql`
-    query TranscribeNeuralSpace(
-        $file: String!
-        $text: String
-        $language: String
-        $wordTimestamped: Boolean
-        $maxLineCount: Int
-        $maxLineWidth: Int
-        $maxWordsPerLine: Int
-        $highlightWords: Boolean
-        $responseFormat: String
-        $async: Boolean
-    ) {
-        transcribe_neuralspace(
-            file: $file
-            text: $text
-            language: $language
-            wordTimestamped: $wordTimestamped
-            maxLineCount: $maxLineCount
-            maxLineWidth: $maxLineWidth
-            maxWordsPerLine: $maxWordsPerLine
-            highlightWords: $highlightWords
-            responseFormat: $responseFormat
-            async: $async
-        ) {
-            result
-        }
-    }
-`;
-
-const TRANSLATE_SUBTITLE = gql`
-    query TranslateSubtitle(
-        $text: String
-        $to: String
-        $async: Boolean
-        $format: String
-    ) {
-        translate_subtitle(
-            text: $text
-            to: $to
-            async: $async
-            format: $format
-        ) {
-            result
-        }
-    }
-`;
-
-const TRANSLATE = gql`
-    query Translate($text: String!, $to: String!, $model: String) {
-        translate(text: $text, to: $to, model: $model) {
-            result
-        }
-    }
-`;
-
-const TRANSLATE_CONTEXT = gql`
-    query TranslateContext($text: String!, $to: String!) {
-        translate_context(text: $text, to: $to) {
-            result
-        }
-    }
-`;
-
-const TRANSLATE_AZURE = gql`
-    query TranslateAzure($text: String!, $to: String!) {
-        translate_azure(text: $text, to: $to) {
-            result
-        }
-    }
-`;
-
 const ENTITIES = gql`
     query Entities($text: String!, $async: Boolean) {
         entities(text: $text, async: $async) {
@@ -872,87 +738,9 @@ const VIDEO_SEEDANCE = gql`
     }
 `;
 
-const JIRA_STORY = gql`
-    query JiraStory(
-        $text: String!
-        $storyType: String
-        $storyCount: String
-        $async: Boolean
-    ) {
-        jira_story(
-            text: $text
-            storyType: $storyType
-            storyCount: $storyCount
-            async: $async
-        ) {
-            result
-        }
-    }
-`;
-
 const CODE_HUMAN_INPUT = gql`
     query ($text: String, $codeRequestId: String) {
         code_human_input(text: $text, codeRequestId: $codeRequestId) {
-            result
-        }
-    }
-`;
-
-const getWorkspacePromptQuery = (pathwayName) => {
-    return gql`
-        query ${pathwayName}(
-            $chatHistory: [MultiMessage]
-            $async: Boolean
-            $model: String
-        ) {
-            ${pathwayName}(
-                chatHistory: $chatHistory
-                async: $async
-                model: $model
-            ) {
-                result
-                tool
-            }
-        }
-    `;
-};
-
-const getWorkspaceAgentQuery = (pathwayName) => {
-    return gql`
-        query ${pathwayName}(
-            $chatHistory: [MultiMessage]
-            $async: Boolean
-            $model: String
-            $agentContext: [AgentContextInput]
-        ) {
-            ${pathwayName}(
-                chatHistory: $chatHistory
-                async: $async
-                model: $model
-                agentContext: $agentContext
-            ) {
-                result
-                tool
-            }
-        }
-    `;
-};
-
-const AZURE_VIDEO_TRANSLATE = gql`
-    query (
-        $mode: String
-        $sourcelocale: String
-        $targetlocale: String
-        $sourcevideooraudiofilepath: String
-        $stream: Boolean
-    ) {
-        azure_video_translate(
-            mode: $mode
-            sourcelocale: $sourcelocale
-            targetlocale: $targetlocale
-            sourcevideooraudiofilepath: $sourcevideooraudiofilepath
-            stream: $stream
-        ) {
             result
         }
     }
@@ -1059,34 +847,7 @@ const SYS_TOOL_MERMAID = gql`
     }
 `;
 
-const WORKSPACE_APPLET_EDIT = gql`
-    query WorkspaceAppletEdit(
-        $text: String!
-        $async: Boolean
-        $stream: Boolean
-        $promptEndpoint: String
-        $fileEndpoint: String
-        $dataEndpoint: String
-        $currentHtml: String
-        $promptDetails: String
-    ) {
-        workspace_applet_edit(
-            text: $text
-            promptEndpoint: $promptEndpoint
-            dataEndpoint: $dataEndpoint
-            fileEndpoint: $fileEndpoint
-            currentHtml: $currentHtml
-            async: $async
-            stream: $stream
-            promptDetails: $promptDetails
-        ) {
-            result
-        }
-    }
-`;
-
 const QUERIES = {
-    AZURE_VIDEO_TRANSLATE,
     CHAT_TITLE,
     CODE_HUMAN_INPUT,
     IMAGE,
@@ -1116,26 +877,15 @@ const QUERIES = {
     KEYWORDS,
     TAGS,
     EMBEDDINGS,
-    JIRA_STORY,
-    getWorkspacePromptQuery,
-    getWorkspaceAgentQuery,
     ENTITIES,
     STORY_ANGLES,
     SUMMARIZE_TURBO,
-    TRANSCRIBE,
-    TRANSCRIBE_NEURALSPACE,
-    TRANSCRIBE_GEMINI,
-    TRANSLATE,
-    TRANSLATE_AZURE,
-    TRANSLATE_CONTEXT,
     TIMELINE,
-    TRANSLATE_SUBTITLE,
     HIGHLIGHTS,
     REMOVE_CONTENT,
     HEADLINE_CUSTOM,
     SUBHEAD,
     VISION,
-    WORKSPACE_APPLET_EDIT,
 };
 
 const SUBSCRIPTIONS = {
@@ -1186,7 +936,6 @@ const MUTATIONS = {
 
 export {
     getClient,
-    AZURE_VIDEO_TRANSLATE,
     CODE_HUMAN_INPUT,
     EXPAND_STORY,
     SYS_READ_FILE_COLLECTION,
@@ -1218,14 +967,8 @@ export {
     SUBSCRIPTIONS,
     MUTATIONS,
     SUMMARIZE_TURBO,
-    TRANSLATE,
-    TRANSLATE_AZURE,
-    TRANSLATE_CONTEXT,
     TIMELINE,
-    TRANSLATE_SUBTITLE,
     HIGHLIGHTS,
     REMOVE_CONTENT,
-    JIRA_STORY,
     VISION,
-    WORKSPACE_APPLET_EDIT,
 };

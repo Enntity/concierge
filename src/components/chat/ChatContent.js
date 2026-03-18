@@ -19,7 +19,7 @@ import {
 import {
     checkFileUrlExists,
     purgeFile,
-} from "../../../app/workspaces/[id]/components/chatFileUtils";
+} from "../files/chatFileUtils";
 import { useStreamingMessages } from "../../hooks/useStreamingMessages";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRunTask } from "../../../app/queries/notifications";
@@ -146,7 +146,6 @@ function ChatContent({
                         const fileUrl =
                             fileObj.url ||
                             fileObj.image_url?.url ||
-                            fileObj.gcs ||
                             fileObj.file;
                         const fileKey = `${message.id || message._id}-${payloadIndex}-${fileUrl}`;
 
@@ -189,7 +188,7 @@ function ChatContent({
                         // Mark as checked immediately to avoid duplicate checks
                         checkedFilesRef.current.checked.add(fileKey);
 
-                        // Use server-side URL check (doesn't rely on hash database)
+                        // Use server-side URL check instead of trusting stale client state.
                         const exists = await checkFileUrlExists(fileUrl);
 
                         if (!exists) {

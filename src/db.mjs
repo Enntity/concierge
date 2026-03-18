@@ -150,87 +150,10 @@ export async function connectToDatabase() {
                 keyId: [_key],
             },
         },
-        [`${dbName}.prompts`]: {
-            bsonType: "object",
-            properties: {
-                title: {
-                    encrypt: {
-                        bsonType: "string",
-                        algorithm:
-                            "AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic",
-                    },
-                },
-                text: {
-                    encrypt: {
-                        bsonType: "string",
-                        algorithm: "AEAD_AES_256_CBC_HMAC_SHA_512-Random",
-                    },
-                },
-            },
-            encryptMetadata: {
-                keyId: [_key],
-            },
-        },
-        [`${dbName}.runs`]: {
-            bsonType: "object",
-            properties: {
-                output: {
-                    encrypt: {
-                        bsonType: "string",
-                        algorithm: "AEAD_AES_256_CBC_HMAC_SHA_512-Random",
-                    },
-                },
-            },
-            encryptMetadata: {
-                keyId: [_key],
-            },
-        },
         [`${dbName}.userstates`]: {
             bsonType: "object",
             properties: {
                 serializedState: {
-                    encrypt: {
-                        bsonType: "string",
-                        algorithm: "AEAD_AES_256_CBC_HMAC_SHA_512-Random",
-                    },
-                },
-            },
-            encryptMetadata: {
-                keyId: [_key],
-            },
-        },
-        [`${dbName}.workspaces`]: {
-            bsonType: "object",
-            properties: {
-                name: {
-                    encrypt: {
-                        bsonType: "string",
-                        algorithm:
-                            "AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic",
-                    },
-                },
-                slug: {
-                    encrypt: {
-                        bsonType: "string",
-                        algorithm:
-                            "AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic",
-                    },
-                },
-                systemPrompt: {
-                    encrypt: {
-                        bsonType: "string",
-                        algorithm: "AEAD_AES_256_CBC_HMAC_SHA_512-Random",
-                    },
-                },
-            },
-            encryptMetadata: {
-                keyId: [_key],
-            },
-        },
-        [`${dbName}.workspacestates`]: {
-            bsonType: "object",
-            properties: {
-                inputText: {
                     encrypt: {
                         bsonType: "string",
                         algorithm: "AEAD_AES_256_CBC_HMAC_SHA_512-Random",
@@ -283,18 +206,6 @@ export async function connectToDatabase() {
                     },
                 },
                 url: {
-                    encrypt: {
-                        bsonType: "string",
-                        algorithm: "AEAD_AES_256_CBC_HMAC_SHA_512-Random",
-                    },
-                },
-                azureUrl: {
-                    encrypt: {
-                        bsonType: "string",
-                        algorithm: "AEAD_AES_256_CBC_HMAC_SHA_512-Random",
-                    },
-                },
-                gcsUrl: {
                     encrypt: {
                         bsonType: "string",
                         algorithm: "AEAD_AES_256_CBC_HMAC_SHA_512-Random",

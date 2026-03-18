@@ -9,6 +9,12 @@ import {
     VIDEO_SEEDANCE,
 } from "../graphql.mjs";
 import MediaItem from "../../app/api/models/media-item.mjs";
+import {
+    buildMediaHelperFileParams,
+    createMediaStorageTarget,
+    extractBlobPathFromUrl,
+    getFilenameFromBlobPath,
+} from "../../src/utils/storageTargets.js";
 
 // User model for getting contextId
 let User;
@@ -899,12 +905,7 @@ class MediaGenerationHandler extends BaseTask {
                         );
 
                         // Check if the retry also failed to produce artifacts
-                        if (
-                            !processedData ||
-                            (!processedData.url &&
-                                !processedData.azureUrl &&
-                                !processedData.gcsUrl)
-                        ) {
+                        if (!processedData?.url) {
                             throw new Error(
                                 "Retry failed to produce artifacts",
                             );
@@ -922,8 +923,8 @@ class MediaGenerationHandler extends BaseTask {
                             model: metadata.model,
                             prompt: metadata.prompt,
                             url: processedData?.url,
-                            azureUrl: processedData?.azureUrl,
-                            gcsUrl: processedData?.gcsUrl,
+                            blobPath: processedData?.blobPath,
+                            filename: processedData?.filename,
                         };
 
                         return result;
@@ -992,8 +993,8 @@ class MediaGenerationHandler extends BaseTask {
             model: metadata.model,
             prompt: metadata.prompt,
             url: processedData?.url,
-            azureUrl: processedData?.azureUrl,
-            gcsUrl: processedData?.gcsUrl,
+            blobPath: processedData?.blobPath,
+            filename: processedData?.filename,
         };
 
         return result;
@@ -1085,12 +1086,12 @@ class MediaGenerationHandler extends BaseTask {
                     metadata.userId,
                 );
                 // processGeminiArtifacts returns:
-                // - { azureUrl, gcsUrl } object on success
+                // - { url, blobPath, filename } object on success
                 // - data URL string on upload failure (fallback)
                 // - null if no artifacts
                 if (geminiResult && typeof geminiResult === "object") {
                     cloudUrls = geminiResult;
-                    mediaUrl = cloudUrls.azureUrl || cloudUrls.gcsUrl;
+                    mediaUrl = cloudUrls.url;
                 } else if (typeof geminiResult === "string") {
                     // Fallback data URL - will be uploaded below
                     mediaUrl = geminiResult;
@@ -1141,20 +1142,16 @@ class MediaGenerationHandler extends BaseTask {
                 }
             }
 
-            // Return processed data with cloud URLs
-            const isGoogleModel = metadata.model?.includes("veo");
-            const finalUrl = isGoogleModel
-                ? cloudUrls?.gcsUrl || mediaUrl
-                : cloudUrls?.azureUrl ||
-                  (mediaUrl && !mediaUrl.startsWith("data:")
-                      ? mediaUrl
-                      : undefined);
+            const finalUrl =
+                cloudUrls?.url ||
+                (mediaUrl && !mediaUrl.startsWith("data:")
+                    ? mediaUrl
+                    : undefined);
 
-            // Only include URL fields if they have truthy values (CSFLE can't encrypt null/undefined)
             return {
                 ...(finalUrl && { url: finalUrl }),
-                ...(cloudUrls?.azureUrl && { azureUrl: cloudUrls.azureUrl }),
-                ...(cloudUrls?.gcsUrl && { gcsUrl: cloudUrls.gcsUrl }),
+                ...(cloudUrls?.blobPath && { blobPath: cloudUrls.blobPath }),
+                ...(cloudUrls?.filename && { filename: cloudUrls.filename }),
                 ...(dataObject?.id && { id: dataObject.id }),
                 ...(dataObject?.model && { model: dataObject.model }),
                 ...(dataObject?.version && { version: dataObject.version }),
@@ -1201,7 +1198,6 @@ class MediaGenerationHandler extends BaseTask {
                             );
 
                             if (cloudUrls) {
-                                // Return the full cloudUrls object so we preserve both URLs
                                 return cloudUrls;
                             }
                         } catch (uploadError) {
@@ -1319,6 +1315,36 @@ class MediaGenerationHandler extends BaseTask {
         }
     }
 
+    buildMediaUploadRouting(contextId = null) {
+        return buildMediaHelperFileParams({
+            storageTarget: contextId
+                ? createMediaStorageTarget(contextId)
+                : undefined,
+            contextId,
+        });
+    }
+
+    normalizeCloudUpload(data) {
+        const url = data?.shortLivedUrl || data?.url || null;
+        const blobPath =
+            data?.blobPath ||
+            data?.name ||
+            extractBlobPathFromUrl(data?.url) ||
+            null;
+        const filename =
+            data?.filename || getFilenameFromBlobPath(blobPath) || null;
+
+        if (!url) {
+            throw new Error("Media file upload failed: Missing file URL");
+        }
+
+        return {
+            url,
+            ...(blobPath ? { blobPath } : {}),
+            ...(filename ? { filename } : {}),
+        };
+    }
+
     async uploadBase64Data(mediaUrl, serverUrl, contextId = null) {
         const response = await fetch(mediaUrl);
         const blob = await response.blob();
@@ -1329,14 +1355,14 @@ class MediaGenerationHandler extends BaseTask {
         const filename = `media.${extension}`;
         formData.append("file", blob, filename);
 
-        // Add contextId if provided
-        if (contextId) {
-            formData.append("contextId", contextId);
+        const routingParams = this.buildMediaUploadRouting(contextId);
+        for (const [key, value] of Object.entries(routingParams)) {
+            formData.append(key, value);
         }
 
         const uploadUrl = new URL(serverUrl);
-        if (contextId) {
-            uploadUrl.searchParams.set("contextId", contextId);
+        for (const [key, value] of Object.entries(routingParams)) {
+            uploadUrl.searchParams.set(key, value);
         }
 
         const uploadResponse = await fetch(uploadUrl.toString(), {
@@ -1355,18 +1381,15 @@ class MediaGenerationHandler extends BaseTask {
         }
 
         const data = await uploadResponse.json();
-
-        const validatedUrls = this.validateCloudUrls(data);
-        return validatedUrls;
+        return this.normalizeCloudUpload(data);
     }
 
     async uploadRegularUrl(mediaUrl, serverUrl, contextId = null) {
         const url = new URL(serverUrl);
         url.searchParams.set("fetch", mediaUrl);
-
-        // Add contextId if provided
-        if (contextId) {
-            url.searchParams.set("contextId", contextId);
+        const routingParams = this.buildMediaUploadRouting(contextId);
+        for (const [key, value] of Object.entries(routingParams)) {
+            url.searchParams.set(key, value);
         }
 
         const response = await fetch(url.toString(), {
@@ -1384,24 +1407,7 @@ class MediaGenerationHandler extends BaseTask {
         }
 
         const data = await response.json();
-        return this.validateCloudUrls(data);
-    }
-
-    validateCloudUrls(data) {
-        const hasAzureUrl =
-            data.url && data.url.includes("blob.core.windows.net");
-        const hasGcsUrl = data.gcs;
-
-        if (!hasAzureUrl || !hasGcsUrl) {
-            throw new Error(
-                "Media file upload failed: Missing required storage URLs",
-            );
-        }
-
-        return {
-            azureUrl: data.url,
-            gcsUrl: data.gcs,
-        };
+        return this.normalizeCloudUpload(data);
     }
 
     async getInheritedTags(userId, inputImageUrls, inputTags = []) {
@@ -1440,16 +1446,15 @@ class MediaGenerationHandler extends BaseTask {
                 metadata.inputTags,
             );
 
-            // Build update data - only include encrypted URL fields if they have values (CSFLE can't encrypt null)
+            // Build update data from the canonical media file contract.
             const updateData = {
                 status: "completed",
                 completed: Math.floor(Date.now() / 1000),
                 // Inherit tags from input images
                 tags: inheritedTags,
-                // Only include encrypted URL fields if they have truthy values
                 ...(dataObject.url && { url: dataObject.url }),
-                ...(dataObject.azureUrl && { azureUrl: dataObject.azureUrl }),
-                ...(dataObject.gcsUrl && { gcsUrl: dataObject.gcsUrl }),
+                ...(dataObject.blobPath && { blobPath: dataObject.blobPath }),
+                ...(dataObject.filename && { filename: dataObject.filename }),
                 // Video-specific fields (not encrypted, so undefined is OK but be explicit)
                 ...(dataObject.duration !== undefined && {
                     duration: dataObject.duration,

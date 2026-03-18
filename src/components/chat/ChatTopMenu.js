@@ -10,7 +10,7 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
-import UserFileCollection from "@/app/workspaces/[id]/components/UserFileCollection";
+import UserFileCollection from "@/src/components/files/UserFileCollection";
 
 function ChatTopMenu({ displayState = "full", readOnly = false }) {
     const { t } = useTranslation();
@@ -41,7 +41,7 @@ function ChatTopMenu({ displayState = "full", readOnly = false }) {
                 open={showFileCollectionDialog}
                 onOpenChange={setShowFileCollectionDialog}
             >
-                <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] sm:w-full max-h-[85vh] flex flex-col overflow-hidden">
+                <DialogContent className="max-w-6xl w-[calc(100vw-2rem)] sm:w-full h-[85vh] flex flex-col overflow-hidden">
                     <DialogHeader className="flex-shrink-0">
                         <DialogTitle>{t("Chat Files")}</DialogTitle>
                         <DialogDescription>
@@ -60,6 +60,7 @@ function ChatTopMenu({ displayState = "full", readOnly = false }) {
                                 }
                                 messages={chat?.messages || []}
                                 updateChatHook={updateChatHook}
+                                containerHeight="100%"
                             />
                         )}
                     </div>

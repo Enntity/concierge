@@ -373,9 +373,8 @@
         @apply text-white;
     }
 
-    /* Chat and workspace grids */
-    .chat-grid,
-    .workspace-grid {
+    /* Chat grids */
+    .chat-grid {
         @apply grid gap-4 w-full;
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     }
@@ -388,18 +387,6 @@
 
     @media (min-width: 640px) {
         .chat-tile {
-            aspect-ratio: 1.8/1;
-        }
-    }
-
-    /* Workspace/Applet tiles */
-    .workspace-tile {
-        @apply relative bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow select-none;
-        aspect-ratio: 2.2/1;
-    }
-
-    @media (min-width: 640px) {
-        .workspace-tile {
             aspect-ratio: 1.8/1;
         }
     }
@@ -421,9 +408,7 @@
     html[dir="rtl"] .chat-tile .selection-checkbox,
     html[dir="rtl"] .chat-tile .hamburger-menu,
     html[dir="rtl"] .media-tile .selection-checkbox,
-    html[dir="rtl"] .media-tile .hamburger-menu,
-    html[dir="rtl"] .workspace-tile .selection-checkbox,
-    html[dir="rtl"] .workspace-tile .hamburger-menu {
+    html[dir="rtl"] .media-tile .hamburger-menu {
         right: auto;
         left: 0.5rem;
     }
