@@ -62,7 +62,6 @@ export async function POST(request, { params }) {
             contextId,
             contextKey,
             aiName: "Enntity",
-            agentModel: "gemini-flash-3-vision",
             role: "user",
         });
 

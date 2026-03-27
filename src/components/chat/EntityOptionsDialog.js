@@ -24,9 +24,9 @@ import {
 } from "@/components/ui/dialog";
 import EntityIcon from "./EntityIcon";
 import {
-    AGENT_MODEL_OPTIONS,
-    DEFAULT_AGENT_MODEL,
-} from "../../../app/utils/agent-model-mapping";
+    useAgentModels,
+    resolveModelId,
+} from "../../../app/queries/modelMetadata";
 
 const REASONING_EFFORT_OPTIONS = [
     { value: "none", label: "None", description: "No reasoning" },
@@ -47,8 +47,15 @@ export default function EntityOptionsDialog({
     refetchEntities,
 }) {
     const { t } = useTranslation();
+    const { data: agentModels, redirects } = useAgentModels();
+    const defaultAgentModel =
+        agentModels?.find((model) => model.isDefault)?.modelId || "";
     const [preferredModel, setPreferredModel] = useState(
-        entity?.preferredModel || DEFAULT_AGENT_MODEL,
+        resolveModelId(
+            entity?.preferredModel || entity?.modelOverride,
+            agentModels,
+            redirects,
+        ) || defaultAgentModel,
     );
     const [forceModel, setForceModel] = useState(!!entity?.modelOverride);
     const [reasoningEffort, setReasoningEffort] = useState(
@@ -74,9 +81,11 @@ export default function EntityOptionsDialog({
             // Otherwise use preferredModel
             const hasOverride = !!entity.modelOverride;
             setPreferredModel(
-                entity.modelOverride ||
-                    entity.preferredModel ||
-                    DEFAULT_AGENT_MODEL,
+                resolveModelId(
+                    entity.modelOverride || entity.preferredModel,
+                    agentModels,
+                    redirects,
+                ) || defaultAgentModel,
             );
             setForceModel(hasOverride);
             setReasoningEffort(entity.reasoningEffort || "medium");
@@ -88,15 +97,17 @@ export default function EntityOptionsDialog({
             setPulseTimezone(entity.pulse?.activeHours?.tz || "UTC");
             setHasChanges(false);
         }
-    }, [entity]);
+    }, [entity, agentModels, redirects, defaultAgentModel]);
 
     // Track changes
     useEffect(() => {
         if (!entity) return;
         const currentModel =
-            entity.modelOverride ||
-            entity.preferredModel ||
-            DEFAULT_AGENT_MODEL;
+            resolveModelId(
+                entity.modelOverride || entity.preferredModel,
+                agentModels,
+                redirects,
+            ) || defaultAgentModel;
         const modelChanged = preferredModel !== currentModel;
         const forceChanged = forceModel !== !!entity.modelOverride;
         const effortChanged =
@@ -132,6 +143,9 @@ export default function EntityOptionsDialog({
         pulseActiveEnd,
         pulseTimezone,
         entity,
+        agentModels,
+        redirects,
+        defaultAgentModel,
     ]);
 
     const handleSave = async () => {
@@ -250,7 +264,7 @@ export default function EntityOptionsDialog({
                                 }
                                 className="flex-1 px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
                             >
-                                {AGENT_MODEL_OPTIONS.map((option) => (
+                                {(agentModels || []).map((option) => (
                                     <option
                                         key={option.modelId}
                                         value={option.modelId}

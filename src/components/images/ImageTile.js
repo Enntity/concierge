@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { AlertTriangle, Check, ShieldAlert } from "lucide-react";
 import ProgressUpdate from "../editor/ProgressUpdate";
 import {
     Dialog,
@@ -46,6 +46,14 @@ function ImageTile({
     const { cortexRequestId, prompt, result, regenerating, uploading, error } =
         image || {};
     const { code, message } = error || result?.error || {};
+    const actualErrorMessage =
+        message || error?.message || result?.error?.message || "";
+    const isFailed = image?.status === "failed";
+    const isSafetyBlocked =
+        code === "ERR_BAD_REQUEST" ||
+        /flagged as sensitive|blocked by safety|safety system/i.test(
+            actualErrorMessage,
+        );
     const isSelected = selectedImages.has(cortexRequestId);
 
     const handleSelection = (e) => {
@@ -123,13 +131,17 @@ function ImageTile({
         regenerating ||
         (image?.status === "pending" && image?.taskId) ||
         (!url &&
-            !error &&
-            !result?.error &&
+            !actualErrorMessage &&
             image?.status !== "completed" &&
             image?.status !== "failed");
 
     const showError =
-        expired || loadError || (cortexRequestId && !hasValidUrl) || code;
+        expired ||
+        loadError ||
+        (cortexRequestId && !hasValidUrl) ||
+        isFailed ||
+        code ||
+        actualErrorMessage;
 
     return (
         <div className="media-tile select-none">
@@ -172,6 +184,7 @@ function ImageTile({
                         {cortexRequestId &&
                             !hasValidUrl &&
                             !code &&
+                            !actualErrorMessage &&
                             image?.status !== "failed" && (
                                 <NoImageError
                                     t={t}
@@ -196,13 +209,13 @@ function ImageTile({
                                     outputType={image?.type || "image"}
                                 />
                             )}
-                        {code === "ERR_BAD_REQUEST" && (
+                        {isSafetyBlocked && (
                             <BadRequestError
                                 t={t}
                                 setShowErrorDialog={setShowErrorDialog}
                             />
                         )}
-                        {code && code !== "ERR_BAD_REQUEST" && (
+                        {!isSafetyBlocked && (code || actualErrorMessage || isFailed) && (
                             <OtherError
                                 t={t}
                                 message={message}
@@ -233,7 +246,7 @@ function ImageTile({
                 <DialogContent className="max-w-4xl">
                     <DialogHeader>
                         <DialogTitle className="text-red-600 dark:text-red-400">
-                            {code === "ERR_BAD_REQUEST"
+                            {isSafetyBlocked
                                 ? t("Content blocked by safety system")
                                 : t("Media generation failed")}
                         </DialogTitle>
@@ -341,42 +354,64 @@ function UploadComponent({ t }) {
     );
 }
 
-function BadRequestError({ t, setShowErrorDialog }) {
+function ErrorTileCard({
+    icon,
+    eyebrow,
+    title,
+    description,
+    hint,
+    onClick,
+    action,
+    detailsLabel = "Details",
+}) {
     return (
         <div
-            className="flex flex-col items-center justify-center h-full p-4 overflow-hidden cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+            className="flex h-full w-full cursor-pointer flex-col justify-between bg-gray-100 p-4 text-left transition-colors hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800"
+            onClick={onClick}
+        >
+            <div>
+                <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+                    {icon}
+                    <span>{eyebrow}</span>
+                </div>
+                <div className="mt-3 text-base font-semibold text-gray-900 dark:text-gray-100">
+                    {title}
+                </div>
+                <div className="mt-2 line-clamp-4 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                    {description}
+                </div>
+            </div>
+
+            <div className="mt-4 flex items-end justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                    <div className="line-clamp-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
+                        {hint}
+                    </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                    {action}
+                    <span className="text-xs font-medium text-sky-600 dark:text-sky-400">
+                        {detailsLabel}
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function BadRequestError({ t, setShowErrorDialog }) {
+    return (
+        <ErrorTileCard
+            icon={<ShieldAlert className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
+            eyebrow={t("Safety")}
+            title={t("Blocked by model safety")}
+            description={t("This prompt was blocked by the model safety filter.")}
+            hint={t("Try a less explicit prompt or adjust the request.")}
             onClick={(e) => {
                 e.stopPropagation();
                 setShowErrorDialog(true);
             }}
-        >
-            <div className="text-center overflow-hidden w-full">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
-                        <svg
-                            className="w-4 h-4 text-red-600 dark:text-red-400"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                        >
-                            <path
-                                fillRule="evenodd"
-                                d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z"
-                                clipRule="evenodd"
-                            />
-                        </svg>
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 break-words overflow-hidden px-2">
-                        {t("Content blocked by safety system")}
-                    </div>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-500 break-words overflow-hidden px-2">
-                    {t("Please try a different prompt")}
-                </div>
-                <div className="text-xs text-sky-600 dark:text-sky-400 mt-2">
-                    {t("Click for details")}
-                </div>
-            </div>
-        </div>
+        />
     );
 }
 
@@ -395,55 +430,32 @@ function OtherError({
         result?.error?.message ||
         "Unknown error occurred";
 
-    return (
-        <div className="flex flex-col items-center justify-center h-full overflow-hidden">
-            <div
-                className="text-center w-full overflow-hidden cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors rounded"
+    const action =
+        image.type === "video" || !image.model ? null : (
+            <button
+                className="lb-primary text-sm px-3 py-1"
                 onClick={(e) => {
                     e.stopPropagation();
-                    setShowErrorDialog(true);
+                    onRegenerate();
                 }}
             >
-                <div className="flex items-center justify-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
-                        <svg
-                            className="w-4 h-4 text-red-600 dark:text-red-400"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                        >
-                            <path
-                                fillRule="evenodd"
-                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                clipRule="evenodd"
-                            />
-                        </svg>
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap overflow-hidden text-ellipsis">
-                        {t("Media generation failed")}
-                    </div>
-                </div>
-                <div
-                    className="text-xs text-gray-500 dark:text-gray-500 px-2 line-clamp-4 break-words overflow-hidden"
-                    title={actualErrorMessage}
-                >
-                    {actualErrorMessage}
-                </div>
-            </div>
+                {t("Regenerate")}
+            </button>
+        );
 
-            <div className="mt-4 flex-shrink-0">
-                {image.type === "video" ? null : !image.model ? null : (
-                    <button
-                        className="lb-primary text-sm px-3 py-1"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onRegenerate();
-                        }}
-                    >
-                        {t("Regenerate")}
-                    </button>
-                )}
-            </div>
-        </div>
+    return (
+        <ErrorTileCard
+            icon={<AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />}
+            eyebrow={t("Error")}
+            title={t("Generation failed")}
+            description={actualErrorMessage}
+            hint={t("Open details for the full provider error.")}
+            onClick={(e) => {
+                e.stopPropagation();
+                setShowErrorDialog(true);
+            }}
+            action={action}
+        />
     );
 }
 
@@ -497,64 +509,36 @@ function NoImageError({
         result?.error?.message ||
         "No media was generated";
 
-    return (
-        <div className="flex flex-col items-center justify-center h-full p-4 overflow-hidden">
-            <div
-                className="text-center w-full overflow-hidden cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors rounded p-2"
+    const action =
+        image.type === "video" ? null : !image.model ? null : (
+            <button
+                className="lb-primary text-sm px-3 py-1"
                 onClick={(e) => {
                     e.stopPropagation();
-                    setShowErrorDialog(true);
+                    onRegenerate();
                 }}
             >
-                <div className="flex items-center justify-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
-                        <svg
-                            className="w-4 h-4 text-red-600 dark:text-red-400"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                        >
-                            <path
-                                fillRule="evenodd"
-                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                clipRule="evenodd"
-                            />
-                        </svg>
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap overflow-hidden text-ellipsis">
-                        {t("Media generation failed")}
-                    </div>
-                </div>
-                <div
-                    className="text-xs text-gray-500 dark:text-gray-500 px-2 line-clamp-4 break-words overflow-hidden"
-                    title={actualErrorMessage}
-                >
-                    {actualErrorMessage}
-                </div>
-                <div className="text-xs text-sky-600 dark:text-sky-400 mt-2">
-                    {t("Click for details")}
-                </div>
-            </div>
+                {t("Regenerate")}
+            </button>
+        );
 
-            <div className="mt-4 flex-shrink-0">
-                {image.type === "video" ? (
-                    <div className="text-xs text-gray-500 dark:text-gray-500 text-center break-words overflow-hidden px-2">
-                        {t(
-                            "Please try a different prompt or contact support if the issue persists.",
-                        )}
-                    </div>
-                ) : !image.model ? null : (
-                    <button
-                        className="lb-primary text-sm px-3 py-1"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onRegenerate();
-                        }}
-                    >
-                        {t("Regenerate")}
-                    </button>
-                )}
-            </div>
-        </div>
+    return (
+        <ErrorTileCard
+            icon={<AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />}
+            eyebrow={t("Error")}
+            title={t("No media returned")}
+            description={actualErrorMessage}
+            hint={
+                image.type === "video"
+                    ? t("Try a different prompt if the provider returned no output.")
+                    : t("Try regenerating or open details for the full error.")
+            }
+            onClick={(e) => {
+                e.stopPropagation();
+                setShowErrorDialog(true);
+            }}
+            action={action}
+        />
     );
 }
 

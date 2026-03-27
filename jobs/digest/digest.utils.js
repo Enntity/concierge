@@ -112,8 +112,7 @@ const generateDigestBlockContent = async (
 
     // Model priority: user override > entity preferred > default
     // (matches ChatContent.js logic; entity modelOverride is handled server-side in cortex)
-    const model =
-        user?.agentModel || entityPreferredModel || "gemini-flash-3-vision";
+    const model = user?.agentModel || entityPreferredModel || undefined;
 
     const variables = {
         chatHistory: [systemMessage, { role: "user", content: [prompt] }],

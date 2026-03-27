@@ -45,7 +45,6 @@ const userSchema = new mongoose.Schema(
         agentModel: {
             type: String,
             required: false,
-            default: "gemini-flash-3-vision",
         },
         defaultEntityId: {
             type: String,

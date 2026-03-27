@@ -1,9 +1,9 @@
 // File validation configuration and utilities
 export const FILE_VALIDATION_CONFIG = {
-    // Maximum file size: 10MB (configurable per environment)
+    // Maximum file size: 50MB (configurable per environment)
     MAX_FILE_SIZE: process.env.MAX_FILE_SIZE
         ? parseInt(process.env.MAX_FILE_SIZE)
-        : 10 * 1024 * 1024,
+        : 50 * 1024 * 1024,
 
     // Allowed MIME types for user-uploaded files
     ALLOWED_MIME_TYPES: [
@@ -16,17 +16,25 @@ export const FILE_VALIDATION_CONFIG = {
         "image/svg+xml",
         "image/bmp",
         "image/tiff",
+        "image/heic",
+        "image/heif",
         // Documents
         "application/pdf",
         "text/plain",
         "text/csv",
         "application/json",
+        "application/javascript",
+        "text/javascript",
         "text/markdown",
+        "text/html",
+        "text/css",
+        "application/xml",
         "application/rtf",
         // Microsoft Office
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
         "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+        "application/vnd.ms-powerpoint.presentation.macroenabled.12", // .pptm
         "application/msword", // .doc
         "application/vnd.ms-excel", // .xls
         "application/vnd.ms-powerpoint", // .ppt
@@ -40,11 +48,19 @@ export const FILE_VALIDATION_CONFIG = {
         "audio/mp3",
         "audio/ogg",
         "audio/webm",
+        "audio/wave",
+        "audio/mp4",
+        "audio/x-aac",
+        "audio/x-flac",
         "video/mp4",
         "video/mpeg",
         "video/quicktime",
         "video/webm",
         "video/ogg",
+        "video/x-msvideo",
+        "video/x-flv",
+        "video/x-ms-wmv",
+        "video/3gpp",
         // Archives (be cautious with these)
         "application/zip",
         "application/x-zip-compressed",
@@ -60,7 +76,6 @@ export const FILE_VALIDATION_CONFIG = {
         ".pif",
         ".scr",
         ".vbs",
-        ".js",
         ".jar",
         ".app",
         ".deb",

@@ -53,7 +53,6 @@ export const getCurrentUser = async (convertToJsonObj = true) => {
                 contextId,
                 contextKey,
                 aiName: "Enntity",
-                agentModel: "gemini-flash-3-vision",
             });
         } catch (error) {
             // Handle race condition: if user was created by another request

@@ -109,11 +109,6 @@ const config = {
                     process.env.CORTEX_GRAPHQL_API_URL ||
                     "http://localhost:4000/graphql",
             },
-            {
-                source: "/media-helper",
-                destination:
-                    process.env.CORTEX_MEDIA_API_URL || "http://localhost:5000",
-            },
         ];
 
         // If you have a blue/green deployment, you can use this to switch between the two

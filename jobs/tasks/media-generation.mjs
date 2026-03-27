@@ -5,8 +5,12 @@ import {
     IMAGE_GEMINI_3,
     IMAGE_QWEN,
     IMAGE_SEEDREAM4,
+    IMAGE_XAI,
+    SYS_MODEL_METADATA,
+    VIDEO_KLING,
     VIDEO_VEO,
     VIDEO_SEEDANCE,
+    VIDEO_XAI,
 } from "../graphql.mjs";
 import MediaItem from "../../app/api/models/media-item.mjs";
 import {
@@ -26,177 +30,131 @@ async function initializeUserModel() {
     return User;
 }
 
-// Model configuration mapping
-const MODEL_CONFIG = {
-    // Image models
-    "gemini-25-flash-image-preview": {
-        query: IMAGE_GEMINI_25,
-        resultKey: "image_gemini_25",
-        type: "image",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings =
-                settings?.models?.["gemini-25-flash-image-preview"] || {};
+const QUERY_BY_PATHWAY = {
+    image_flux: IMAGE_FLUX,
+    image_gemini_25: IMAGE_GEMINI_25,
+    image_gemini_3: IMAGE_GEMINI_3,
+    image_qwen: IMAGE_QWEN,
+    image_seedream4: IMAGE_SEEDREAM4,
+    image_xai: IMAGE_XAI,
+    video_kling: VIDEO_KLING,
+    video_veo: VIDEO_VEO,
+    video_seedance: VIDEO_SEEDANCE,
+    video_xai: VIDEO_XAI,
+};
+
+let modelMetadataCache = null;
+
+const getMergedModelSettings = (modelMetadata, settings = {}) => ({
+    ...(modelMetadata?.mediaDefaults || {}),
+    ...(settings?.models?.[modelMetadata?.modelId] || {}),
+});
+
+const normalizeAspectRatio = (aspectRatio, inputImages = []) => {
+    if (aspectRatio === "match_input_image" && !inputImages[0]) {
+        return "1:1";
+    }
+    return aspectRatio;
+};
+
+async function getModelMetadataStore(client) {
+    if (modelMetadataCache) return modelMetadataCache;
+
+    const result = await client.query({
+        query: SYS_MODEL_METADATA,
+        fetchPolicy: "no-cache",
+    });
+    modelMetadataCache = JSON.parse(result.data.sys_model_metadata.result);
+    return modelMetadataCache;
+}
+
+function resolveModelMetadata(store, modelId, outputType) {
+    const models = store?.models || [];
+    const redirects = store?.redirects || {};
+    const resolvedModelId = redirects[modelId] || modelId;
+
+    const direct = models.find((model) => model.modelId === resolvedModelId);
+    if (direct) {
+        return direct;
+    }
+
+    const fallback = models.find(
+        (model) => model.category === outputType && model.isDefault,
+    );
+    return fallback || models.find((model) => model.category === outputType);
+}
+
+function buildModelVariables(modelMetadata, prompt, settings, inputImages) {
+    const modelSettings = getMergedModelSettings(modelMetadata, settings);
+    const pathwayName = modelMetadata.pathwayName;
+
+    switch (pathwayName) {
+        case "image_gemini_25": {
             const variables = {
                 text: prompt,
                 async: true,
-                optimizePrompt: modelSettings.optimizePrompt !== false, // Default to true if not specified
+                optimizePrompt: modelSettings.optimizePrompt !== false,
             };
-
-            // Only add input_image parameters if they exist
-            // Note: The UI should already be passing GCS URLs for Gemini models
-            if (inputImages[0]) {
-                variables.input_image = inputImages[0];
-            }
-            if (inputImages[1]) {
-                variables.input_image_2 = inputImages[1];
-            }
-            // Gemini supports up to 3 input images, but we're not using the third one
-
+            if (inputImages[0]) variables.input_image = inputImages[0];
+            if (inputImages[1]) variables.input_image_2 = inputImages[1];
+            if (inputImages[2]) variables.input_image_3 = inputImages[2];
             return variables;
-        },
-    },
-    "gemini-3-pro-image-preview": {
-        query: IMAGE_GEMINI_3,
-        resultKey: "image_gemini_3",
-        type: "image",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings =
-                settings?.models?.["gemini-3-pro-image-preview"] || {};
+        }
+        case "image_gemini_3": {
             const variables = {
                 text: prompt,
                 async: true,
-                optimizePrompt: modelSettings.optimizePrompt !== false, // Default to true if not specified
+                optimizePrompt: modelSettings.optimizePrompt !== false,
             };
-
-            // Add aspectRatio if specified
             if (modelSettings.aspectRatio) {
                 variables.aspectRatio = modelSettings.aspectRatio;
             }
-
-            // Add image_size if specified
             if (modelSettings.image_size) {
                 variables.image_size = modelSettings.image_size;
             }
-
-            // Add up to 14 input images
-            // Note: The UI should already be passing GCS URLs for Gemini models
-            if (inputImages[0]) {
-                variables.input_image = inputImages[0];
-            }
-            if (inputImages[1]) {
-                variables.input_image_2 = inputImages[1];
-            }
-            if (inputImages[2]) {
-                variables.input_image_3 = inputImages[2];
-            }
-            if (inputImages[3]) {
-                variables.input_image_4 = inputImages[3];
-            }
-            if (inputImages[4]) {
-                variables.input_image_5 = inputImages[4];
-            }
-            if (inputImages[5]) {
-                variables.input_image_6 = inputImages[5];
-            }
-            if (inputImages[6]) {
-                variables.input_image_7 = inputImages[6];
-            }
-            if (inputImages[7]) {
-                variables.input_image_8 = inputImages[7];
-            }
-            if (inputImages[8]) {
-                variables.input_image_9 = inputImages[8];
-            }
-            if (inputImages[9]) {
-                variables.input_image_10 = inputImages[9];
-            }
-            if (inputImages[10]) {
-                variables.input_image_11 = inputImages[10];
-            }
-            if (inputImages[11]) {
-                variables.input_image_12 = inputImages[11];
-            }
-            if (inputImages[12]) {
-                variables.input_image_13 = inputImages[12];
-            }
-            if (inputImages[13]) {
-                variables.input_image_14 = inputImages[13];
-            }
-
+            inputImages.slice(0, 14).forEach((image, index) => {
+                const key = index === 0 ? "input_image" : `input_image_${index + 1}`;
+                variables[key] = image;
+            });
             return variables;
-        },
-    },
-    "replicate-qwen-image": {
-        query: IMAGE_QWEN,
-        resultKey: "image_qwen",
-        type: "image",
-        buildVariables: (prompt, settings, inputImages) => ({
-            text: prompt,
-            model: "replicate-qwen-image",
-            async: true,
-        }),
-    },
-    "replicate-qwen-image-edit-plus": {
-        query: IMAGE_QWEN,
-        resultKey: "image_qwen",
-        type: "image",
-        buildVariables: (prompt, settings, inputImages) => ({
-            text: prompt,
-            model: "replicate-qwen-image-edit-plus",
-            async: true,
-            input_image: inputImages[0] || "",
-            input_image_2: inputImages[1] || "",
-            input_image_3: inputImages[2] || "",
-        }),
-    },
-    "replicate-qwen-image-edit-2511": {
-        query: IMAGE_QWEN,
-        resultKey: "image_qwen",
-        type: "image",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings = settings?.models?.[
-                "replicate-qwen-image-edit-2511"
-            ] || {
-                aspectRatio: "match_input_image",
-                output_format: "webp",
-                output_quality: 95,
-                go_fast: true,
-                disable_safety_checker: false,
-            };
-            let aspectRatio = modelSettings.aspectRatio;
-            if (aspectRatio === "match_input_image" && !inputImages[0]) {
-                aspectRatio = "1:1";
-            }
+        }
+        case "image_qwen": {
             return {
                 text: prompt,
-                model: "replicate-qwen-image-edit-2511",
+                model: modelMetadata.modelId,
                 async: true,
+                negativePrompt: modelSettings.negativePrompt,
+                width: modelSettings.width,
+                height: modelSettings.height,
+                aspectRatio: normalizeAspectRatio(
+                    modelSettings.aspectRatio,
+                    inputImages,
+                ),
+                numberResults: modelSettings.numberResults,
+                output_format: modelSettings.output_format,
+                output_quality: modelSettings.output_quality,
                 input_image: inputImages[0] || "",
                 input_image_2: inputImages[1] || "",
                 input_image_3: inputImages[2] || "",
-                aspectRatio: aspectRatio,
-                output_format: modelSettings.output_format,
-                output_quality: modelSettings.output_quality,
                 go_fast: modelSettings.go_fast,
+                guidance: modelSettings.guidance,
+                strength: modelSettings.strength,
+                image_size: modelSettings.image_size,
+                lora_scale: modelSettings.lora_scale,
+                enhance_prompt: modelSettings.enhance_prompt,
+                num_inference_steps: modelSettings.num_inference_steps,
                 disable_safety_checker: modelSettings.disable_safety_checker,
             };
-        },
-    },
-    "replicate-seedream-4": {
-        query: IMAGE_SEEDREAM4,
-        resultKey: "image_seedream4",
-        type: "image",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings =
-                settings?.models?.["replicate-seedream-4"] || {};
+        }
+        case "image_seedream4": {
             return {
                 text: prompt,
-                model: "replicate-seedream-4",
+                model: modelMetadata.modelId,
                 async: true,
-                size: modelSettings.size || "2K",
-                width: modelSettings.width || 2048,
-                height: modelSettings.height || 2048,
-                aspectRatio: modelSettings.aspectRatio || "4:3",
+                size: modelSettings.size,
+                width: modelSettings.width,
+                height: modelSettings.height,
+                aspectRatio: modelSettings.aspectRatio,
                 maxImages:
                     modelSettings.maxImages || modelSettings.numberResults || 1,
                 numberResults:
@@ -209,157 +167,58 @@ const MODEL_CONFIG = {
                     modelSettings.sequentialImageGeneration || "disabled",
                 seed: modelSettings.seed || 0,
             };
-        },
-    },
-    "replicate-flux-kontext-max": {
-        query: IMAGE_FLUX,
-        resultKey: "image_flux",
-        type: "image",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings = settings?.models?.[
-                "replicate-flux-kontext-max"
-            ] || { aspectRatio: "match_input_image" };
-            let aspectRatio = modelSettings.aspectRatio;
-            if (aspectRatio === "match_input_image" && !inputImages[0]) {
-                aspectRatio = "1:1";
-            }
-            return {
-                text: prompt,
-                async: true,
-                model: "replicate-flux-kontext-max",
-                input_image: inputImages[0] || "",
-                input_image_2: inputImages[1] || "",
-                input_image_3: inputImages[2] || "",
-                aspectRatio: aspectRatio,
-            };
-        },
-    },
-    "replicate-multi-image-kontext-max": {
-        query: IMAGE_FLUX,
-        resultKey: "image_flux",
-        type: "image",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings = settings?.models?.[
-                "replicate-multi-image-kontext-max"
-            ] || { aspectRatio: "1:1" };
-            let aspectRatio = modelSettings.aspectRatio;
-            if (aspectRatio === "match_input_image" && !inputImages[0]) {
-                aspectRatio = "1:1";
-            }
-            return {
-                text: prompt,
-                async: true,
-                model: "replicate-multi-image-kontext-max",
-                input_image: inputImages[0] || "",
-                input_image_2: inputImages[1] || "",
-                input_image_3: inputImages[2] || "",
-                aspectRatio: aspectRatio,
-            };
-        },
-    },
-    "replicate-flux-11-pro": {
-        query: IMAGE_FLUX,
-        resultKey: "image_flux",
-        type: "image",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings = settings?.models?.[
-                "replicate-flux-11-pro"
-            ] || { aspectRatio: "1:1" };
-            let aspectRatio = modelSettings.aspectRatio;
-            if (aspectRatio === "match_input_image" && !inputImages[0]) {
-                aspectRatio = "1:1";
-            }
-            return {
-                text: prompt,
-                async: true,
-                model: "replicate-flux-11-pro",
-                input_image: inputImages[0] || "",
-                input_image_2: inputImages[1] || "",
-                input_image_3: inputImages[2] || "",
-                aspectRatio: aspectRatio,
-            };
-        },
-    },
-    "replicate-flux-2-pro": {
-        query: IMAGE_FLUX,
-        resultKey: "image_flux",
-        type: "image",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings = settings?.models?.[
-                "replicate-flux-2-pro"
-            ] || {
-                aspectRatio: "1:1",
-                resolution: "1 MP",
-                output_format: "webp",
-                output_quality: 80,
-                safety_tolerance: 2,
-            };
-            let aspectRatio = modelSettings.aspectRatio;
-            if (aspectRatio === "match_input_image" && !inputImages[0]) {
-                aspectRatio = "1:1";
-            }
+        }
+        case "image_xai": {
             const variables = {
                 text: prompt,
                 async: true,
-                model: "replicate-flux-2-pro",
-                aspectRatio: aspectRatio,
-                resolution: modelSettings.resolution || "1 MP",
-                output_format: modelSettings.output_format || "webp",
-                output_quality: modelSettings.output_quality || 80,
-                safety_tolerance: modelSettings.safety_tolerance || 2,
+                model: modelMetadata.modelId,
+                aspectRatio: normalizeAspectRatio(
+                    modelSettings.aspectRatio,
+                    inputImages,
+                ),
+                resolution:
+                    modelSettings.resolution || modelSettings.image_size,
+                numberResults:
+                    modelSettings.numberResults || modelSettings.maxImages || 1,
+                input_image: inputImages[0] || "",
+                input_image_2: inputImages[1] || "",
+                input_image_3: inputImages[2] || "",
             };
-            // Add input images if provided (flux-2-pro supports up to 8 via input_images array)
-            if (inputImages.length > 0) {
-                variables.input_images = inputImages.slice(0, 8);
+            return variables;
+        }
+        case "image_flux": {
+            const variables = {
+                text: prompt,
+                async: true,
+                model: modelMetadata.modelId,
+                aspectRatio: normalizeAspectRatio(
+                    modelSettings.aspectRatio,
+                    inputImages,
+                ),
+                resolution: modelSettings.resolution,
+                output_format: modelSettings.output_format,
+                output_quality: modelSettings.output_quality,
+                safety_tolerance: modelSettings.safety_tolerance,
+            };
+            const maxInputs = modelSettings.inputImages?.[1] || 0;
+            if (maxInputs > 3) {
+                if (inputImages.length > 0) {
+                    variables.input_images = inputImages.slice(0, maxInputs);
+                }
+            } else {
+                variables.input_image = inputImages[0] || "";
+                variables.input_image_2 = inputImages[1] || "";
+                variables.input_image_3 = inputImages[2] || "";
             }
             return variables;
-        },
-    },
-    // Video models
-    "replicate-seedance-1-pro": {
-        query: VIDEO_SEEDANCE,
-        resultKey: "video_seedance",
-        type: "video",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings = settings?.models?.[
-                "replicate-seedance-1-pro"
-            ] || {
-                aspectRatio: "16:9",
-                duration: 5,
-                generateAudio: false,
-                resolution: "1080p",
-                cameraFixed: false,
-            };
+        }
+        case "video_seedance": {
             return {
                 text: prompt,
                 async: true,
-                model: "replicate-seedance-1-pro",
+                model: modelMetadata.modelId,
                 resolution: modelSettings.resolution,
-                aspectRatio: modelSettings.aspectRatio,
-                duration: modelSettings.duration,
-                camera_fixed: modelSettings.cameraFixed,
-                image: inputImages[0] || "",
-                seed: -1,
-            };
-        },
-    },
-    "replicate-seedance-1.5-pro": {
-        query: VIDEO_SEEDANCE,
-        resultKey: "video_seedance",
-        type: "video",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings = settings?.models?.[
-                "replicate-seedance-1.5-pro"
-            ] || {
-                aspectRatio: "16:9",
-                duration: 5,
-                generateAudio: false,
-                cameraFixed: false,
-            };
-            return {
-                text: prompt,
-                async: true,
-                model: "replicate-seedance-1.5-pro",
                 aspectRatio: modelSettings.aspectRatio,
                 duration: modelSettings.duration,
                 camera_fixed: modelSettings.cameraFixed,
@@ -367,28 +226,28 @@ const MODEL_CONFIG = {
                 image: inputImages[0] || "",
                 seed: -1,
             };
-        },
-    },
-    // Veo models (default for video)
-    "veo-2.0-generate": {
-        query: VIDEO_VEO,
-        resultKey: "video_veo",
-        type: "video",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings = settings?.models?.["veo-2.0-generate"] || {
-                aspectRatio: "16:9",
-                duration: 5,
-                generateAudio: false,
-                resolution: "1080p",
-                cameraFixed: false,
+        }
+        case "video_kling": {
+            return {
+                text: prompt,
+                async: true,
+                model: modelMetadata.modelId,
+                aspectRatio: modelSettings.aspectRatio,
+                duration: modelSettings.duration,
+                start_image: inputImages[0] || "",
+                end_image: inputImages[1] || "",
+                image: inputImages[0] || "",
+                negativePrompt: modelSettings.negativePrompt || "",
             };
+        }
+        case "video_veo": {
             return {
                 text: prompt,
                 async: true,
                 image: formatImageForVeo(inputImages[0]),
                 video: "",
                 lastFrame: "",
-                model: "veo-2.0-generate",
+                model: modelMetadata.modelId,
                 aspectRatio: modelSettings.aspectRatio,
                 durationSeconds: modelSettings.duration,
                 enhancePrompt: true,
@@ -400,107 +259,25 @@ const MODEL_CONFIG = {
                 location: "us-central1",
                 seed: -1,
             };
-        },
-    },
-    "veo-3.0-generate": {
-        query: VIDEO_VEO,
-        resultKey: "video_veo",
-        type: "video",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings = settings?.models?.["veo-3.0-generate"] || {
-                aspectRatio: "16:9",
-                duration: 5,
-                generateAudio: false,
-                resolution: "1080p",
-                cameraFixed: false,
-            };
+        }
+        case "video_xai": {
             return {
                 text: prompt,
                 async: true,
-                image: formatImageForVeo(inputImages[0]),
+                model: modelMetadata.modelId,
+                reference_images: inputImages.slice(0, 3),
                 video: "",
-                lastFrame: "",
-                model: "veo-3.0-generate",
                 aspectRatio: modelSettings.aspectRatio,
-                durationSeconds: modelSettings.duration,
-                enhancePrompt: true,
-                generateAudio: modelSettings.generateAudio,
-                negativePrompt: "",
-                personGeneration: "allow_all",
-                sampleCount: 1,
-                storageUri: "",
-                location: "us-central1",
-                seed: -1,
+                duration: modelSettings.duration,
+                resolution: modelSettings.resolution,
             };
-        },
-    },
-    "veo-3.1-generate": {
-        query: VIDEO_VEO,
-        resultKey: "video_veo",
-        type: "video",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings = settings?.models?.["veo-3.1-generate"] || {
-                aspectRatio: "16:9",
-                duration: 8,
-                generateAudio: true,
-                resolution: "1080p",
-                cameraFixed: false,
-            };
-            return {
-                text: prompt,
-                async: true,
-                image: formatImageForVeo(inputImages[0]),
-                video: "",
-                lastFrame: "",
-                model: "veo-3.1-generate",
-                aspectRatio: modelSettings.aspectRatio,
-                durationSeconds: modelSettings.duration,
-                enhancePrompt: true,
-                generateAudio: modelSettings.generateAudio,
-                negativePrompt: "",
-                personGeneration: "allow_all",
-                sampleCount: 1,
-                storageUri: "",
-                location: "us-central1",
-                seed: -1,
-            };
-        },
-    },
-    "veo-3.1-fast-generate": {
-        query: VIDEO_VEO,
-        resultKey: "video_veo",
-        type: "video",
-        buildVariables: (prompt, settings, inputImages) => {
-            const modelSettings = settings?.models?.[
-                "veo-3.1-fast-generate"
-            ] || {
-                aspectRatio: "16:9",
-                duration: 8,
-                generateAudio: true,
-                resolution: "1080p",
-                cameraFixed: false,
-            };
-            return {
-                text: prompt,
-                async: true,
-                image: formatImageForVeo(inputImages[0]),
-                video: "",
-                lastFrame: "",
-                model: "veo-3.1-fast-generate",
-                aspectRatio: modelSettings.aspectRatio,
-                durationSeconds: modelSettings.duration,
-                enhancePrompt: true,
-                generateAudio: modelSettings.generateAudio,
-                negativePrompt: "",
-                personGeneration: "allow_all",
-                sampleCount: 1,
-                storageUri: "",
-                location: "us-central1",
-                seed: -1,
-            };
-        },
-    },
-};
+        }
+        default:
+            throw new Error(
+                `No media-generation dispatcher for pathway ${pathwayName}`,
+            );
+    }
+}
 
 // Utility functions
 const formatImageForVeo = (imageUrl) => {
@@ -566,23 +343,22 @@ class MediaGenerationHandler extends BaseTask {
         return true;
     }
 
-    getModelConfig(model, outputType) {
-        // Return specific model config or default based on output type
-        if (MODEL_CONFIG[model]) {
-            return MODEL_CONFIG[model];
+    async getResolvedModel(jobClient, modelId, outputType) {
+        const store = await getModelMetadataStore(jobClient);
+        const modelMetadata = resolveModelMetadata(store, modelId, outputType);
+
+        if (!modelMetadata) {
+            throw new Error(`No Cortex model metadata found for ${outputType}`);
         }
 
-        // Default fallbacks
-        if (outputType === "image") {
-            return MODEL_CONFIG["replicate-flux-11-pro"];
-        } else {
-            return MODEL_CONFIG["veo-3.0-generate"];
+        const query = QUERY_BY_PATHWAY[modelMetadata.pathwayName];
+        if (!query) {
+            throw new Error(
+                `No GraphQL query mapping for pathway ${modelMetadata.pathwayName}`,
+            );
         }
-    }
 
-    getResultKey(outputType, model) {
-        const config = this.getModelConfig(model, outputType);
-        return config.resultKey;
+        return { modelMetadata, query };
     }
 
     async startRequest(job) {
@@ -621,12 +397,14 @@ class MediaGenerationHandler extends BaseTask {
             throw error;
         }
 
-        const modelName =
-            model ||
-            (outputType === "image"
-                ? "replicate-flux-11-pro"
-                : "replicate-seedance-1-pro");
-        const config = this.getModelConfig(modelName, outputType);
+        const { modelMetadata, query } = await this.getResolvedModel(
+            job.client,
+            model,
+            outputType,
+        );
+        metadata.model = modelMetadata.modelId;
+        metadata.pathwayName = modelMetadata.pathwayName;
+        metadata.resultKey = modelMetadata.resultKey;
 
         const inputImages = [
             inputImageUrl,
@@ -645,12 +423,17 @@ class MediaGenerationHandler extends BaseTask {
             inputImageUrl14,
         ].filter(Boolean);
 
-        const variables = config.buildVariables(prompt, settings, inputImages);
+        const variables = buildModelVariables(
+            modelMetadata,
+            prompt,
+            settings,
+            inputImages,
+        );
 
         let data;
         try {
             const result = await job.client.query({
-                query: config.query,
+                query,
                 variables,
                 fetchPolicy: "no-cache",
             });
@@ -686,8 +469,7 @@ class MediaGenerationHandler extends BaseTask {
             throw error;
         }
 
-        const resultKey = this.getResultKey(outputType, modelName);
-        const result = data?.[resultKey]?.result;
+        const result = data?.[metadata.resultKey]?.result;
 
         if (!result) {
             console.debug(
@@ -806,12 +588,11 @@ class MediaGenerationHandler extends BaseTask {
             settings,
         } = metadata;
 
-        const modelName =
-            model ||
-            (outputType === "image"
-                ? "replicate-flux-11-pro"
-                : "replicate-seedance-1-pro");
-        const config = this.getModelConfig(modelName, outputType);
+        const { modelMetadata, query } = await this.getResolvedModel(
+            job.client,
+            model,
+            outputType,
+        );
 
         const inputImages = [
             inputImageUrl,
@@ -829,11 +610,16 @@ class MediaGenerationHandler extends BaseTask {
             inputImageUrl13,
             inputImageUrl14,
         ].filter(Boolean);
-        const variables = config.buildVariables(prompt, settings, inputImages);
+        const variables = buildModelVariables(
+            modelMetadata,
+            prompt,
+            settings,
+            inputImages,
+        );
 
         try {
             const result = await job.client.query({
-                query: config.query,
+                query,
                 variables,
                 fetchPolicy: "no-cache",
             });
@@ -863,8 +649,8 @@ class MediaGenerationHandler extends BaseTask {
 
         // Check if this is a Gemini model that needs retry due to missing artifacts
         if (
-            (metadata.model === "gemini-25-flash-image-preview" ||
-                metadata.model === "gemini-3-pro-image-preview") &&
+            (metadata.pathwayName === "image_gemini_25" ||
+                metadata.pathwayName === "image_gemini_3") &&
             !infoObject?.artifacts
         ) {
             const retryCount = metadata.geminiRetryCount || 0;
@@ -1077,8 +863,8 @@ class MediaGenerationHandler extends BaseTask {
             // Handle Gemini special case first - returns cloudUrls object directly
             let cloudUrls = null;
             const isGeminiModel =
-                metadata.model === "gemini-25-flash-image-preview" ||
-                metadata.model === "gemini-3-pro-image-preview";
+                metadata.pathwayName === "image_gemini_25" ||
+                metadata.pathwayName === "image_gemini_3";
 
             if (isGeminiModel && infoObject?.artifacts) {
                 const geminiResult = await this.processGeminiArtifacts(

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../utils/auth.js";
+import { signFileFromMediaService } from "../../utils/media-service-utils.js";
+import { inferStorageTargetFromBlobPath } from "../../../../src/utils/storageTargets.js";
 
 /**
  * Redact sensitive query parameters from URL for logging
@@ -27,7 +29,8 @@ function redactUrl(url) {
  * Uses POST to avoid logging sensitive URLs in server logs
  *
  * Body:
- * - url: File URL to check (required)
+ * - url: File URL to check (optional when blobPath is provided)
+ * - blobPath: Stable blob path for CFH-managed files (preferred)
  */
 export async function POST(request) {
     try {
@@ -42,12 +45,67 @@ export async function POST(request) {
 
         const body = await request.json();
         const fileUrl = body?.url;
+        const blobPath =
+            typeof body?.blobPath === "string"
+                ? body.blobPath.replace(/^\/+/, "")
+                : null;
 
-        if (!fileUrl) {
+        if (!fileUrl && !blobPath) {
             return NextResponse.json(
-                { error: "URL parameter is required" },
+                { error: "url or blobPath parameter is required" },
                 { status: 400 },
             );
+        }
+
+        if (blobPath) {
+            if (
+                !user.contextId ||
+                !blobPath.startsWith(`${user.contextId}/`)
+            ) {
+                return NextResponse.json(
+                    { error: "Not authorized to access this file" },
+                    { status: 403 },
+                );
+            }
+
+            const storageTarget = inferStorageTargetFromBlobPath(
+                blobPath,
+                user.contextId,
+            );
+
+            if (!storageTarget || storageTarget.contextId !== user.contextId) {
+                return NextResponse.json(
+                    { error: "Not authorized to access this file" },
+                    { status: 403 },
+                );
+            }
+
+            try {
+                const signedFile = await signFileFromMediaService({
+                    blobPath,
+                    minutes: 60,
+                });
+
+                return NextResponse.json({
+                    exists: true,
+                    blobPath,
+                    refreshedUrl: signedFile.url,
+                    url: signedFile.url,
+                });
+            } catch (error) {
+                if (error.status === 404) {
+                    return NextResponse.json({ exists: false, blobPath });
+                }
+
+                console.warn(
+                    `Error refreshing signed URL for ${blobPath}:`,
+                    error.message,
+                );
+            }
+        }
+
+        if (!fileUrl) {
+            return NextResponse.json({ exists: false, blobPath });
         }
 
         // Validate URL format

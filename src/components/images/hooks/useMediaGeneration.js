@@ -177,9 +177,8 @@ export const useMediaGeneration = ({
                 (img) => img.url && img.type === "image",
             );
 
-            // Check if this is gemini-3-pro-image-preview which supports up to 14 images
-            const isGemini3Pro = selectedModel === "gemini-3-pro-image-preview";
-            const maxImages = isGemini3Pro ? 14 : 3;
+            const inputRange = settings?.models?.[selectedModel]?.inputImages;
+            const maxImages = inputRange?.[1] || 3;
             const minImages = 2;
 
             if (
@@ -214,7 +213,7 @@ export const useMediaGeneration = ({
                     inputTags: Array.from(allInputTags),
                 };
 
-                // Add input images (up to 14 for gemini-3-pro-image-preview)
+                // Add input images supported by the selected model
                 if (selectedImageObjects[0]) {
                     taskData.inputImageUrl = getImageUrl(
                         selectedImageObjects[0],
@@ -230,8 +229,7 @@ export const useMediaGeneration = ({
                         selectedImageObjects[2],
                     );
                 }
-                // Only add additional images if this is gemini-3-pro-image-preview
-                if (isGemini3Pro) {
+                if (maxImages > 3) {
                     if (selectedImageObjects[3]) {
                         taskData.inputImageUrl4 = getImageUrl(
                             selectedImageObjects[3],

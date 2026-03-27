@@ -1008,7 +1008,7 @@ export default function EntityOnboarding({
                             model:
                                 user.agentModel ||
                                 onboardingEntity.preferredModel ||
-                                "gemini-flash-3-vision",
+                                undefined,
                             userInfo: composeUserDateTimeInfo(),
                         }),
                     },
@@ -1113,7 +1113,7 @@ export default function EntityOnboarding({
                                 model:
                                     user.agentModel ||
                                     createdEntity.preferredModel ||
-                                    "gemini-flash-3-vision",
+                                    undefined,
                                 userInfo: composeUserDateTimeInfo(),
                             }),
                         }).catch(console.error);
@@ -1264,7 +1264,7 @@ export default function EntityOnboarding({
                             model:
                                 user.agentModel ||
                                 onboardingEntity.preferredModel ||
-                                "gemini-flash-3-vision",
+                                undefined,
                             userInfo: composeUserDateTimeInfo(),
                         }),
                     },

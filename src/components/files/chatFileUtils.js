@@ -80,30 +80,33 @@ export async function deleteFileFromCloud(fileObj, options = {}) {
 /**
  * Check if a file URL exists by making a server-side request
  * This avoids CORS issues and doesn't rely on legacy file metadata
- * @param {string} url - File URL to check
- * @returns {Promise<boolean>} - True if file exists, false otherwise
+ * @param {Object} options
+ * @param {string} options.url - File URL to check
+ * @param {string} options.blobPath - Stable blob path for CFH-managed files
+ * @returns {Promise<{exists: boolean, refreshedUrl?: string, url?: string}>}
  */
-export async function checkFileUrlExists(url) {
-    if (!url) return false;
+export async function checkFileUrlExists({ url = null, blobPath = null } = {}) {
+    if (!url && !blobPath) {
+        return { exists: false };
+    }
 
     try {
         // Use POST to avoid logging sensitive SAS URLs in server logs
         const response = await fetch("/api/files/check-url", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url }),
+            body: JSON.stringify({ url, blobPath }),
         });
 
         if (!response.ok) {
             console.warn(`Failed to check file URL: ${response.statusText}`);
-            return false;
+            return { exists: false };
         }
 
-        const data = await response.json().catch(() => null);
-        return data?.exists === true;
+        return (await response.json().catch(() => null)) || { exists: false };
     } catch (error) {
         console.error("Error checking file URL:", error);
-        return false;
+        return { exists: false };
     }
 }
 

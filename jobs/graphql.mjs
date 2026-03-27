@@ -567,6 +567,34 @@ const IMAGE_SEEDREAM4 = gql`
     }
 `;
 
+const IMAGE_XAI = gql`
+    query ImageXai(
+        $text: String!
+        $model: String
+        $async: Boolean
+        $input_image: String
+        $input_image_2: String
+        $input_image_3: String
+        $aspectRatio: String
+        $resolution: String
+        $numberResults: Int
+    ) {
+        image_xai(
+            text: $text
+            model: $model
+            async: $async
+            input_image: $input_image
+            input_image_2: $input_image_2
+            input_image_3: $input_image_3
+            aspectRatio: $aspectRatio
+            resolution: $resolution
+            numberResults: $numberResults
+        ) {
+            result
+        }
+    }
+`;
+
 const VIDEO_VEO = gql`
     query VideoVeo(
         $text: String!
@@ -603,6 +631,60 @@ const VIDEO_VEO = gql`
             storageUri: $storageUri
             location: $location
             seed: $seed
+        ) {
+            result
+        }
+    }
+`;
+
+const VIDEO_XAI = gql`
+    query VideoXai(
+        $text: String!
+        $model: String
+        $async: Boolean
+        $reference_images: [String]
+        $video: String
+        $aspectRatio: String
+        $resolution: String
+        $duration: Int
+    ) {
+        video_xai(
+            text: $text
+            model: $model
+            async: $async
+            reference_images: $reference_images
+            video: $video
+            aspectRatio: $aspectRatio
+            resolution: $resolution
+            duration: $duration
+        ) {
+            result
+        }
+    }
+`;
+
+const VIDEO_KLING = gql`
+    query VideoKling(
+        $text: String!
+        $async: Boolean
+        $model: String
+        $aspectRatio: String
+        $duration: Int
+        $start_image: String
+        $end_image: String
+        $image: String
+        $negativePrompt: String
+    ) {
+        video_kling(
+            text: $text
+            async: $async
+            model: $model
+            aspectRatio: $aspectRatio
+            duration: $duration
+            start_image: $start_image
+            end_image: $end_image
+            image: $image
+            negativePrompt: $negativePrompt
         ) {
             result
         }
@@ -680,8 +762,11 @@ const QUERIES = {
     IMAGE_GEMINI_3,
     IMAGE_QWEN,
     IMAGE_SEEDREAM4,
+    IMAGE_XAI,
+    VIDEO_KLING,
     VIDEO_VEO,
     VIDEO_SEEDANCE,
+    VIDEO_XAI,
     SYS_ENTITY_RUNTIME,
     EXPAND_STORY,
     FORMAT_PARAGRAPH_TURBO,
@@ -716,6 +801,14 @@ const MUTATIONS = {
     CANCEL_REQUEST,
 };
 
+const SYS_MODEL_METADATA = gql`
+    query SysModelMetadata($category: String) {
+        sys_model_metadata(category: $category) {
+            result
+        }
+    }
+`;
+
 export {
     getClient,
     EXPAND_STORY,
@@ -729,8 +822,11 @@ export {
     IMAGE_GEMINI_3,
     IMAGE_QWEN,
     IMAGE_SEEDREAM4,
+    IMAGE_XAI,
+    VIDEO_KLING,
     VIDEO_VEO,
     VIDEO_SEEDANCE,
+    VIDEO_XAI,
     GRAMMAR,
     SPELLING,
     PARAPHRASE,
@@ -741,6 +837,7 @@ export {
     QUERIES,
     SUBSCRIPTIONS,
     MUTATIONS,
+    SYS_MODEL_METADATA,
     SUMMARIZE_TURBO,
     TIMELINE,
     HIGHLIGHTS,

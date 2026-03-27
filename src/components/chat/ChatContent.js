@@ -18,7 +18,7 @@ import {
 } from "../../../app/queries/chats";
 import {
     checkFileUrlExists,
-    purgeFile,
+    createFilePlaceholder,
 } from "../files/chatFileUtils";
 import { useStreamingMessages } from "../../hooks/useStreamingMessages";
 import { useQueryClient } from "@tanstack/react-query";
@@ -147,7 +147,11 @@ function ChatContent({
                             fileObj.url ||
                             fileObj.image_url?.url ||
                             fileObj.file;
-                        const fileKey = `${message.id || message._id}-${payloadIndex}-${fileUrl}`;
+                        const fileIdentity =
+                            fileObj.blobPath ||
+                            fileUrl ||
+                            `${message.id || message._id}-${payloadIndex}`;
+                        const fileKey = `${message.id || message._id}-${payloadIndex}-${fileIdentity}`;
 
                         // Skip if we've already checked this file
                         if (checkedFilesRef.current.checked.has(fileKey)) {
@@ -173,7 +177,7 @@ function ChatContent({
 
         // Check files in the background
         const checkFiles = async () => {
-            const filesToReplace = [];
+            const fileChanges = [];
 
             await Promise.all(
                 filesToCheck.map(
@@ -189,46 +193,125 @@ function ChatContent({
                         checkedFilesRef.current.checked.add(fileKey);
 
                         // Use server-side URL check instead of trusting stale client state.
-                        const exists = await checkFileUrlExists(fileUrl);
+                        const result = await checkFileUrlExists({
+                            url: fileUrl,
+                            blobPath: fileObj.blobPath || null,
+                        });
 
-                        if (!exists) {
-                            filesToReplace.push({
+                        if (!result?.exists) {
+                            fileChanges.push({
+                                kind: "missing",
+                                messageIndex,
+                                payloadIndex,
+                                fileObj,
+                            });
+                            return;
+                        }
+
+                        if (
+                            result?.refreshedUrl &&
+                            result.refreshedUrl !== fileUrl
+                        ) {
+                            fileChanges.push({
+                                kind: "refresh",
                                 messageIndex,
                                 payloadIndex,
                                 messageId,
                                 fileObj,
+                                refreshedUrl: result.refreshedUrl,
                             });
                         }
                     },
                 ),
             );
 
-            if (filesToReplace.length === 0) return;
+            if (fileChanges.length === 0) return;
 
-            // Use unified purgeFile function for each missing file
-            // Skip cloud deletion since file is already gone
-            await Promise.allSettled(
-                filesToReplace.map(({ fileObj }) =>
-                    purgeFile({
-                        fileObj,
-                        apolloClient: client,
-                        contextId: user?.contextId,
-                        contextKey: user?.contextKey,
-                        chatId,
-                        messages: memoizedMessages,
-                        updateChatHook,
-                        t,
-                        filename:
-                            fileObj.displayFilename ||
-                            fileObj.originalFilename ||
-                            fileObj.filename ||
-                            "file",
-                        skipCloudDelete: true, // File already gone from cloud
-                    }).catch((error) => {
-                        console.warn("Failed to purge missing file:", error);
-                    }),
-                ),
+            const changeMap = new Map(
+                fileChanges.map((change) => [
+                    `${change.messageIndex}:${change.payloadIndex}`,
+                    change,
+                ]),
             );
+
+            const updatedMessages = memoizedMessages.map(
+                (message, messageIndex) => {
+                    if (!Array.isArray(message.payload)) return message;
+
+                    let didChange = false;
+                    const updatedPayload = message.payload.map(
+                        (payloadItem, payloadIndex) => {
+                            const change = changeMap.get(
+                                `${messageIndex}:${payloadIndex}`,
+                            );
+                            if (!change) {
+                                return payloadItem;
+                            }
+
+                            try {
+                                const payloadObj = JSON.parse(payloadItem);
+                                didChange = true;
+
+                                if (change.kind === "missing") {
+                                    return createFilePlaceholder(
+                                        payloadObj,
+                                        t,
+                                        payloadObj.displayFilename ||
+                                            payloadObj.originalFilename ||
+                                            payloadObj.filename ||
+                                            "file",
+                                    );
+                                }
+
+                                const refreshedUrl = change.refreshedUrl;
+                                const refreshedPayload = {
+                                    ...payloadObj,
+                                    url: refreshedUrl,
+                                };
+
+                                if (
+                                    payloadObj.image_url &&
+                                    typeof payloadObj.image_url === "object"
+                                ) {
+                                    refreshedPayload.image_url = {
+                                        ...payloadObj.image_url,
+                                        url: refreshedUrl,
+                                    };
+                                } else if (payloadObj.type === "image_url") {
+                                    refreshedPayload.image_url = {
+                                        url: refreshedUrl,
+                                    };
+                                }
+
+                                if (payloadObj.file) {
+                                    refreshedPayload.file = refreshedUrl;
+                                }
+
+                                return JSON.stringify(refreshedPayload);
+                            } catch (error) {
+                                console.warn(
+                                    "Failed to update file payload:",
+                                    error,
+                                );
+                                return payloadItem;
+                            }
+                        },
+                    );
+
+                    return didChange
+                        ? { ...message, payload: updatedPayload }
+                        : message;
+                },
+            );
+
+            try {
+                await updateChatHook.mutateAsync({
+                    chatId,
+                    messages: updatedMessages,
+                });
+            } catch (error) {
+                console.warn("Failed to refresh chat file URLs:", error);
+            }
         };
 
         // Run check in background (don't block UI)
@@ -539,7 +622,7 @@ function ChatContent({
                         model:
                             agentModel ||
                             currentEntity?.preferredModel ||
-                            "gemini-flash-3-vision",
+                            undefined,
                         userInfo,
                     }),
                 });

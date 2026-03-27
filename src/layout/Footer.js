@@ -11,8 +11,8 @@ import { ThemeContext } from "../contexts/ThemeProvider";
 import { AuthContext } from "../App";
 import {
     getProviderFromModelId,
-    DEFAULT_AGENT_MODEL,
-} from "../../app/utils/agent-model-mapping";
+    useAgentModels,
+} from "../../app/queries/modelMetadata";
 import {
     OpenAIIcon,
     GoogleGeminiIcon,
@@ -24,12 +24,14 @@ export default function Footer() {
     const { t } = useTranslation();
     const { theme, changeTheme } = useContext(ThemeContext);
     const { user } = useContext(AuthContext);
+    const { data: agentModels } = useAgentModels();
     const currentYear = new Date().getFullYear();
     const copyrightText = t("footer_copyright", { year: currentYear });
 
     // Get the provider icon for the current agent model
-    const agentModel = user?.agentModel || DEFAULT_AGENT_MODEL;
-    const provider = getProviderFromModelId(agentModel);
+    const defaultModelId = agentModels?.find((model) => model.isDefault)?.modelId;
+    const agentModel = user?.agentModel || defaultModelId;
+    const provider = getProviderFromModelId(agentModel, agentModels);
 
     const getProviderIcon = () => {
         switch (provider) {

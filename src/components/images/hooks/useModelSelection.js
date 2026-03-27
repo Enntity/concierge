@@ -1,8 +1,8 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
     groupAndSortModels,
-    DEFAULT_MODEL_SETTINGS,
 } from "../config/models.js";
+import { useMediaModels } from "../../../../app/queries/modelMetadata";
 
 export const useModelSelection = ({
     selectedImagesObjects,
@@ -13,12 +13,18 @@ export const useModelSelection = ({
     setOutputType,
     getModelSettings,
 }) => {
+    const { data: mediaModels } = useMediaModels();
+    const modelMap = useMemo(
+        () => new Map((mediaModels || []).map((model) => [model.modelId, model])),
+        [mediaModels],
+    );
+
     // Get available models based on current input conditions
     const getAvailableModels = useCallback(() => {
         // If no images in gallery, return all models (no restrictions)
         if (!sortedImages || sortedImages.length === 0) {
             const allModels = Object.keys(settings.models || {});
-            return groupAndSortModels(allModels, settings);
+            return groupAndSortModels(allModels, settings, mediaModels);
         }
 
         const imageCount = selectedImagesObjects.filter(
@@ -27,15 +33,16 @@ export const useModelSelection = ({
 
         const allModels = Object.keys(settings.models || {});
         const availableModels = allModels.filter((modelName) => {
-            const defaultSettings = DEFAULT_MODEL_SETTINGS[modelName];
-            const range = defaultSettings?.inputImages;
+            const range =
+                modelMap.get(modelName)?.mediaDefaults?.inputImages ||
+                settings.models?.[modelName]?.inputImages;
 
             if (!range) return true; // Unknown models default to available
             return imageCount >= range[0] && imageCount <= range[1];
         });
 
-        return groupAndSortModels(availableModels, settings);
-    }, [selectedImagesObjects, sortedImages, settings]);
+        return groupAndSortModels(availableModels, settings, mediaModels);
+    }, [selectedImagesObjects, sortedImages, settings, mediaModels, modelMap]);
 
     // Apply intelligent model selection based on input conditions
     useEffect(() => {

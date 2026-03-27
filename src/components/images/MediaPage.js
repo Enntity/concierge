@@ -68,13 +68,18 @@ import {
     useUpdateMediaItemTags,
     useCleanupOrphanedMediaItems,
 } from "../../../app/queries/media-items";
+import {
+    useMediaModels,
+    resolveModelId,
+} from "../../../app/queries/modelMetadata";
 
 // Import extracted modules and hooks
 import {
     getModelSettings,
+    getModelDisplayName,
     mergeNewModels,
     migrateSettings,
-    DEFAULT_MODEL_SETTINGS,
+    getDefaultModelForType,
     getModelType,
     getAvailableAspectRatios,
     getAvailableDurations,
@@ -91,13 +96,12 @@ import EmptyState from "../common/EmptyState";
 function MediaPage() {
     const { direction } = useContext(LanguageContext);
     const { userState, debouncedUpdateUserState } = useContext(AuthContext);
+    const { data: mediaModels, redirects } = useMediaModels();
     const apolloClient = useApolloClient();
     const [prompt, setPrompt] = useState("");
     const [generationPrompt, setGenerationPrompt] = useState("");
     const [outputType, setOutputType] = useState("image"); // "image" or "video"
-    const [selectedModel, setSelectedModel] = useState(
-        "gemini-25-flash-image-preview",
-    ); // Current selected model - Gemini 2.5 Flash as default
+    const [selectedModel, setSelectedModel] = useState("");
     const [showSettings, setShowSettings] = useState(false);
     const [disableTooltip, setDisableTooltip] = useState(false);
     const [filterText, setFilterText] = useState("");
@@ -117,23 +121,7 @@ function MediaPage() {
             return () => clearTimeout(timer);
         }
     }, [showSettings]);
-    const [settings, setSettings] = useState({
-        models: DEFAULT_MODEL_SETTINGS,
-        // Legacy support - will be migrated
-        image: {
-            defaultQuality: "high",
-            defaultModel: "gemini-25-flash-image-preview",
-            defaultAspectRatio: "1:1",
-        },
-        video: {
-            defaultModel: "replicate-seedance-1-pro",
-            defaultAspectRatio: "16:9",
-            defaultDuration: 5,
-            defaultGenerateAudio: false,
-            defaultResolution: "1080p",
-            defaultCameraFixed: false,
-        },
-    });
+    const [settings, setSettings] = useState({ models: {} });
 
     // Infinite scroll for media items API
     const {
@@ -217,6 +205,20 @@ function MediaPage() {
     const mediaContainerRef = useRef(null);
     const modelSelectorRef = useRef(null);
     const [isImageBadgeHovered, setIsImageBadgeHovered] = useState(false);
+    const selectedMediaModel = useMemo(
+        () => mediaModels?.find((model) => model.modelId === selectedModel),
+        [mediaModels, selectedModel],
+    );
+    const getResolvedModelSettings = useCallback(
+        (currentSettings, modelName) =>
+            getModelSettings(currentSettings, modelName, mediaModels),
+        [mediaModels],
+    );
+    const getResolvedModelType = useCallback(
+        (modelName, currentSettings = settings) =>
+            getModelType(modelName, currentSettings, mediaModels),
+        [mediaModels, settings],
+    );
 
     // Use custom selection hook
     const {
@@ -280,17 +282,56 @@ function MediaPage() {
 
     // Load settings from user state (only when user state changes)
     useEffect(() => {
-        if (userState?.media?.settings && !isMigrationInProgress) {
-            const migratedSettings = migrateSettings(userState.media.settings);
-            const settingsWithNewModels = mergeNewModels(migratedSettings);
-            setSettings(settingsWithNewModels);
+        if (!mediaModels?.length || isMigrationInProgress) {
+            return;
         }
-    }, [userState?.media?.settings, isMigrationInProgress]);
+
+        const migratedSettings = migrateSettings(
+            userState?.media?.settings || {},
+            redirects,
+        );
+        const settingsWithNewModels = mergeNewModels(
+            migratedSettings,
+            mediaModels,
+            redirects,
+        );
+        setSettings(settingsWithNewModels);
+    }, [
+        userState?.media?.settings,
+        isMigrationInProgress,
+        mediaModels,
+        redirects,
+    ]);
+
+    useEffect(() => {
+        if (!mediaModels?.length || !settings?.models) return;
+
+        const resolvedSelectedModel = resolveModelId(
+            selectedModel ||
+                (outputType === "video"
+                    ? settings.video?.defaultModel
+                    : settings.image?.defaultModel),
+            mediaModels,
+            redirects,
+        );
+
+        const defaultModel =
+            resolvedSelectedModel ||
+            getDefaultModelForType(mediaModels, outputType);
+
+        if (defaultModel && defaultModel !== selectedModel) {
+            setSelectedModel(defaultModel);
+        }
+    }, [mediaModels, redirects, settings, outputType, selectedModel]);
 
     // No longer need to load images from user state - they come from the API now
 
     // Migrate from localStorage on first load (run only once)
     useEffect(() => {
+        if (!mediaModels?.length) {
+            return;
+        }
+
         // Check if migration has already been completed
         const migrationCompleted = localStorage.getItem(
             "media-migration-completed",
@@ -329,8 +370,15 @@ function MediaPage() {
                 if (localSettings) {
                     try {
                         const parsedSettings = JSON.parse(localSettings);
-                        const settings = migrateSettings(parsedSettings);
-                        const settingsWithNewModels = mergeNewModels(settings);
+                        const settings = migrateSettings(
+                            parsedSettings,
+                            redirects,
+                        );
+                        const settingsWithNewModels = mergeNewModels(
+                            settings,
+                            mediaModels,
+                            redirects,
+                        );
                         debouncedUpdateUserState({
                             media: { settings: settingsWithNewModels },
                         });
@@ -394,8 +442,15 @@ function MediaPage() {
                 "🔄 No migration needed, ensuring new models are available...",
             );
             // Get current settings and merge new models
-            const currentSettings = userState?.media?.settings || {};
-            const settingsWithNewModels = mergeNewModels(currentSettings);
+            const currentSettings = migrateSettings(
+                userState?.media?.settings || {},
+                redirects,
+            );
+            const settingsWithNewModels = mergeNewModels(
+                currentSettings,
+                mediaModels,
+                redirects,
+            );
 
             // Only update if we actually added new models
             const hasNewModels =
@@ -410,7 +465,13 @@ function MediaPage() {
         } else {
             runMigration();
         }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [
+        userState?.media?.settings,
+        mediaModels,
+        redirects,
+        migrateMediaItems,
+        debouncedUpdateUserState,
+    ]);
 
     // Use custom model selection hook
     const { getAvailableModels } = useModelSelection({
@@ -420,13 +481,13 @@ function MediaPage() {
         selectedModel,
         setSelectedModel,
         setOutputType,
-        getModelSettings,
+        getModelSettings: getResolvedModelSettings,
     });
 
     // Get current model settings for display
     const currentModelSettings = useMemo(() => {
-        return getModelSettings(settings, selectedModel);
-    }, [settings, selectedModel]);
+        return getResolvedModelSettings(settings, selectedModel);
+    }, [settings, selectedModel, getResolvedModelSettings]);
 
     // Count selected images for context badge
     const selectedImageCount = useMemo(() => {
@@ -790,11 +851,8 @@ function MediaPage() {
 
                             // Check if we have selected images to use as input
                             if (selectedImages.size > 0) {
-                                // For gemini-3-pro-image-preview, support up to 14 images
-                                const isGemini3Pro =
-                                    selectedModel ===
-                                    "gemini-3-pro-image-preview";
-                                const maxCombineImages = isGemini3Pro ? 14 : 3;
+                                const maxCombineImages =
+                                    currentModelSettings.inputImages?.[1] || 3;
 
                                 if (
                                     selectedImages.size >= 2 &&
@@ -920,45 +978,13 @@ function MediaPage() {
                                     {(() => {
                                         const availableModels =
                                             getAvailableModels();
-                                        const displayNames = {
-                                            "replicate-flux-11-pro":
-                                                t("Flux Pro"),
-                                            "replicate-flux-2-pro":
-                                                t("Flux 2 Pro"),
-                                            "replicate-flux-kontext-max":
-                                                t("Flux Kontext Max"),
-                                            "replicate-multi-image-kontext-max":
-                                                t("Multi-Image Kontext Max"),
-                                            "gemini-25-flash-image-preview": t(
-                                                "Gemini 2.5 Flash Image",
-                                            ),
-                                            "gemini-3-pro-image-preview":
-                                                t("Gemini 3 Pro Image"),
-                                            "replicate-qwen-image":
-                                                t("Qwen Image"),
-                                            "replicate-qwen-image-edit-plus": t(
-                                                "Qwen Image Edit Plus",
-                                            ),
-                                            "replicate-qwen-image-edit-2511": t(
-                                                "Qwen Image Edit 2511",
-                                            ),
-                                            "replicate-seedream-4":
-                                                t("Seedream 4.0"),
-                                            "veo-2.0-generate": t("Veo 2.0"),
-                                            "veo-3.0-generate": t("Veo 3.0"),
-                                            "veo-3.1-generate": t("Veo 3.1"),
-                                            "veo-3.1-fast-generate":
-                                                t("Veo 3.1 Fast"),
-                                            "replicate-seedance-1-pro":
-                                                t("Seedance 1.0 Pro"),
-                                            "replicate-seedance-1.5-pro":
-                                                t("Seedance 1.5 Pro"),
-                                        };
 
                                         const getDisplayName = (modelName) => {
-                                            return (
-                                                displayNames[modelName] ||
-                                                modelName
+                                            return t(
+                                                getModelDisplayName(
+                                                    modelName,
+                                                    mediaModels,
+                                                ),
                                             );
                                         };
 
@@ -966,7 +992,7 @@ function MediaPage() {
                                             const currentDisplayName =
                                                 getDisplayName(selectedModel);
                                             const modelSettings =
-                                                getModelSettings(
+                                                getResolvedModelSettings(
                                                     settings,
                                                     selectedModel,
                                                 );
@@ -984,7 +1010,7 @@ function MediaPage() {
                                                     newSelectedModel,
                                                 ) => {
                                                     const modelSettings =
-                                                        getModelSettings(
+                                                        getResolvedModelSettings(
                                                             settings,
                                                             newSelectedModel,
                                                         );
@@ -1145,7 +1171,10 @@ function MediaPage() {
                                     {/* Model settings display and image context badge */}
                                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                                         {/* Model settings - only show configurable fields */}
-                                        {getAvailableAspectRatios(selectedModel)
+                                        {getAvailableAspectRatios(
+                                            selectedModel,
+                                            mediaModels,
+                                        )
                                             .length > 0 &&
                                             currentModelSettings.aspectRatio && (
                                                 <span className="px-1.5 py-0.5">
@@ -1155,11 +1184,12 @@ function MediaPage() {
                                                         : currentModelSettings.aspectRatio}
                                                 </span>
                                             )}
-                                        {getModelType(selectedModel) ===
+                                        {getResolvedModelType(selectedModel) ===
                                             "video" && (
                                             <>
                                                 {getAvailableDurations(
                                                     selectedModel,
+                                                    mediaModels,
                                                 ).length > 0 &&
                                                     currentModelSettings.duration && (
                                                         <span className="px-1.5 py-0.5">
@@ -1169,9 +1199,8 @@ function MediaPage() {
                                                             s
                                                         </span>
                                                     )}
-                                                {!selectedModel.startsWith(
-                                                    "veo",
-                                                ) &&
+                                                {selectedMediaModel?.mediaToggles
+                                                    ?.resolution &&
                                                     currentModelSettings.resolution && (
                                                         <span className="px-1.5 py-0.5">
                                                             {
@@ -1179,12 +1208,8 @@ function MediaPage() {
                                                             }
                                                         </span>
                                                     )}
-                                                {(selectedModel ===
-                                                    "veo-3.0-generate" ||
-                                                    selectedModel ===
-                                                        "veo-3.1-generate" ||
-                                                    selectedModel ===
-                                                        "veo-3.1-fast-generate") &&
+                                                {selectedMediaModel?.mediaToggles
+                                                    ?.generateAudio &&
                                                     currentModelSettings.generateAudio !==
                                                         undefined && (
                                                         <span className="px-1.5 py-0.5">
@@ -1193,8 +1218,8 @@ function MediaPage() {
                                                                 : t("No Audio")}
                                                         </span>
                                                     )}
-                                                {selectedModel ===
-                                                    "replicate-seedance-1-pro" &&
+                                                {selectedMediaModel?.mediaToggles
+                                                    ?.cameraFixed &&
                                                     currentModelSettings.cameraFixed && (
                                                         <span className="px-1.5 py-0.5">
                                                             {t("Fixed Camera")}
@@ -1202,10 +1227,8 @@ function MediaPage() {
                                                     )}
                                             </>
                                         )}
-                                        {(selectedModel ===
-                                            "gemini-25-flash-image-preview" ||
-                                            selectedModel ===
-                                                "gemini-3-pro-image-preview") &&
+                                        {selectedMediaModel?.mediaToggles
+                                            ?.optimizePrompt &&
                                             currentModelSettings.optimizePrompt && (
                                                 <span className="px-1.5 py-0.5">
                                                     {t("Optimized")}
@@ -1504,6 +1527,7 @@ function MediaPage() {
             <ImageModal
                 show={showModal}
                 image={selectedImage}
+                mediaModels={mediaModels}
                 onHide={() => {
                     setShowModal(false);
                     setTimeout(() => {
@@ -1547,6 +1571,8 @@ function MediaPage() {
                 debouncedUpdateUserState={debouncedUpdateUserState}
                 userState={userState}
                 currentSelectedModel={selectedModel}
+                mediaModels={mediaModels}
+                redirects={redirects}
             />
 
             <AlertDialog
@@ -1691,12 +1717,14 @@ function SettingsDialog({
     debouncedUpdateUserState,
     userState,
     currentSelectedModel,
+    mediaModels,
+    redirects,
 }) {
     const { t } = useTranslation();
     const { direction } = useContext(LanguageContext);
     const [localSettings, setLocalSettings] = useState(settings);
     const [selectedModel, setSelectedModel] = useState(
-        currentSelectedModel || "gemini-25-flash-image-preview",
+        currentSelectedModel || getDefaultModelForType(mediaModels, "image"),
     );
     const initializedRef = useRef(false);
 
@@ -1708,13 +1736,15 @@ function SettingsDialog({
             setLocalSettings(settings);
             // Set the selected model to the current one from the main component
             if (currentSelectedModel) {
-                setSelectedModel(currentSelectedModel);
+                setSelectedModel(
+                    resolveModelId(currentSelectedModel, mediaModels, redirects),
+                );
             }
             initializedRef.current = true;
         } else if (!show) {
             initializedRef.current = false;
         }
-    }, [show, settings, currentSelectedModel]);
+    }, [show, settings, currentSelectedModel, mediaModels, redirects]);
 
     const handleSave = () => {
         // Update local settings state immediately
@@ -1749,184 +1779,28 @@ function SettingsDialog({
         }));
     };
 
-    const getModelDisplayName = (modelName) => {
-        const names = {
-            "replicate-flux-11-pro": t("Flux Pro"),
-            "replicate-flux-2-pro": t("Flux 2 Pro"),
-            "replicate-flux-kontext-max": t("Flux Kontext Max"),
-            "replicate-multi-image-kontext-max": t("Multi-Image Kontext Max"),
-            "gemini-25-flash-image-preview": t("Gemini 2.5 Flash Image"),
-            "replicate-qwen-image": t("Qwen Image"),
-            "replicate-qwen-image-edit-plus": t("Qwen Image Edit Plus"),
-            "replicate-qwen-image-edit-2511": t("Qwen Image Edit 2511"),
-            "replicate-seedream-4": t("Seedream 4.0"),
-            "veo-2.0-generate": t("Veo 2.0"),
-            "veo-3.0-generate": t("Veo 3.0"),
-            "veo-3.1-generate": t("Veo 3.1"),
-            "veo-3.1-fast-generate": t("Veo 3.1 Fast"),
-            "replicate-seedance-1-pro": t("Seedance 1.0 Pro"),
-            "replicate-seedance-1.5-pro": t("Seedance 1.5 Pro"),
-        };
-        return names[modelName] || modelName;
-    };
-
-    const getModelType = (modelName) => {
-        return localSettings.models[modelName]?.type || "image";
-    };
-
-    const getAvailableAspectRatios = (modelName) => {
-        const modelType = getModelType(modelName);
-        if (modelType === "video") {
-            if (modelName.startsWith("veo")) {
-                return [
-                    { value: "16:9", label: "16:9" },
-                    { value: "9:16", label: "9:16" },
-                ];
-            } else {
-                return [
-                    { value: "16:9", label: "16:9" },
-                    { value: "4:3", label: "4:3" },
-                    { value: "9:16", label: "9:16" },
-                    { value: "1:1", label: "1:1" },
-                    { value: "3:4", label: "3:4" },
-                    { value: "21:9", label: "21:9" },
-                    { value: "9:21", label: "9:21" },
-                ];
-            }
-        } else {
-            // Gemini 25 doesn't support aspect ratio control
-            if (modelName === "gemini-25-flash-image-preview") {
-                return [];
-            }
-
-            // Gemini 3 Pro supports aspect ratio control
-            if (modelName === "gemini-3-pro-image-preview") {
-                return [
-                    { value: "1:1", label: "1:1" },
-                    { value: "16:9", label: "16:9" },
-                    { value: "9:16", label: "9:16" },
-                    { value: "4:3", label: "4:3" },
-                    { value: "3:4", label: "3:4" },
-                ];
-            }
-
-            // Qwen models have specific aspect ratio support
-            if (modelName === "replicate-qwen-image") {
-                return [
-                    { value: "1:1", label: "1:1" },
-                    { value: "16:9", label: "16:9" },
-                    { value: "9:16", label: "9:16" },
-                    { value: "4:3", label: "4:3" },
-                    { value: "3:4", label: "3:4" },
-                ];
-            }
-
-            if (modelName === "replicate-qwen-image-edit-plus") {
-                return [
-                    { value: "1:1", label: "1:1" },
-                    { value: "16:9", label: "16:9" },
-                    { value: "9:16", label: "9:16" },
-                    { value: "4:3", label: "4:3" },
-                    { value: "3:4", label: "3:4" },
-                    {
-                        value: "match_input_image",
-                        label: t("Match Input Image"),
-                    },
-                ];
-            }
-
-            if (modelName === "replicate-qwen-image-edit-2511") {
-                return [
-                    { value: "1:1", label: "1:1" },
-                    { value: "16:9", label: "16:9" },
-                    { value: "9:16", label: "9:16" },
-                    { value: "4:3", label: "4:3" },
-                    { value: "3:4", label: "3:4" },
-                    {
-                        value: "match_input_image",
-                        label: t("Match Input Image"),
-                    },
-                ];
-            }
-
-            // Base aspect ratios for all other image models
-            const baseRatios = [
-                { value: "1:1", label: "1:1" },
-                { value: "16:9", label: "16:9" },
-                { value: "21:9", label: "21:9" },
-                { value: "3:2", label: "3:2" },
-                { value: "2:3", label: "2:3" },
-                { value: "4:5", label: "4:5" },
-                { value: "5:4", label: "5:4" },
-                { value: "3:4", label: "3:4" },
-                { value: "4:3", label: "4:3" },
-                { value: "9:16", label: "9:16" },
-                { value: "9:21", label: "9:21" },
-            ];
-
-            // Only Kontext models support "match_input_image"
-            if (modelName.includes("kontext")) {
-                baseRatios.push({
-                    value: "match_input_image",
-                    label: "Match Input Image",
-                });
-            }
-
-            return baseRatios;
-        }
-    };
-
-    const getAvailableDurations = (modelName) => {
-        if (
-            modelName === "veo-3.0-generate" ||
-            modelName === "veo-3.1-generate" ||
-            modelName === "veo-3.1-fast-generate"
-        ) {
-            return [{ value: 8, label: "8s" }];
-        } else if (modelName === "veo-2.0-generate") {
-            return [
-                { value: 5, label: "5s" },
-                { value: 6, label: "6s" },
-                { value: 7, label: "7s" },
-                { value: 8, label: "8s" },
-            ];
-        } else if (modelName === "replicate-seedance-1-pro") {
-            return [
-                { value: 5, label: "5s" },
-                { value: 10, label: "10s" },
-            ];
-        } else if (modelName === "replicate-seedance-1.5-pro") {
-            return [
-                { value: 2, label: "2s" },
-                { value: 3, label: "3s" },
-                { value: 4, label: "4s" },
-                { value: 5, label: "5s" },
-                { value: 6, label: "6s" },
-                { value: 7, label: "7s" },
-                { value: 8, label: "8s" },
-                { value: 9, label: "9s" },
-                { value: 10, label: "10s" },
-                { value: 11, label: "11s" },
-                { value: 12, label: "12s" },
-            ];
-        }
-        return [];
-    };
-
     // Group and sort models for SettingsDialog
     const allModelNames = Object.keys(localSettings.models || {});
     const imageModels = allModelNames
-        .filter(
-            (name) => (localSettings.models[name]?.type || "image") === "image",
-        )
-        .sort();
+        .filter((name) => getModelType(name, localSettings, mediaModels) === "image")
+        .sort((a, b) =>
+            getModelDisplayName(a, mediaModels).localeCompare(
+                getModelDisplayName(b, mediaModels),
+            ),
+        );
     const videoModels = allModelNames
-        .filter(
-            (name) => (localSettings.models[name]?.type || "image") === "video",
-        )
-        .sort();
+        .filter((name) => getModelType(name, localSettings, mediaModels) === "video")
+        .sort((a, b) =>
+            getModelDisplayName(a, mediaModels).localeCompare(
+                getModelDisplayName(b, mediaModels),
+            ),
+        );
     const modelNames = [...imageModels, ...videoModels];
-    const currentModelSettings = localSettings.models?.[selectedModel] || {};
+    const currentModelSettings =
+        getModelSettings(localSettings, selectedModel, mediaModels) || {};
+    const selectedModelMetadata = mediaModels?.find(
+        (model) => model.modelId === selectedModel,
+    );
 
     return (
         <Modal
@@ -1947,11 +1821,21 @@ function SettingsDialog({
                         onChange={(e) => setSelectedModel(e.target.value)}
                     >
                         {modelNames.map((modelName) => {
-                            const modelType = getModelType(modelName);
+                            const modelType = getModelType(
+                                modelName,
+                                localSettings,
+                                mediaModels,
+                            );
                             const icon = modelType === "video" ? "🎬" : "🖼️";
                             return (
                                 <option key={modelName} value={modelName}>
-                                    {icon} {getModelDisplayName(modelName)}
+                                    {icon}{" "}
+                                    {t(
+                                        getModelDisplayName(
+                                            modelName,
+                                            mediaModels,
+                                        ),
+                                    )}
                                 </option>
                             );
                         })}
@@ -1961,12 +1845,14 @@ function SettingsDialog({
                 {/* Model Settings */}
                 <div>
                     <h3 className="text-lg font-semibold mb-3">
-                        {getModelDisplayName(selectedModel)} {t("Settings")}
+                        {t(getModelDisplayName(selectedModel, mediaModels))}{" "}
+                        {t("Settings")}
                     </h3>
 
                     <div className="space-y-3">
                         {/* Aspect Ratio - only show if model supports it */}
-                        {getAvailableAspectRatios(selectedModel).length > 0 && (
+                        {getAvailableAspectRatios(selectedModel, mediaModels)
+                            .length > 0 && (
                             <div>
                                 <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
                                     {t("Aspect Ratio")}
@@ -1988,6 +1874,7 @@ function SettingsDialog({
                                 >
                                     {getAvailableAspectRatios(
                                         selectedModel,
+                                        mediaModels,
                                     ).map((ratio) => (
                                         <option
                                             key={ratio.value}
@@ -2001,8 +1888,13 @@ function SettingsDialog({
                         )}
 
                         {/* Duration (for video models) */}
-                        {getModelType(selectedModel) === "video" &&
-                            getAvailableDurations(selectedModel).length > 0 && (
+                        {getModelType(
+                            selectedModel,
+                            localSettings,
+                            mediaModels,
+                        ) === "video" &&
+                            getAvailableDurations(selectedModel, mediaModels)
+                                .length > 0 && (
                                 <div>
                                     <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
                                         {t("Duration (seconds)")}
@@ -2023,6 +1915,7 @@ function SettingsDialog({
                                     >
                                         {getAvailableDurations(
                                             selectedModel,
+                                            mediaModels,
                                         ).map((duration) => (
                                             <option
                                                 key={duration.value}
@@ -2036,9 +1929,12 @@ function SettingsDialog({
                             )}
 
                         {/* Resolution (for non-Veo video models, but not Seedance 1.5 Pro) */}
-                        {getModelType(selectedModel) === "video" &&
-                            !selectedModel.startsWith("veo") &&
-                            selectedModel !== "replicate-seedance-1.5-pro" && (
+                        {getModelType(
+                            selectedModel,
+                            localSettings,
+                            mediaModels,
+                        ) === "video" &&
+                            selectedModelMetadata?.mediaToggles?.resolution && (
                                 <div>
                                     <label className="block text-sm font-medium mb-1">
                                         {t("Resolution")}
@@ -2058,32 +1954,28 @@ function SettingsDialog({
                                             )
                                         }
                                     >
-                                        <option value="480p">480p</option>
-                                        <option value="1080p">1080p</option>
+                                        {(selectedModelMetadata?.availableResolutions ||
+                                            ["1080p"]).map((resolution) => (
+                                            <option
+                                                key={resolution}
+                                                value={resolution}
+                                            >
+                                                {resolution}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
                             )}
 
-                        {/* Generate Audio (for Veo 3.0+ and Seedance 1.5 Pro) */}
-                        {(selectedModel === "veo-3.0-generate" ||
-                            selectedModel === "veo-3.1-generate" ||
-                            selectedModel === "veo-3.1-fast-generate" ||
-                            selectedModel === "replicate-seedance-1.5-pro") && (
+                        {/* Generate Audio */}
+                        {selectedModelMetadata?.mediaToggles?.generateAudio && (
                             <div>
                                 <label className="flex items-center space-x-2">
                                     <input
                                         type="checkbox"
                                         checked={
-                                            selectedModel ===
-                                                "veo-3.0-generate" ||
-                                            selectedModel ===
-                                                "veo-3.1-generate" ||
-                                            selectedModel ===
-                                                "veo-3.1-fast-generate"
-                                                ? currentModelSettings.generateAudio !==
-                                                  false // Default to true for Veo 3.0+
-                                                : currentModelSettings.generateAudio ||
-                                                  false
+                                            currentModelSettings.generateAudio !==
+                                            false
                                         }
                                         onChange={(e) =>
                                             updateModelSetting(
@@ -2100,9 +1992,8 @@ function SettingsDialog({
                             </div>
                         )}
 
-                        {/* Camera Fixed (for Seedance) */}
-                        {(selectedModel === "replicate-seedance-1-pro" ||
-                            selectedModel === "replicate-seedance-1.5-pro") && (
+                        {/* Camera Fixed */}
+                        {selectedModelMetadata?.mediaToggles?.cameraFixed && (
                             <div>
                                 <label className="flex items-center space-x-2">
                                     <input
@@ -2126,9 +2017,8 @@ function SettingsDialog({
                             </div>
                         )}
 
-                        {/* Optimize Prompt (for Gemini) */}
-                        {(selectedModel === "gemini-25-flash-image-preview" ||
-                            selectedModel === "gemini-3-pro-image-preview") && (
+                        {/* Optimize Prompt */}
+                        {selectedModelMetadata?.mediaToggles?.optimizePrompt && (
                             <div>
                                 <label className="flex items-center space-x-2">
                                     <input
@@ -2157,8 +2047,8 @@ function SettingsDialog({
                             </div>
                         )}
 
-                        {/* Image Size (for Gemini 3 Pro) */}
-                        {selectedModel === "gemini-3-pro-image-preview" && (
+                        {/* Image Size */}
+                        {selectedModelMetadata?.mediaToggles?.imageSize && (
                             <div>
                                 <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
                                     {t("Image Size")}
@@ -2177,8 +2067,12 @@ function SettingsDialog({
                                         )
                                     }
                                 >
-                                    <option value="2K">2K</option>
-                                    <option value="4K">4K</option>
+                                    {(selectedModelMetadata?.availableImageSizes ||
+                                        ["2K"]).map((size) => (
+                                        <option key={size} value={size}>
+                                            {size}
+                                        </option>
+                                    ))}
                                 </select>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     {t("Select the output image size")}
@@ -2201,7 +2095,7 @@ function SettingsDialog({
     );
 }
 
-function ImageModal({ show, image, onHide }) {
+function ImageModal({ show, image, onHide, mediaModels }) {
     const { t } = useTranslation();
     const [tags, setTags] = useState([]);
     const [newTag, setNewTag] = useState("");
@@ -2290,7 +2184,11 @@ function ImageModal({ show, image, onHide }) {
                 </div>
                 <div className="sm:basis-5/12 flex flex-col max-h-[500px] overflow-y-auto overflow-x-hidden">
                     <div className="sm:text-sm flex-shrink-0">
-                        <ImageInfo data={image} type={image?.type || "image"} />
+                        <ImageInfo
+                            data={image}
+                            type={image?.type || "image"}
+                            mediaModels={mediaModels}
+                        />
                     </div>
 
                     {/* Tags Section */}
@@ -2366,30 +2264,8 @@ function ImageModal({ show, image, onHide }) {
     );
 }
 
-function ImageInfo({ data, type }) {
+function ImageInfo({ data, type, mediaModels }) {
     const { t } = useTranslation();
-
-    const getModelDisplayName = (modelName) => {
-        const names = {
-            "replicate-flux-11-pro": t("Flux Pro"),
-            "replicate-flux-2-pro": t("Flux 2 Pro"),
-            "replicate-flux-kontext-max": t("Flux Kontext Max"),
-            "replicate-multi-image-kontext-max": t("Multi-Image Kontext Max"),
-            "gemini-25-flash-image-preview": t("Gemini 2.5 Flash Image"),
-            "gemini-3-pro-image-preview": t("Gemini 3 Pro Image"),
-            "replicate-qwen-image": t("Qwen Image"),
-            "replicate-qwen-image-edit-plus": t("Qwen Image Edit Plus"),
-            "replicate-qwen-image-edit-2511": t("Qwen Image Edit 2511"),
-            "replicate-seedream-4": t("Seedream 4.0"),
-            "veo-2.0-generate": t("Veo 2.0"),
-            "veo-3.0-generate": t("Veo 3.0"),
-            "veo-3.1-generate": t("Veo 3.1"),
-            "veo-3.1-fast-generate": t("Veo 3.1 Fast"),
-            "replicate-seedance-1-pro": t("Seedance 1.0 Pro"),
-            "replicate-seedance-1.5-pro": t("Seedance 1.5 Pro"),
-        };
-        return names[modelName] || modelName;
-    };
 
     return (
         <div>
@@ -2458,7 +2334,7 @@ function ImageInfo({ data, type }) {
                         </div>
                     </div>
                     <div className="text-gray-700 dark:text-gray-300">
-                        {getModelDisplayName(data.model)}
+                        {t(getModelDisplayName(data.model, mediaModels))}
                     </div>
                 </div>
             )}

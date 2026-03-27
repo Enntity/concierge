@@ -32,6 +32,32 @@ export function normalizeMediaServiceUpload(data, defaults = {}) {
     };
 }
 
+function getMediaHelperUrl() {
+    const mediaHelperUrl = config.endpoints.mediaHelperDirect();
+    if (!mediaHelperUrl) {
+        throw new Error("Media helper URL is not defined");
+    }
+    return mediaHelperUrl;
+}
+
+function appendQueryParams(url, params = {}) {
+    for (const [key, value] of Object.entries(params)) {
+        if (value != null && value !== "") {
+            url.searchParams.set(key, value);
+        }
+    }
+}
+
+async function throwMediaServiceError(response, message) {
+    const errorBody = await response.text();
+    const error = new Error(
+        `${message}: ${response.statusText}. Response body: ${errorBody}`,
+    );
+    error.status = response.status;
+    error.details = errorBody;
+    throw error;
+}
+
 export async function deleteFileFromMediaService({
     blobPath = null,
     filename = null,
@@ -43,10 +69,7 @@ export async function deleteFileFromMediaService({
         return false;
     }
 
-    const mediaHelperUrl = config.endpoints.mediaHelperDirect();
-    if (!mediaHelperUrl) {
-        throw new Error("Media helper URL is not defined");
-    }
+    const mediaHelperUrl = getMediaHelperUrl();
 
     const routingParams = buildMediaHelperFileParams({
         storageTarget,
@@ -54,9 +77,7 @@ export async function deleteFileFromMediaService({
     });
     const deleteUrl = new URL(mediaHelperUrl);
     deleteUrl.searchParams.set("filename", resolvedFilename);
-    for (const [key, value] of Object.entries(routingParams)) {
-        deleteUrl.searchParams.set(key, value);
-    }
+    appendQueryParams(deleteUrl, routingParams);
 
     const response = await fetch(deleteUrl.toString(), {
         method: "DELETE",
@@ -70,13 +91,38 @@ export async function deleteFileFromMediaService({
     }
 
     if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(
-            `Failed to delete file ${resolvedFilename}: ${response.statusText}. Response body: ${errorBody}`,
+        await throwMediaServiceError(
+            response,
+            `Failed to delete file ${resolvedFilename}`,
         );
     }
 
     return true;
+}
+
+export async function deletePrefixFromMediaService(prefix) {
+    if (!prefix) {
+        throw new Error("Prefix is required");
+    }
+
+    const deleteUrl = new URL(getMediaHelperUrl());
+    deleteUrl.searchParams.set("prefix", prefix);
+
+    const response = await fetch(deleteUrl.toString(), {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json",
+        },
+    });
+
+    if (!response.ok) {
+        await throwMediaServiceError(
+            response,
+            `Failed to delete prefix ${prefix}`,
+        );
+    }
+
+    return response.json();
 }
 
 export async function listFilesFromMediaService({
@@ -86,10 +132,7 @@ export async function listFilesFromMediaService({
     fileScope = "all",
     chatId = null,
 } = {}) {
-    const mediaHelperUrl = config.endpoints.mediaHelperDirect();
-    if (!mediaHelperUrl) {
-        throw new Error("Media helper URL is not defined");
-    }
+    const mediaHelperUrl = getMediaHelperUrl();
 
     const listParams = buildMediaHelperListParams({
         storageTarget,
@@ -101,16 +144,11 @@ export async function listFilesFromMediaService({
 
     const listUrl = new URL(mediaHelperUrl);
     listUrl.searchParams.set("operation", "listFolder");
-    for (const [key, value] of Object.entries(listParams)) {
-        listUrl.searchParams.set(key, value);
-    }
+    appendQueryParams(listUrl, listParams);
 
     const response = await fetch(listUrl.toString());
     if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(
-            `Failed to list files: ${response.statusText}. Response body: ${errorBody}`,
-        );
+        await throwMediaServiceError(response, "Failed to list files");
     }
 
     const files = await response.json();
@@ -125,6 +163,37 @@ export async function listFilesFromMediaService({
             displayFilename: file?.displayFilename || file?.filename || null,
         }),
     );
+}
+
+export async function signFileFromMediaService({
+    blobPath = null,
+    minutes = 5,
+} = {}) {
+    if (!blobPath) {
+        throw new Error("blobPath is required");
+    }
+
+    const signUrl = new URL(getMediaHelperUrl());
+    signUrl.searchParams.set("operation", "signUrl");
+    signUrl.searchParams.set("blobPath", blobPath);
+    if (minutes) {
+        signUrl.searchParams.set("minutes", String(minutes));
+    }
+
+    const response = await fetch(signUrl.toString(), {
+        method: "GET",
+    });
+
+    if (!response.ok) {
+        await throwMediaServiceError(
+            response,
+            `Failed to sign file ${blobPath}`,
+        );
+    }
+
+    return normalizeMediaServiceUpload(await response.json(), {
+        blobPath,
+    });
 }
 
 export function findMediaServiceFile(files, { blobPath = null, filename = null } = {}) {
@@ -156,10 +225,7 @@ export async function uploadBufferToMediaService(
     options = {},
 ) {
     try {
-        const mediaHelperUrl = config.endpoints.mediaHelperDirect();
-        if (!mediaHelperUrl) {
-            throw new Error("Media helper URL is not defined");
-        }
+        const mediaHelperUrl = getMediaHelperUrl();
 
         const { storageTarget = null, contextId = null } = options || {};
         const routingParams = buildMediaHelperFileParams({
@@ -180,10 +246,7 @@ export async function uploadBufferToMediaService(
         });
 
         if (!uploadResponse.ok) {
-            const errorBody = await uploadResponse.text();
-            throw new Error(
-                `Upload failed: ${uploadResponse.statusText}. Response body: ${errorBody}`,
-            );
+            await throwMediaServiceError(uploadResponse, "Upload failed");
         }
 
         const uploadData = normalizeMediaServiceUpload(
@@ -209,9 +272,88 @@ export async function uploadBufferToMediaService(
                 {
                     error:
                         "Failed to upload to media service: " + error.message,
+                    ...(error.details ? { details: error.details } : {}),
                 },
-                { status: 500 },
+                { status: error.status || 500 },
             ),
         };
     }
+}
+
+export async function importUrlToMediaService(
+    remoteUrl,
+    options = {},
+) {
+    if (!remoteUrl) {
+        throw new Error("remoteUrl is required");
+    }
+
+    const { storageTarget = null, contextId = null } = options || {};
+    const routingParams = buildMediaHelperFileParams({
+        storageTarget,
+        contextId,
+    });
+    const importUrl = new URL(getMediaHelperUrl());
+    importUrl.searchParams.set("fetch", remoteUrl);
+    appendQueryParams(importUrl, routingParams);
+
+    const response = await fetch(importUrl.toString(), {
+        method: "GET",
+    });
+
+    if (!response.ok) {
+        await throwMediaServiceError(response, "Failed to import remote file");
+    }
+
+    return normalizeMediaServiceUpload(await response.json(), {
+        url: remoteUrl,
+    });
+}
+
+export async function renameFileInMediaService({
+    blobPath = null,
+    filename = null,
+    newFilename = null,
+    storageTarget = null,
+    contextId = null,
+} = {}) {
+    const resolvedFilename = filename || getFilenameFromBlobPath(blobPath);
+    if (!resolvedFilename) {
+        throw new Error("filename or blobPath is required");
+    }
+    if (!newFilename) {
+        throw new Error("newFilename is required");
+    }
+
+    const routingParams = buildMediaHelperFileParams({
+        storageTarget,
+        contextId,
+    });
+    const renameUrl = new URL(getMediaHelperUrl());
+    renameUrl.searchParams.set("operation", "rename");
+
+    const response = await fetch(renameUrl.toString(), {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            ...routingParams,
+            filename: resolvedFilename,
+            newFilename,
+        }),
+    });
+
+    if (!response.ok) {
+        await throwMediaServiceError(
+            response,
+            `Failed to rename file ${resolvedFilename}`,
+        );
+    }
+
+    return normalizeMediaServiceUpload(await response.json(), {
+        blobPath,
+        filename: newFilename,
+        displayFilename: newFilename,
+    });
 }
