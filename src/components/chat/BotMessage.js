@@ -1,20 +1,27 @@
 import { CheckCircle, XCircle, Loader2, Check } from "lucide-react";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useCancelTask, useTask } from "../../../app/queries/notifications";
 import classNames from "../../../app/utils/class-names";
 import { TASK_INFO } from "../../utils/task-info";
+import {
+    getExtension,
+    getFilename,
+    IMAGE_EXTENSIONS,
+    VIDEO_EXTENSIONS,
+    isAudioUrl,
+    isVideoUrl,
+} from "../../utils/mediaUtils";
+import { getYoutubeEmbedUrl } from "../../utils/urlUtils";
+import {
+    ASSISTANT_PAYLOAD_ITEM_TYPES,
+    buildLegacyInlineAssistantPayloadItems,
+    parseAssistantPayloadItem,
+} from "../../utils/assistantInlinePayload";
 import CopyButton from "../CopyButton";
+import MediaCard from "./MediaCard";
 import { convertMessageToMarkdown } from "./ChatMessage";
-
-// Helper functions for ephemeral content
-const hasToolCalls = (toolCalls) =>
-    Array.isArray(toolCalls) && toolCalls.length > 0;
-const hasEphemeralContent = (content) => content && content.trim();
-// Only show ephemeral content when we have actual content to display
-// Don't show empty box just because isThinking is true
-const shouldShowEphemeralContent = (content, toolCalls) =>
-    hasEphemeralContent(content) || hasToolCalls(toolCalls);
+import { AuthContext } from "../../App";
 
 const MemoizedMarkdownMessage = React.memo(
     ({ message, onLoad, onMermaidFix }) => {
@@ -84,6 +91,620 @@ const MemoizedMarkdownMessage = React.memo(
         return false;
     },
 );
+
+const formatLocalizedNumber = (language, value) => {
+    try {
+        return new Intl.NumberFormat(language).format(value);
+    } catch {
+        return String(value);
+    }
+};
+
+const deriveInitials = (value = "") => {
+    const parts = String(value).trim().split(/\s+/).filter(Boolean);
+
+    if (!parts.length) return "";
+
+    return parts
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() || "")
+        .join("");
+};
+
+const getInlineUserIdentity = (currentUser) => {
+    const normalizedUser = currentUser?.user || currentUser || {};
+    return {
+        picture:
+            normalizedUser.picture ||
+            normalizedUser.profilePicture ||
+            normalizedUser.avatar ||
+            null,
+        name: normalizedUser.name || normalizedUser.fullName || "User",
+        initials:
+            normalizedUser.initials ||
+            deriveInitials(
+                normalizedUser.name ||
+                    normalizedUser.fullName ||
+                    normalizedUser.email ||
+                    normalizedUser.username ||
+                    "",
+            ),
+    };
+};
+
+const normalizeConversationModeData = (value) => {
+    if (!value) return null;
+    const mode = String(value.mode || value.conversationMode || "").trim();
+    if (!mode) return null;
+    return {
+        mode,
+        label:
+            value.label ||
+            mode.charAt(0).toUpperCase() + mode.slice(1).replace(/_/g, " "),
+        reason: value.reason || null,
+        source: value.source || null,
+    };
+};
+
+const getConversationModeBadgeClasses = (mode = "") => {
+    switch (String(mode).toLowerCase()) {
+        case "research":
+            return "border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300";
+        case "agentic":
+            return "border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300";
+        case "creative":
+            return "border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300";
+        case "nsfw":
+            return "border-fuchsia-200/80 bg-fuchsia-50 text-fuchsia-700 dark:border-fuchsia-500/30 dark:bg-fuchsia-500/10 dark:text-fuchsia-300";
+        default:
+            return "border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300";
+    }
+};
+
+export const ConversationModeBadge = React.memo(function ConversationModeBadge({
+    modeData,
+    className = "",
+}) {
+    const normalized = normalizeConversationModeData(modeData);
+    if (!normalized) return null;
+
+    return (
+        <div className={classNames("flex", className)}>
+            <span
+                className={classNames(
+                    "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]",
+                    getConversationModeBadgeClasses(normalized.mode),
+                )}
+            >
+                {normalized.label}
+            </span>
+        </div>
+    );
+});
+
+const ToolEventStatusIcon = ({ status }) => {
+    if (status === "thinking") {
+        return (
+            <Loader2 className="h-3 w-3 text-gray-500 dark:text-gray-400 animate-spin" />
+        );
+    }
+    if (status === "completed") {
+        return <Check className="h-3 w-3 text-green-500 dark:text-green-400" />;
+    }
+    if (status === "failed") {
+        return <XCircle className="h-3 w-3 text-red-500 dark:text-red-400" />;
+    }
+    return null;
+};
+
+const ToolEventItem = React.memo(function ToolEventItem({
+    item,
+    count = 1,
+    currentUser = null,
+}) {
+    const { t, i18n } = useTranslation();
+    const localizedCount = formatLocalizedNumber(i18n.language, count);
+    const isInlineUserMessage = item.presentation === "inline_user";
+    const inlineUser = getInlineUserIdentity(currentUser);
+
+    if (isInlineUserMessage) {
+        return (
+            <div className="flex">
+                <div className="relative w-full rounded-md border border-sky-200/25 bg-sky-100/35 px-3 py-2 dark:border-white/10 dark:bg-slate-500/20">
+                    <div className="absolute top-1/2 start-3 flex h-5 w-5 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full bg-sky-200/85 dark:bg-sky-900/35">
+                        {inlineUser.picture ? (
+                            <img
+                                src={inlineUser.picture}
+                                alt={inlineUser.name}
+                                className="h-full w-full object-cover"
+                            />
+                        ) : inlineUser.initials ? (
+                            <span className="text-[9px] font-medium leading-none text-sky-600 dark:text-sky-400">
+                                {inlineUser.initials}
+                            </span>
+                        ) : (
+                            <span className="h-1.5 w-1.5 rounded-full bg-sky-600 dark:bg-sky-400" />
+                        )}
+                    </div>
+                    <div className="w-full ps-8 pe-1">
+                        <div className="chat-message-user whitespace-pre-wrap break-words text-[13px] leading-5 text-slate-700 dark:text-slate-100">
+                            {item.userMessage}
+                        </div>
+                        {count > 1 && (
+                            <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                                {t("Repeated count", {
+                                    value: localizedCount,
+                                })}
+                            </div>
+                        )}
+                        {item.error && (
+                            <div className="mt-1 text-red-600 dark:text-red-300">
+                                {item.error}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex items-start gap-2 rtl:flex-row-reverse text-[13px] leading-5 text-gray-500 dark:text-gray-400">
+            <div className="mt-1 flex-shrink-0 rtl:order-2">
+                <ToolEventStatusIcon status={item.status} />
+            </div>
+            <div className="min-w-0 flex-1 rtl:order-1 rtl:text-right">
+                <span className="mr-1 rtl:mr-0 rtl:ml-1 opacity-80">
+                    {item.icon}
+                </span>
+                <span>{item.userMessage}</span>
+                {count > 1 && (
+                    <span className="ml-2 text-[11px] font-medium uppercase tracking-[0.08em] text-gray-400 dark:text-gray-500 rtl:ml-0 rtl:mr-2">
+                        {t("Repeated count", { value: localizedCount })}
+                    </span>
+                )}
+                {item.error && (
+                    <span className="ml-1 text-red-500 dark:text-red-400 rtl:ml-0 rtl:mr-1">
+                        ({item.error})
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+});
+
+const collapseToolEvents = (items) => {
+    const collapsed = [];
+
+    items.forEach((item) => {
+        const key = JSON.stringify({
+            icon: item.icon || "",
+            userMessage: item.userMessage || "",
+            status: item.status || "",
+            error: item.error || "",
+            presentation: item.presentation || "",
+        });
+        const previous = collapsed[collapsed.length - 1];
+
+        if (previous?.key === key) {
+            previous.count += 1;
+            return;
+        }
+
+        collapsed.push({
+            key,
+            item,
+            count: 1,
+        });
+    });
+
+    return collapsed;
+};
+
+const ToolEventGroup = React.memo(function ToolEventGroup({
+    items,
+    currentUser = null,
+}) {
+    const collapsedItems = collapseToolEvents(items);
+
+    return (
+        <div className="my-1">
+            <div className="flex flex-col gap-1">
+                {collapsedItems.map(({ item, count }, index) => (
+                    <ToolEventItem
+                        key={item.callId || `${item.userMessage}-${index}`}
+                        item={item}
+                        count={count}
+                        currentUser={currentUser}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+});
+
+const ThinkingItem = React.memo(function ThinkingItem({
+    item,
+    isStreaming,
+    defaultDuration,
+    onLoad,
+    onMermaidFix,
+}) {
+    const { t, i18n } = useTranslation();
+    const duration =
+        Number.isFinite(item?.duration) && item.duration >= 0
+            ? item.duration
+            : defaultDuration;
+    const localizedDuration = formatLocalizedNumber(i18n.language, duration);
+    const thinkingLabel = isStreaming
+        ? t("Thinking with duration", {
+              duration: localizedDuration,
+          })
+        : t("Thought for duration", {
+              duration: localizedDuration,
+          });
+    const hasThinkingText =
+        typeof item?.text === "string" && item.text.trim().length > 0;
+    const markdownFinalRender = !isStreaming;
+
+    return (
+        <div>
+            <div
+                className={classNames(
+                    hasThinkingText ? "mb-1" : "",
+                    "text-[11px] font-semibold uppercase tracking-[0.08em]",
+                    isStreaming
+                        ? "text-transparent bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 dark:from-gray-100 dark:via-gray-400 dark:to-gray-100 bg-clip-text animate-shimmer bg-[length:200%_100%]"
+                        : "text-gray-500 dark:text-gray-400",
+                )}
+            >
+                {thinkingLabel}
+            </div>
+            {hasThinkingText ? (
+                <div className="text-gray-600 dark:text-gray-300">
+                    {convertMessageToMarkdown(
+                        { payload: item.text, sender: "enntity" },
+                        markdownFinalRender,
+                        onLoad,
+                        onMermaidFix,
+                    )}
+                </div>
+            ) : null}
+        </div>
+    );
+});
+
+const renderMediaPayloadItem = ({ item, key, onLoad, t }) => {
+    if (item.hideFromClient === true && item.isDeletedFile === true) {
+        const deletedFilename = item.deletedFilename || "file";
+        const deletedExt = getExtension(deletedFilename);
+        let deletedType = "file";
+        if (
+            isVideoUrl(deletedFilename) ||
+            VIDEO_EXTENSIONS.includes(deletedExt)
+        ) {
+            deletedType = "video";
+        } else if (IMAGE_EXTENSIONS.includes(deletedExt)) {
+            deletedType = "image";
+        }
+
+        return (
+            <MediaCard
+                key={key}
+                type={deletedType}
+                src={null}
+                filename={deletedFilename}
+                isDeleted={true}
+                t={t}
+            />
+        );
+    }
+
+    if (item.hideFromClient === true) {
+        return null;
+    }
+
+    const src = item?.url || item?.image_url?.url || item?.file;
+    if (!src) return null;
+
+    const displayFilename = item?.displayFilename || item?.originalFilename;
+
+    let filename;
+    let ext;
+    try {
+        filename = displayFilename || decodeURIComponent(getFilename(src));
+        ext = getExtension(src);
+    } catch (error) {
+        console.error("Error extracting assistant media metadata:", error);
+        return null;
+    }
+
+    if (isAudioUrl(src)) {
+        return (
+            <audio
+                key={key}
+                onLoadedData={onLoad}
+                src={src}
+                className="max-h-[20%] max-w-[100%] rounded-md border bg-white p-1 my-2 dark:border-neutral-700 dark:bg-neutral-800 shadow-lg dark:shadow-black/30"
+                controls
+            />
+        );
+    }
+
+    if (isVideoUrl(src)) {
+        const youtubeEmbedUrl = getYoutubeEmbedUrl(src);
+        if (youtubeEmbedUrl) {
+            return (
+                <MediaCard
+                    key={key}
+                    type="youtube"
+                    src={src}
+                    filename={filename}
+                    youtubeEmbedUrl={youtubeEmbedUrl}
+                    onLoad={onLoad}
+                    t={t}
+                />
+            );
+        }
+
+        return (
+            <MediaCard
+                key={key}
+                type="video"
+                src={src}
+                filename={filename}
+                onLoad={onLoad}
+                t={t}
+            />
+        );
+    }
+
+    const mediaType =
+        item.type === "image_url" || IMAGE_EXTENSIONS.includes(ext)
+            ? "image"
+            : "file";
+
+    return (
+        <MediaCard
+            key={key}
+            type={mediaType}
+            src={src}
+            filename={filename}
+            onLoad={mediaType === "image" ? onLoad : undefined}
+            t={t}
+        />
+    );
+};
+
+const isArtifactPayloadItem = (parsed) =>
+    !!parsed &&
+    (parsed.type === "image_url" ||
+        parsed.type === "file" ||
+        parsed.isDeletedFile === true);
+
+const isBlankPayloadItem = (item, parsed) =>
+    (!parsed && (typeof item !== "string" || item.trim().length === 0)) ||
+    (parsed?.type === ASSISTANT_PAYLOAD_ITEM_TYPES.TEXT &&
+        (typeof parsed.text !== "string" || parsed.text.trim().length === 0));
+
+const isSummaryOnlyThinkingItem = (parsed) =>
+    parsed?.type === ASSISTANT_PAYLOAD_ITEM_TYPES.THINKING &&
+    (typeof parsed.text !== "string" || parsed.text.trim().length === 0);
+
+const buildChronologicalBlocks = (items) => {
+    const blocks = [];
+    let currentToolItems = [];
+    const thinkingItems = [];
+
+    const flushToolItems = () => {
+        if (!currentToolItems.length) return;
+        blocks.push({
+            type: "tool_group",
+            items: currentToolItems,
+        });
+        currentToolItems = [];
+    };
+
+    items.forEach((entry) => {
+        if (entry.parsed?.type === ASSISTANT_PAYLOAD_ITEM_TYPES.TOOL_EVENT) {
+            currentToolItems.push(entry.parsed);
+            return;
+        }
+
+        if (entry.parsed?.type === ASSISTANT_PAYLOAD_ITEM_TYPES.THINKING) {
+            flushToolItems();
+            thinkingItems.push({
+                type: "item",
+                ...entry,
+            });
+            return;
+        }
+
+        flushToolItems();
+        blocks.push({
+            type: "item",
+            ...entry,
+        });
+    });
+
+    flushToolItems();
+    return [...blocks, ...thinkingItems];
+};
+
+export const InlineAssistantPayload = React.memo(function InlineAssistantPayload({
+    items = [],
+    message,
+    onLoad,
+    onMermaidFix,
+    isStreaming = false,
+    defaultThinkingDuration = 0,
+    currentUser = null,
+}) {
+    const { t } = useTranslation();
+    const normalizedItems = useMemo(
+        () => (Array.isArray(items) ? items.filter(Boolean) : []),
+        [items],
+    );
+    const stableMessageId = String(
+        message?._clientId ||
+            message?.sentTime ||
+            message?.id ||
+            message?._id ||
+            message?.taskId ||
+            "assistant",
+    );
+
+    const { bodyBlocks, footerBlocks } = useMemo(() => {
+        if (!normalizedItems.length) {
+            return { bodyBlocks: [], footerBlocks: [] };
+        }
+
+        const chronologicalItems = [];
+        const occurrenceCounts = new Map();
+
+        normalizedItems.forEach((item, index) => {
+            const parsed = parseAssistantPayloadItem(item);
+            const baseKey = JSON.stringify(parsed || item || index);
+            const occurrence = occurrenceCounts.get(baseKey) || 0;
+            occurrenceCounts.set(baseKey, occurrence + 1);
+
+            if (isBlankPayloadItem(item, parsed)) {
+                return;
+            }
+
+            chronologicalItems.push({
+                item,
+                parsed,
+                key: `${stableMessageId}-${baseKey}-${occurrence}`,
+            });
+        });
+
+        const blocks = buildChronologicalBlocks(chronologicalItems);
+        const nextBodyBlocks = [];
+        const nextFooterBlocks = [];
+
+        blocks.forEach((block) => {
+            if (
+                block.type === "item" &&
+                isSummaryOnlyThinkingItem(block.parsed)
+            ) {
+                if (isStreaming) {
+                    nextFooterBlocks.push(block);
+                }
+                return;
+            }
+            nextBodyBlocks.push(block);
+        });
+
+        return {
+            bodyBlocks: nextBodyBlocks,
+            footerBlocks: nextFooterBlocks,
+        };
+    }, [isStreaming, normalizedItems, stableMessageId]);
+
+    if (!normalizedItems.length) {
+        return null;
+    }
+
+    const markdownFinalRender = !isStreaming;
+
+    const renderStandardItem = ({ item, parsed, key }) => {
+        if (!parsed) {
+            if (typeof item !== "string" || item.trim().length === 0) {
+                return null;
+            }
+            return (
+                <div key={key}>
+                    {convertMessageToMarkdown(
+                        {
+                            ...message,
+                            payload: typeof item === "string" ? item : "",
+                        },
+                        markdownFinalRender,
+                        onLoad,
+                        onMermaidFix,
+                    )}
+                </div>
+            );
+        }
+
+        if (parsed.type === ASSISTANT_PAYLOAD_ITEM_TYPES.THINKING) {
+            return (
+                <ThinkingItem
+                    key={key}
+                    item={parsed}
+                    isStreaming={isStreaming}
+                    defaultDuration={defaultThinkingDuration}
+                    onLoad={onLoad}
+                    onMermaidFix={onMermaidFix}
+                />
+            );
+        }
+
+        if (parsed.type === ASSISTANT_PAYLOAD_ITEM_TYPES.TEXT) {
+            if (
+                typeof parsed.text !== "string" ||
+                parsed.text.trim().length === 0
+            ) {
+                return null;
+            }
+            return (
+                <div key={key}>
+                    {convertMessageToMarkdown(
+                        {
+                            ...message,
+                            payload: parsed.text || "",
+                        },
+                        markdownFinalRender,
+                        onLoad,
+                        onMermaidFix,
+                    )}
+                </div>
+            );
+        }
+
+        if (isArtifactPayloadItem(parsed)) {
+            return renderMediaPayloadItem({
+                item: parsed,
+                key,
+                onLoad,
+                t,
+            });
+        }
+
+        return null;
+    };
+
+    return (
+        <div className="flex flex-col">
+            {bodyBlocks.length ? (
+                <div className="flex flex-col gap-2">
+                    {bodyBlocks.map((block, index) => {
+                        if (block.type === "tool_group") {
+                            return (
+                                <ToolEventGroup
+                                    key={`${stableMessageId}-tool-group-${index}`}
+                                    items={block.items}
+                                    currentUser={currentUser}
+                                />
+                            );
+                        }
+
+                        return renderStandardItem(block);
+                    })}
+                </div>
+            ) : null}
+            {footerBlocks.map((block) => (
+                <div
+                    key={block.key}
+                    className={classNames(bodyBlocks.length ? "mt-1" : "")}
+                >
+                    {renderStandardItem(block)}
+                </div>
+            ))}
+        </div>
+    );
+});
 
 const TaskPlaceholder = ({ message, onTaskStatusUpdate }) => {
     const { data: serverTask } = useTask(message.taskId);
@@ -342,114 +963,6 @@ const TaskPlaceholder = ({ message, onTaskStatusUpdate }) => {
     );
 };
 
-export const EphemeralContent = React.memo(
-    ({ content, toolCalls = [], duration, isThinking }) => {
-        const [expanded, setExpanded] = useState(true);
-        const scrollContainerRef = useRef(null);
-        const { t } = useTranslation();
-
-        // Auto-scroll to bottom when tool calls change
-        useEffect(() => {
-            if (scrollContainerRef.current && expanded) {
-                // Use requestAnimationFrame to ensure DOM has updated
-                requestAnimationFrame(() => {
-                    if (scrollContainerRef.current) {
-                        scrollContainerRef.current.scrollTop =
-                            scrollContainerRef.current.scrollHeight;
-                    }
-                });
-            }
-        }, [toolCalls.length, expanded]);
-
-        // Don't render if we have nothing to show
-        if (!shouldShowEphemeralContent(content, toolCalls)) {
-            return null;
-        }
-
-        return (
-            <div className="mb-2 ephemeral-content-wrapper">
-                <div
-                    className="relative flex items-center gap-2 cursor-pointer font-semibold text-xs"
-                    onClick={() => setExpanded(!expanded)}
-                >
-                    <span
-                        className={`inline-block ${isThinking ? "text-transparent bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 dark:from-gray-100 dark:via-gray-400 dark:to-gray-100 bg-clip-text animate-shimmer bg-[length:200%_100%]" : "text-gray-900 [.dark_&]:text-gray-100"} font-semibold me-1`}
-                    >
-                        {isThinking
-                            ? t("Thinking...") + ` ${duration}s`
-                            : t("Thought for") + ` ${duration}s`}
-                    </span>
-                    <svg
-                        className={`h-4 w-4 text-gray-500 transition-transform ${expanded ? "rotate-180" : ""}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                        />
-                    </svg>
-                </div>
-                {expanded && (
-                    <div
-                        ref={scrollContainerRef}
-                        className="text-gray-600 dark:text-gray-300 mt-1 ps-3 rtl:ps-0 rtl:pe-3 border-s-2 rtl:border-s-0 rtl:border-e-2 border-gray-400 dark:border-gray-600 bg-gray-200 dark:bg-gray-700 py-2 px-3 rounded-r-md rtl:rounded-r-none rtl:rounded-l-md text-[12px] overflow-y-auto max-h-[7.5rem] scroll-smooth"
-                    >
-                        {hasToolCalls(toolCalls) &&
-                            toolCalls.map((toolCall, index) => (
-                                <div
-                                    key={index}
-                                    className="flex items-start gap-2 mb-1 last:mb-0 rtl:flex-row-reverse"
-                                >
-                                    <div className="flex-shrink-0 rtl:order-2 mt-1">
-                                        {toolCall.status === "thinking" && (
-                                            <Loader2 className="h-3 w-3 text-gray-500 dark:text-gray-400 animate-spin" />
-                                        )}
-                                        {toolCall.status === "completed" && (
-                                            <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
-                                        )}
-                                        {toolCall.status === "failed" && (
-                                            <XCircle className="h-3 w-3 text-red-600 dark:text-red-400" />
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0 rtl:order-1 rtl:text-right">
-                                        <span className="mr-1 rtl:mr-0 rtl:ml-1">
-                                            {toolCall.icon}
-                                        </span>
-                                        {toolCall.userMessage}
-                                        {toolCall.error && (
-                                            <span className="text-red-600 dark:text-red-400 ml-1 rtl:ml-0 rtl:mr-1">
-                                                ({toolCall.error})
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        {hasEphemeralContent(content) && (
-                            <div
-                                className={
-                                    hasToolCalls(toolCalls) ? "mt-2" : ""
-                                }
-                            >
-                                {convertMessageToMarkdown({
-                                    payload: content,
-                                    sender: "enntity",
-                                })}
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-        );
-    },
-);
-
-// Export helper functions for use in other components
-export { hasToolCalls, hasEphemeralContent, shouldShowEphemeralContent };
-
 const BotMessage = ({
     message,
     toolData,
@@ -470,6 +983,31 @@ const BotMessage = ({
 }) => {
     const { data: serverTask } = useTask(message.taskId);
     const task = message.task || serverTask;
+    const { user } = useContext(AuthContext);
+    const legacyInlineItems = buildLegacyInlineAssistantPayloadItems({
+        ephemeralContent: message.ephemeralContent,
+        toolCalls: message.toolCalls,
+        thinkingDuration: message.thinkingDuration,
+    });
+    const inlineItems =
+        Array.isArray(message.payload) && message.sender === "enntity"
+            ? message.payload
+            : [
+                  ...legacyInlineItems,
+                  ...(typeof message.payload === "string" &&
+                  message.payload.trim()
+                      ? [
+                            JSON.stringify({
+                                type: ASSISTANT_PAYLOAD_ITEM_TYPES.TEXT,
+                                text: message.payload,
+                            }),
+                        ]
+                      : []),
+              ];
+    const hasInlineItems = Array.isArray(inlineItems) && inlineItems.length > 0;
+    const modeData = normalizeConversationModeData(
+        toolData?.modeMessage || toolData?.entityRuntime || toolData,
+    );
 
     return (
         <div
@@ -493,26 +1031,31 @@ const BotMessage = ({
                 )}
             >
                 <div className="flex flex-col">
-                    {shouldShowEphemeralContent(
-                        message.ephemeralContent,
-                        message.toolCalls,
-                    ) && (
-                        <EphemeralContent
-                            content={message.ephemeralContent}
-                            toolCalls={message.toolCalls || []}
-                            duration={message.thinkingDuration ?? 0}
-                            isThinking={message.isStreaming}
-                        />
-                    )}
                     <div
                         className="chat-message-bot relative break-words"
                         ref={(el) => messageRef(el, message.id)}
                     >
                         <React.Fragment key={`md-${message.id}`}>
+                            <ConversationModeBadge
+                                modeData={modeData}
+                                className="mb-2"
+                            />
                             {message.taskId && task ? (
                                 <TaskPlaceholder
                                     message={message}
                                     onTaskStatusUpdate={onTaskStatusUpdate}
+                                />
+                            ) : hasInlineItems ? (
+                                <InlineAssistantPayload
+                                    items={inlineItems}
+                                    message={message}
+                                    onLoad={onLoad}
+                                    onMermaidFix={onMermaidFix}
+                                    isStreaming={Boolean(message.isStreaming)}
+                                    defaultThinkingDuration={
+                                        message.thinkingDuration ?? 0
+                                    }
+                                    currentUser={user}
                                 />
                             ) : (
                                 <MemoizedMarkdownMessage

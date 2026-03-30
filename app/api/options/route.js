@@ -5,7 +5,7 @@ export async function POST(req) {
     try {
         const body = await req.json();
 
-        const { userId, contextId, aiName, agentModel, defaultEntityId } = body;
+        const { userId, contextId, aiName, defaultEntityId } = body;
 
         if (!mongoose.connection.readyState) {
             throw new Error("Database is not connected");
@@ -19,9 +19,6 @@ export async function POST(req) {
             }
             if (aiName !== undefined) {
                 user.aiName = aiName;
-            }
-            if (agentModel !== undefined) {
-                user.agentModel = agentModel;
             }
             if (defaultEntityId !== undefined) {
                 user.defaultEntityId = defaultEntityId;

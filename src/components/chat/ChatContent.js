@@ -417,6 +417,7 @@ function ChatContent({
         streamingContent,
         ephemeralContent,
         toolCalls,
+        conversationModeData,
         stopStreaming,
         setIsStreaming,
         setSubscriptionId,
@@ -545,7 +546,7 @@ function ChatContent({
                     content: optimisticUserMessage.payload,
                 });
 
-                const { aiName, agentModel } = user;
+                const { aiName } = user;
 
                 // Build agentContext for user chat (single user context as default)
                 const agentContext = user.contextId
@@ -600,7 +601,7 @@ function ChatContent({
                 // Call agent via Next.js proxy (SSE streaming)
                 setIsStreaming(true);
 
-                // Get the current entity for preferred model fallback
+                // Get the current entity for display name fallback
                 const currentEntity = entities?.find(
                     (e) => e.id === currentSelectedEntityId,
                 );
@@ -617,12 +618,6 @@ function ChatContent({
                         aiName: currentEntity?.name || aiName,
                         title: chat?.title,
                         entityId: currentSelectedEntityId,
-                        // Model priority: user override > entity preferred > default
-                        // (entity modelOverride is handled server-side in cortex)
-                        model:
-                            agentModel ||
-                            currentEntity?.preferredModel ||
-                            undefined,
                         userInfo,
                     }),
                 });
@@ -790,6 +785,7 @@ function ChatContent({
             streamingContent={streamingContent}
             ephemeralContent={ephemeralContent}
             toolCalls={toolCalls}
+            conversationModeData={conversationModeData}
             onStopStreaming={stopStreaming}
             thinkingDuration={thinkingDuration}
             isThinking={isThinking}

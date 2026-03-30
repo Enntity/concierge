@@ -9,7 +9,6 @@ export function useUpdateAiOptions() {
             userId,
             contextId,
             aiName,
-            agentModel,
             defaultEntityId,
         }) => {
             // persist it to user options in the database
@@ -17,7 +16,6 @@ export function useUpdateAiOptions() {
                 userId,
                 contextId,
                 aiName,
-                agentModel,
                 defaultEntityId,
             });
             return response.data;
@@ -26,7 +24,6 @@ export function useUpdateAiOptions() {
             userId,
             contextId,
             aiName,
-            agentModel,
             defaultEntityId,
         }) => {
             await queryClient.cancelQueries({ queryKey: ["currentUser"] });
@@ -40,7 +37,6 @@ export function useUpdateAiOptions() {
                     ...old,
                     contextId,
                     aiName,
-                    agentModel,
                     defaultEntityId,
                 };
             });

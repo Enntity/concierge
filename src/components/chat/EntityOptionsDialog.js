@@ -7,8 +7,6 @@ import {
     Settings,
     Brain,
     Sparkles,
-    Lock,
-    Unlock,
     Wrench,
     Mic,
     Heart,
@@ -25,8 +23,15 @@ import {
 import EntityIcon from "./EntityIcon";
 import {
     useAgentModels,
-    resolveModelId,
 } from "../../../app/queries/modelMetadata";
+import { useModelProfiles } from "../../../app/queries/modelProfiles";
+import {
+    buildEntityModelPolicyFromProfile,
+    CUSTOM_MODEL_PROFILE_ID,
+    getDefaultModelProfileId,
+    getEntityModelProfileId,
+    getResolvedModelProfiles,
+} from "../../utils/entityModelProfiles";
 
 const REASONING_EFFORT_OPTIONS = [
     { value: "none", label: "None", description: "No reasoning" },
@@ -48,16 +53,20 @@ export default function EntityOptionsDialog({
 }) {
     const { t } = useTranslation();
     const { data: agentModels, redirects } = useAgentModels();
-    const defaultAgentModel =
-        agentModels?.find((model) => model.isDefault)?.modelId || "";
-    const [preferredModel, setPreferredModel] = useState(
-        resolveModelId(
-            entity?.preferredModel || entity?.modelOverride,
-            agentModels,
-            redirects,
-        ) || defaultAgentModel,
+    const { data: modelProfiles } = useModelProfiles();
+    const resolvedModelProfiles = getResolvedModelProfiles(modelProfiles, {
+        models: agentModels,
+        redirects,
+    });
+    const selectableModelProfiles = resolvedModelProfiles.filter(
+        (profile) => profile.slug !== "nsfw",
     );
-    const [forceModel, setForceModel] = useState(!!entity?.modelOverride);
+    const [modelProfileId, setModelProfileId] = useState(
+        getEntityModelProfileId(entity?.modelPolicy, modelProfiles, {
+            models: agentModels,
+            redirects,
+        }) || getDefaultModelProfileId(modelProfiles, { models: agentModels, redirects }),
+    );
     const [reasoningEffort, setReasoningEffort] = useState(
         entity?.reasoningEffort || "medium",
     );
@@ -77,17 +86,16 @@ export default function EntityOptionsDialog({
     // Reset state when entity changes
     useEffect(() => {
         if (entity) {
-            // If modelOverride exists, use it and check the force box
-            // Otherwise use preferredModel
-            const hasOverride = !!entity.modelOverride;
-            setPreferredModel(
-                resolveModelId(
-                    entity.modelOverride || entity.preferredModel,
-                    agentModels,
+            setModelProfileId(
+                getEntityModelProfileId(entity.modelPolicy, modelProfiles, {
+                    models: agentModels,
                     redirects,
-                ) || defaultAgentModel,
+                }) ||
+                    getDefaultModelProfileId(modelProfiles, {
+                        models: agentModels,
+                        redirects,
+                    }),
             );
-            setForceModel(hasOverride);
             setReasoningEffort(entity.reasoningEffort || "medium");
             // Pulse
             setPulseEnabled(entity.pulse?.enabled || false);
@@ -97,19 +105,21 @@ export default function EntityOptionsDialog({
             setPulseTimezone(entity.pulse?.activeHours?.tz || "UTC");
             setHasChanges(false);
         }
-    }, [entity, agentModels, redirects, defaultAgentModel]);
+    }, [entity, agentModels, redirects, modelProfiles]);
 
     // Track changes
     useEffect(() => {
         if (!entity) return;
-        const currentModel =
-            resolveModelId(
-                entity.modelOverride || entity.preferredModel,
-                agentModels,
+        const currentModelProfileId =
+            getEntityModelProfileId(entity.modelPolicy, modelProfiles, {
+                models: agentModels,
                 redirects,
-            ) || defaultAgentModel;
-        const modelChanged = preferredModel !== currentModel;
-        const forceChanged = forceModel !== !!entity.modelOverride;
+            }) ||
+            getDefaultModelProfileId(modelProfiles, {
+                models: agentModels,
+                redirects,
+            });
+        const modelChanged = modelProfileId !== currentModelProfileId;
         const effortChanged =
             reasoningEffort !== (entity.reasoningEffort || "medium");
         const pulseEnabledChanged =
@@ -125,7 +135,6 @@ export default function EntityOptionsDialog({
 
         setHasChanges(
             modelChanged ||
-                forceChanged ||
                 effortChanged ||
                 pulseEnabledChanged ||
                 pulseIntervalChanged ||
@@ -134,8 +143,7 @@ export default function EntityOptionsDialog({
                 pulseTzChanged,
         );
     }, [
-        preferredModel,
-        forceModel,
+        modelProfileId,
         reasoningEffort,
         pulseEnabled,
         pulseInterval,
@@ -145,7 +153,7 @@ export default function EntityOptionsDialog({
         entity,
         agentModels,
         redirects,
-        defaultAgentModel,
+        modelProfiles,
     ]);
 
     const handleSave = async () => {
@@ -153,12 +161,18 @@ export default function EntityOptionsDialog({
 
         setIsSaving(true);
         try {
+            const selectedProfile = selectableModelProfiles.find(
+                (profile) => profile.slug === modelProfileId,
+            );
+            const modelPolicy =
+                modelProfileId === CUSTOM_MODEL_PROFILE_ID
+                    ? entity.modelPolicy || null
+                    : buildEntityModelPolicyFromProfile(selectedProfile);
             const response = await fetch(`/api/entities/${entity.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    preferredModel: forceModel ? null : preferredModel,
-                    modelOverride: forceModel ? preferredModel : null,
+                    modelPolicy,
                     reasoningEffort,
                     pulseEnabled,
                     pulseWakeIntervalMinutes: pulseInterval,
@@ -250,53 +264,43 @@ export default function EntityOptionsDialog({
                 </DialogHeader>
 
                 <div className="space-y-3 mt-3 overflow-y-auto flex-1 min-h-0 px-1">
-                    {/* Preferred Model */}
+                    {/* Model Profile */}
                     <div>
                         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                             <Sparkles className="w-3.5 h-3.5 inline mr-1 text-cyan-500" />
-                            {t("Preferred Model")}
+                            {t("Model Profile")}
                         </label>
-                        <div className="flex items-center gap-2">
+                        <div className="space-y-2">
                             <select
-                                value={preferredModel}
+                                value={modelProfileId}
                                 onChange={(e) =>
-                                    setPreferredModel(e.target.value)
+                                    setModelProfileId(e.target.value)
                                 }
                                 className="flex-1 px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
                             >
-                                {(agentModels || []).map((option) => (
+                                {selectableModelProfiles.map((option) => (
                                     <option
-                                        key={option.modelId}
-                                        value={option.modelId}
+                                        key={option.slug}
+                                        value={option.slug}
                                     >
-                                        {option.displayName}
+                                        {t(option.name)}
                                     </option>
                                 ))}
-                            </select>
-                            <button
-                                type="button"
-                                onClick={() => setForceModel(!forceModel)}
-                                className={`p-1.5 rounded-md transition-colors ${
-                                    forceModel
-                                        ? "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/60"
-                                        : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600"
-                                }`}
-                                title={
-                                    forceModel
-                                        ? t(
-                                              "Entity MUST use this model (click to unlock)",
-                                          )
-                                        : t(
-                                              "Entity prefers this model (click to lock)",
-                                          )
-                                }
-                            >
-                                {forceModel ? (
-                                    <Lock className="w-4 h-4" />
-                                ) : (
-                                    <Unlock className="w-4 h-4" />
+                                {modelProfileId === CUSTOM_MODEL_PROFILE_ID && (
+                                    <option value={CUSTOM_MODEL_PROFILE_ID}>
+                                        {t("Custom")}
+                                    </option>
                                 )}
-                            </button>
+                            </select>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {t(
+                                    selectableModelProfiles.find(
+                                        (option) =>
+                                            option.slug === modelProfileId,
+                                    )?.description ||
+                                        "Keeps the entity on its existing custom stage policy.",
+                                )}
+                            </p>
                         </div>
                     </div>
 

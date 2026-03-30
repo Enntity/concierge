@@ -90,7 +90,6 @@ export async function GET(request) {
                 voice: Array.isArray(entity.voice) ? entity.voice : null,
                 description: entity.description,
                 isSystem: entity.isSystem || false,
-                preferredModel: entity.preferredModel || null,
             }));
 
             console.log(

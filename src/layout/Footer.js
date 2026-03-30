@@ -8,7 +8,6 @@ import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { ThemeContext } from "../contexts/ThemeProvider";
-import { AuthContext } from "../App";
 import {
     getProviderFromModelId,
     useAgentModels,
@@ -23,15 +22,13 @@ import {
 export default function Footer() {
     const { t } = useTranslation();
     const { theme, changeTheme } = useContext(ThemeContext);
-    const { user } = useContext(AuthContext);
     const { data: agentModels } = useAgentModels();
     const currentYear = new Date().getFullYear();
     const copyrightText = t("footer_copyright", { year: currentYear });
 
     // Get the provider icon for the current agent model
     const defaultModelId = agentModels?.find((model) => model.isDefault)?.modelId;
-    const agentModel = user?.agentModel || defaultModelId;
-    const provider = getProviderFromModelId(agentModel, agentModels);
+    const provider = getProviderFromModelId(defaultModelId, agentModels);
 
     const getProviderIcon = () => {
         switch (provider) {

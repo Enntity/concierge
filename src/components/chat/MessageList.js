@@ -21,6 +21,10 @@ import {
     IMAGE_EXTENSIONS,
     VIDEO_EXTENSIONS,
 } from "../../utils/mediaUtils";
+import {
+    extractCopyTextFromAssistantPayload,
+    parseAssistantPayloadItem,
+} from "../../utils/assistantInlinePayload";
 import CopyButton from "../CopyButton";
 import ReplayButton from "../ReplayButton";
 import MediaCard from "./MediaCard";
@@ -135,6 +139,18 @@ const getTextFromPayload = (payload) => {
         .join("\n");
 };
 
+const isAssistantInlinePayload = (message) =>
+    message?.sender === "enntity" &&
+    Array.isArray(message?.payload) &&
+    message.payload.some((item) => {
+        const parsed = parseAssistantPayloadItem(item);
+        return (
+            parsed?.type === "tool_event" ||
+            parsed?.type === "thinking" ||
+            parsed?.type === "text"
+        );
+    });
+
 const parseToolData = (toolString) => {
     if (!toolString) return null;
     try {
@@ -142,6 +158,8 @@ const parseToolData = (toolString) => {
         return {
             avatarImage: toolObj.avatarImage,
             toolUsed: toolObj.toolUsed,
+            modeMessage: toolObj.modeMessage || toolObj.entityRuntime?.modeMessage || null,
+            entityRuntime: toolObj.entityRuntime || null,
         };
     } catch (e) {
         console.error("Invalid JSON in tool:", e);
@@ -231,9 +249,16 @@ const MessageListContent = React.memo(function MessageListContent({
             newMessage.id = newMessage._id || index;
         }
         let display;
+        let textForCopy = getTextFromPayload(newMessage.payload);
         if (Array.isArray(newMessage.payload)) {
-            const arr = newMessage.payload
-                .map((t, index2) => {
+            if (isAssistantInlinePayload(newMessage)) {
+                display = newMessage.payload;
+                textForCopy = extractCopyTextFromAssistantPayload(
+                    newMessage.payload,
+                );
+            } else {
+                const arr = newMessage.payload
+                    .map((t, index2) => {
                     try {
                         const obj = JSON.parse(t);
 
@@ -414,66 +439,76 @@ const MessageListContent = React.memo(function MessageListContent({
                         console.error("Invalid JSON:", t);
                         return t;
                     }
-                })
-                .filter((item) => item !== null); // Remove null items (hidden from client)
+                    })
+                    .filter((item) => item !== null); // Remove null items (hidden from client)
 
-            // Group consecutive MediaCard components together
-            // For 2+ items, use MediaGalleryCard; for single items, keep MediaCard
-            const grouped = [];
-            let currentGroup = [];
-            let currentGroupData = []; // Track item data for gallery
+                // Group consecutive MediaCard components together
+                // For 2+ items, use MediaGalleryCard; for single items, keep MediaCard
+                const grouped = [];
+                let currentGroup = [];
+                let currentGroupData = []; // Track item data for gallery
 
-            arr.forEach((item, idx) => {
+                arr.forEach((item, idx) => {
                 // Check if item is a MediaCard component (all media types: image, video, youtube, file)
-                const isMediaCard =
-                    React.isValidElement(item) &&
-                    (item.key?.includes("image-") ||
-                        item.key?.includes("video-") ||
-                        item.key?.includes("youtube-") ||
-                        item.key?.includes("file-"));
+                    const isMediaCard =
+                        React.isValidElement(item) &&
+                        (item.key?.includes("image-") ||
+                            item.key?.includes("video-") ||
+                            item.key?.includes("youtube-") ||
+                            item.key?.includes("file-"));
 
-                if (isMediaCard) {
-                    currentGroup.push(item);
+                    if (isMediaCard) {
+                        currentGroup.push(item);
                     // Extract item data for gallery usage
-                    currentGroupData.push({
-                        type: item.props.type,
-                        url: item.props.src,
-                        src: item.props.src,
-                        filename: item.props.filename,
-                        label: item.props.filename,
-                        youtubeEmbedUrl: item.props.youtubeEmbedUrl,
-                        messageId: newMessage.id,
-                        payloadIndex: parseInt(item.key?.split("-").pop(), 10),
-                        isDeleted: item.props.isDeleted,
-                    });
-                } else {
-                    if (currentGroup.length > 0) {
+                        currentGroupData.push({
+                            type: item.props.type,
+                            url: item.props.src,
+                            src: item.props.src,
+                            filename: item.props.filename,
+                            label: item.props.filename,
+                            youtubeEmbedUrl: item.props.youtubeEmbedUrl,
+                            messageId: newMessage.id,
+                            payloadIndex: parseInt(item.key?.split("-").pop(), 10),
+                            isDeleted: item.props.isDeleted,
+                        });
+                    } else {
+                        if (currentGroup.length > 0) {
                         // Use gallery for 2+ items, single card for 1 item
-                        if (currentGroup.length > 1) {
+                            if (currentGroup.length > 1) {
                             // Filter out deleted items for gallery
-                            const validItems = currentGroupData.filter(
-                                (d) => !d.isDeleted,
-                            );
-                            const deletedItems = currentGroup.filter(
-                                (c) => c.props.isDeleted,
-                            );
-
-                            if (validItems.length > 1) {
-                                grouped.push(
-                                    <div
-                                        key={`media-group-${idx}`}
-                                        className="flex flex-wrap gap-2 my-2"
-                                    >
-                                        <MediaGalleryCard
-                                            items={validItems}
-                                            onDeleteFile={onDeleteFile}
-                                            t={t}
-                                        />
-                                        {deletedItems}
-                                    </div>,
+                                const validItems = currentGroupData.filter(
+                                    (d) => !d.isDeleted,
                                 );
-                            } else {
+                                const deletedItems = currentGroup.filter(
+                                    (c) => c.props.isDeleted,
+                                );
+
+                                if (validItems.length > 1) {
+                                    grouped.push(
+                                        <div
+                                            key={`media-group-${idx}`}
+                                            className="flex flex-wrap gap-2 my-2"
+                                        >
+                                            <MediaGalleryCard
+                                                items={validItems}
+                                                onDeleteFile={onDeleteFile}
+                                                t={t}
+                                            />
+                                            {deletedItems}
+                                        </div>,
+                                    );
+                                } else {
                                 // Only 1 valid item + deleted items, render individually
+                                    grouped.push(
+                                        <div
+                                            key={`media-group-${idx}`}
+                                            className="flex flex-wrap gap-2 my-2"
+                                        >
+                                            {currentGroup}
+                                        </div>,
+                                    );
+                                }
+                            } else {
                                 grouped.push(
                                     <div
                                         key={`media-group-${idx}`}
@@ -483,50 +518,50 @@ const MessageListContent = React.memo(function MessageListContent({
                                     </div>,
                                 );
                             }
-                        } else {
+                            currentGroup = [];
+                            currentGroupData = [];
+                        }
+                        grouped.push(item);
+                    }
+                });
+
+                // Add any remaining media group
+                if (currentGroup.length > 0) {
+                    if (currentGroup.length > 1) {
+                    // Filter out deleted items for gallery
+                        const validItems = currentGroupData.filter(
+                            (d) => !d.isDeleted,
+                        );
+                        const deletedItems = currentGroup.filter(
+                            (c) => c.props.isDeleted,
+                        );
+
+                        if (validItems.length > 1) {
                             grouped.push(
                                 <div
-                                    key={`media-group-${idx}`}
+                                    key={`media-group-end`}
+                                    className="flex flex-wrap gap-2 my-2"
+                                >
+                                    <MediaGalleryCard
+                                        items={validItems}
+                                        onDeleteFile={onDeleteFile}
+                                        t={t}
+                                    />
+                                    {deletedItems}
+                                </div>,
+                            );
+                        } else {
+                        // Only 1 valid item + deleted items, render individually
+                            grouped.push(
+                                <div
+                                    key={`media-group-end`}
                                     className="flex flex-wrap gap-2 my-2"
                                 >
                                     {currentGroup}
                                 </div>,
                             );
                         }
-                        currentGroup = [];
-                        currentGroupData = [];
-                    }
-                    grouped.push(item);
-                }
-            });
-
-            // Add any remaining media group
-            if (currentGroup.length > 0) {
-                if (currentGroup.length > 1) {
-                    // Filter out deleted items for gallery
-                    const validItems = currentGroupData.filter(
-                        (d) => !d.isDeleted,
-                    );
-                    const deletedItems = currentGroup.filter(
-                        (c) => c.props.isDeleted,
-                    );
-
-                    if (validItems.length > 1) {
-                        grouped.push(
-                            <div
-                                key={`media-group-end`}
-                                className="flex flex-wrap gap-2 my-2"
-                            >
-                                <MediaGalleryCard
-                                    items={validItems}
-                                    onDeleteFile={onDeleteFile}
-                                    t={t}
-                                />
-                                {deletedItems}
-                            </div>,
-                        );
                     } else {
-                        // Only 1 valid item + deleted items, render individually
                         grouped.push(
                             <div
                                 key={`media-group-end`}
@@ -536,19 +571,10 @@ const MessageListContent = React.memo(function MessageListContent({
                             </div>,
                         );
                     }
-                } else {
-                    grouped.push(
-                        <div
-                            key={`media-group-end`}
-                            className="flex flex-wrap gap-2 my-2"
-                        >
-                            {currentGroup}
-                        </div>,
-                    );
                 }
-            }
 
-            display = <>{grouped}</>;
+                display = <>{grouped}</>;
+            }
         } else {
             display = newMessage.payload;
         }
@@ -609,6 +635,7 @@ const MessageListContent = React.memo(function MessageListContent({
                 {renderMessage({
                     ...newMessage,
                     payload: display,
+                    text: textForCopy,
                 })}
             </div>
         );
@@ -629,6 +656,7 @@ const MessageList = React.memo(
             onSend,
             ephemeralContent,
             toolCalls,
+            conversationModeData,
             thinkingDuration,
             isThinking,
             selectedEntityId,
@@ -1303,6 +1331,9 @@ const MessageList = React.memo(
                                             content={streamingContent}
                                             ephemeralContent={ephemeralContent}
                                             toolCalls={toolCalls}
+                                            conversationModeData={
+                                                conversationModeData
+                                            }
                                             bot={bot}
                                             thinkingDuration={thinkingDuration}
                                             isThinking={isThinking}

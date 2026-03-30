@@ -80,8 +80,7 @@ export async function GET(req, { params }) {
  * This ensures changes are immediately reflected in both MongoDB and cortex's internal cache
  *
  * Supported properties:
- * - preferredModel: Default model for this entity (can be overridden by user preferences)
- * - modelOverride: Forced model that always takes precedence over user preferences
+ * - modelPolicy: Curated model profile / stage policy for this entity
  * - reasoningEffort: How much thinking time (low, medium, high)
  * - tools: Array of lowercase tool names the entity can use (empty array = no tools)
  * - voice: Array of voice preferences, ordered by priority
@@ -107,8 +106,7 @@ export async function PATCH(req, { params }) {
 
         const body = await req.json();
         const {
-            preferredModel,
-            modelOverride,
+            modelPolicy,
             reasoningEffort,
             tools,
             // Voice preference array
@@ -169,14 +167,18 @@ export async function PATCH(req, { params }) {
             contextId: user.contextId,
         };
 
-        // Handle preferredModel - null means clear it
-        if (preferredModel !== undefined) {
-            variables.preferredModel = preferredModel;
-        }
-
-        // Handle modelOverride - null means clear it
-        if (modelOverride !== undefined) {
-            variables.modelOverride = modelOverride;
+        if (modelPolicy !== undefined) {
+            if (
+                typeof modelPolicy !== "object" ||
+                Array.isArray(modelPolicy) ||
+                modelPolicy === null
+            ) {
+                return NextResponse.json(
+                    { error: "modelPolicy must be a JSON object" },
+                    { status: 400 },
+                );
+            }
+            variables.modelPolicy = JSON.stringify(modelPolicy);
         }
 
         if (reasoningEffort !== undefined) {

@@ -9,10 +9,6 @@ import { LanguageContext } from "../contexts/LanguageProvider";
 import { useOnboarding } from "../contexts/OnboardingContext";
 import { useEntities } from "../hooks/useEntities";
 import axios from "../../app/utils/axios-client";
-import {
-    useAgentModels,
-    resolveModelId,
-} from "../../app/queries/modelMetadata";
 import usePushNotifications from "../hooks/usePushNotifications";
 
 const UserOptions = ({ show, handleClose }) => {
@@ -22,7 +18,6 @@ const UserOptions = ({ show, handleClose }) => {
     const { openOnboarding } = useOnboarding();
     const isRTL = direction === "rtl";
     const profilePictureInputRef = useRef();
-    const { data: agentModels, redirects } = useAgentModels();
 
     // Push notifications
     const { registerForPush } = usePushNotifications({ enabled: false });
@@ -78,9 +73,6 @@ const UserOptions = ({ show, handleClose }) => {
     const [selectedDefaultEntityId, setSelectedDefaultEntityId] = useState(
         user?.defaultEntityId || "",
     );
-    const [agentModel, setAgentModel] = useState(
-        resolveModelId(user?.agentModel, agentModels, redirects),
-    );
     const [uploadingProfilePicture, setUploadingProfilePicture] =
         useState(false);
     const [error, setError] = useState("");
@@ -100,12 +92,9 @@ const UserOptions = ({ show, handleClose }) => {
         if (show && user) {
             setProfilePicture(user.profilePicture || null);
             setSelectedDefaultEntityId(user.defaultEntityId || "");
-            setAgentModel(
-                resolveModelId(user.agentModel, agentModels, redirects),
-            );
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [show, user, agentModels, redirects]);
+    }, [show, user]);
 
     const handleProfilePictureSelect = async (event) => {
         const file = event.target.files[0];
@@ -202,7 +191,6 @@ const UserOptions = ({ show, handleClose }) => {
                 userId: user.userId,
                 contextId: user.contextId,
                 aiName: updates.aiName ?? aiName,
-                agentModel: updates.agentModel ?? agentModel,
                 defaultEntityId:
                     updates.defaultEntityId ?? selectedDefaultEntityId,
             });
@@ -369,7 +357,7 @@ const UserOptions = ({ show, handleClose }) => {
 
                     {/* AI Settings Section */}
                     <section className="space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3">
                             <div>
                                 <label
                                     className={`block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 ${isRTL ? "text-right" : "text-left"}`}
@@ -407,39 +395,6 @@ const UserOptions = ({ show, handleClose }) => {
                                         )}
                                     </p>
                                 )}
-                            </div>
-
-                            <div>
-                                <label
-                                    className={`block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 ${isRTL ? "text-right" : "text-left"}`}
-                                    htmlFor="agentModel"
-                                >
-                                    {t("Model Override")}
-                                </label>
-                                <select
-                                    id="agentModel"
-                                    value={agentModel}
-                                    onChange={(e) => {
-                                        setAgentModel(e.target.value);
-                                        saveOptions({
-                                            agentModel: e.target.value,
-                                        });
-                                    }}
-                                    className="lb-input w-full text-sm"
-                                    dir={direction}
-                                >
-                                    <option value="">
-                                        {t("Use entity preferred model")}
-                                    </option>
-                                    {(agentModels || []).map((option) => (
-                                        <option
-                                            key={option.modelId}
-                                            value={option.modelId}
-                                        >
-                                            {t(option.displayName)}
-                                        </option>
-                                    ))}
-                                </select>
                             </div>
                         </div>
 

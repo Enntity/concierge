@@ -855,8 +855,6 @@ const SYS_UPDATE_ENTITY = gql`
         $identity: String
         $tools: [String]
         $useMemory: Boolean
-        $preferredModel: String
-        $modelOverride: String
         $reasoningEffort: String
         $modelPolicy: String
         $authorityProfile: String
@@ -885,8 +883,6 @@ const SYS_UPDATE_ENTITY = gql`
             identity: $identity
             tools: $tools
             useMemory: $useMemory
-            preferredModel: $preferredModel
-            modelOverride: $modelOverride
             reasoningEffort: $reasoningEffort
             modelPolicy: $modelPolicy
             authorityProfile: $authorityProfile

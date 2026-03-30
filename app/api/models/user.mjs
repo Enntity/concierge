@@ -42,10 +42,6 @@ const userSchema = new mongoose.Schema(
             required: false,
             default: "Enntity",
         },
-        agentModel: {
-            type: String,
-            required: false,
-        },
         defaultEntityId: {
             type: String,
             required: false,

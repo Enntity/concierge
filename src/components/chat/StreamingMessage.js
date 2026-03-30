@@ -5,27 +5,26 @@ import React, {
     useCallback,
     useMemo,
 } from "react";
-import { convertMessageToMarkdown } from "./ChatMessage";
+import { useContext } from "react";
 import classNames from "../../../app/utils/class-names";
 import Loader from "../../../app/components/loader";
-import { EphemeralContent, shouldShowEphemeralContent } from "./BotMessage";
+import { AuthContext } from "../../App";
+import { ConversationModeBadge, InlineAssistantPayload } from "./BotMessage";
+import { buildLegacyInlineAssistantPayloadItems } from "../../utils/assistantInlinePayload";
 
 // Memoize the content component to prevent re-renders when only the loader position changes
 const StreamingContent = React.memo(function StreamingContent({
     content,
     onContentUpdate,
-    isEphemeral = false,
 }) {
     const contentRef = useRef(null);
-    const markdownContent = useMemo(() => {
-        return convertMessageToMarkdown(
-            {
-                payload: content,
-                sender: "enntity",
-            },
-            false,
-        );
-    }, [content]);
+    const inlineItems = useMemo(
+        () =>
+            content
+                ? [JSON.stringify({ type: "text", text: content })]
+                : [],
+        [content],
+    );
 
     useEffect(() => {
         if (contentRef.current) {
@@ -41,7 +40,14 @@ const StreamingContent = React.memo(function StreamingContent({
             ref={contentRef}
             className="chat-message-bot relative break-words text-gray-800 dark:text-gray-100"
         >
-            {markdownContent}
+            <InlineAssistantPayload
+                items={inlineItems}
+                message={{
+                    id: "streaming-inline-text",
+                    sender: "enntity",
+                }}
+                isStreaming={true}
+            />
         </div>
     );
 });
@@ -50,6 +56,7 @@ const StreamingMessage = React.memo(function StreamingMessage({
     content,
     ephemeralContent,
     toolCalls,
+    conversationModeData,
     bot,
     thinkingDuration,
     isThinking,
@@ -58,10 +65,22 @@ const StreamingMessage = React.memo(function StreamingMessage({
     entityIconSize,
 }) {
     const contentContainerRef = useRef(null); // Ref for the non-ephemeral content container
+    const { user } = useContext(AuthContext);
     const [loaderPosition, setLoaderPosition] = useState({ x: 0, y: 0 });
     const [showLoader, setShowLoader] = useState(true);
     const lastUpdateRef = useRef(Date.now());
     const loaderTimeoutRef = useRef(null);
+    const inlineItems = useMemo(
+        () =>
+            buildLegacyInlineAssistantPayloadItems({
+                ephemeralContent,
+                toolCalls,
+                thinkingDuration,
+            }),
+        [ephemeralContent, thinkingDuration, toolCalls],
+    );
+    const hasStreamingText =
+        typeof content === "string" && content.trim().length > 0;
 
     // Track if we've ever shown ephemeral content
     useEffect(() => {
@@ -199,35 +218,48 @@ const StreamingMessage = React.memo(function StreamingMessage({
                 )}
             >
                 <div className="flex flex-col">
-                    {shouldShowEphemeralContent(
-                        ephemeralContent,
-                        toolCalls,
-                    ) && (
-                        <EphemeralContent
-                            content={ephemeralContent}
-                            toolCalls={toolCalls || []}
-                            duration={thinkingDuration}
-                            isThinking={isThinking}
-                        />
-                    )}
-                    <div className="relative" ref={contentContainerRef}>
-                        <StreamingContent
-                            content={content}
-                            onContentUpdate={handleContentUpdate}
-                        />
-                        {showLoader && (
-                            <div className="pointer-events-none absolute top-0 left-0 w-full h-full">
-                                <div
-                                    className="absolute transition-transform duration-100 ease-out"
-                                    style={{
-                                        transform: `translate(${loaderPosition.x}px, ${loaderPosition.y}px)`,
-                                    }}
-                                >
-                                    <Loader size="small" delay={0} />
+                    <ConversationModeBadge
+                        modeData={conversationModeData}
+                        className="mb-2"
+                    />
+                    {inlineItems.length > 0 ? (
+                        <div className="mb-2">
+                            <InlineAssistantPayload
+                                items={inlineItems}
+                                message={{
+                                    id: "streaming-inline-meta",
+                                    sender: "enntity",
+                                }}
+                                isStreaming={Boolean(isThinking)}
+                                defaultThinkingDuration={thinkingDuration}
+                                currentUser={user}
+                            />
+                        </div>
+                    ) : null}
+                    {hasStreamingText ? (
+                        <div className="relative" ref={contentContainerRef}>
+                            <StreamingContent
+                                content={content}
+                                onContentUpdate={handleContentUpdate}
+                            />
+                            {showLoader && (
+                                <div className="pointer-events-none absolute top-0 left-0 w-full h-full">
+                                    <div
+                                        className="absolute transition-transform duration-100 ease-out"
+                                        style={{
+                                            transform: `translate(${loaderPosition.x}px, ${loaderPosition.y}px)`,
+                                        }}
+                                    >
+                                        <Loader size="small" delay={0} />
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    ) : showLoader ? (
+                        <div className="pt-1 ps-1">
+                            <Loader size="small" delay={0} />
+                        </div>
+                    ) : null}
                 </div>
             </div>
         </div>

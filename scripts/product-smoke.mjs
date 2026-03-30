@@ -156,10 +156,10 @@ async function ensureSmokeSessionToken() {
                     contextId: randomUUID(),
                     contextKey: crypto.randomBytes(32).toString("hex"),
                     aiName: "Enntity",
-                    agentModel: "gemini-flash-3-vision",
                     blocked: false,
                 },
                 $unset: {
+                    agentModel: "",
                     profilePicture: "",
                     profilePictureBlobPath: "",
                     profilePictureFilename: "",

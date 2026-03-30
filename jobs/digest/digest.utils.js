@@ -6,7 +6,7 @@ const PROGRESS_UPDATE_INTERVAL = 3000;
 
 /**
  * Validates that an entityId is in the user's contact list
- * Returns { entityId, preferredModel } if valid, { entityId: null } otherwise
+ * Returns { entityId } if valid, { entityId: null } otherwise
  */
 async function validateEntityAccess(entityId, userContextId, logger) {
     if (!entityId || !userContextId) return { entityId: null };
@@ -23,16 +23,9 @@ async function validateEntityAccess(entityId, userContextId, logger) {
             logger?.log(`Entity ${entityId} not found`);
             return { entityId: null };
         }
-
-        const entityInfo = {
-            entityId,
-            preferredModel:
-                entity.modelOverride || entity.preferredModel || null,
-        };
-
         // System entities are always accessible
         if (entity.isSystem) {
-            return entityInfo;
+            return { entityId };
         }
 
         // Check if user has this entity in their contacts
@@ -41,7 +34,7 @@ async function validateEntityAccess(entityId, userContextId, logger) {
             Array.isArray(entity.assocUserIds) &&
             entity.assocUserIds.includes(userContextId)
         ) {
-            return entityInfo;
+            return { entityId };
         }
 
         logger?.log(
@@ -87,7 +80,6 @@ const generateDigestBlockContent = async (
     // Validate that the entityId is still accessible to the user
     // Falls back to user's default entity if not
     let resolvedEntityId = null;
-    let entityPreferredModel = null;
     if (entityId) {
         const entityAccess = await validateEntityAccess(
             entityId,
@@ -95,7 +87,6 @@ const generateDigestBlockContent = async (
             logger,
         );
         resolvedEntityId = entityAccess.entityId;
-        entityPreferredModel = entityAccess.preferredModel;
         if (!resolvedEntityId && entityId) {
             logger?.log(
                 `Entity ${entityId} no longer accessible, falling back to default`,
@@ -110,15 +101,10 @@ const generateDigestBlockContent = async (
         resolvedEntityId = user?.defaultEntityId || null;
     }
 
-    // Model priority: user override > entity preferred > default
-    // (matches ChatContent.js logic; entity modelOverride is handled server-side in cortex)
-    const model = user?.agentModel || entityPreferredModel || undefined;
-
     const variables = {
         chatHistory: [systemMessage, { role: "user", content: [prompt] }],
         agentContext,
         aiName: user?.aiName,
-        model,
         useMemory: true,
         entityId: resolvedEntityId,
         invocationType: "digest",

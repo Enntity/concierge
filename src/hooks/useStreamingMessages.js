@@ -31,6 +31,7 @@ export function useStreamingMessages({
     const [streamingContent, setStreamingContent] = useState("");
     const [ephemeralContent, setEphemeralContent] = useState("");
     const [toolCalls, setToolCalls] = useState([]);
+    const [conversationModeData, setConversationModeData] = useState(null);
     const [thinkingDuration, setThinkingDuration] = useState(0);
     const [isThinking, setIsThinking] = useState(false);
     const startTimeRef = useRef(null);
@@ -73,6 +74,7 @@ export function useStreamingMessages({
         setStreamingContent("");
         setEphemeralContent("");
         setToolCalls([]);
+        setConversationModeData(null);
         setSubscriptionId(null);
         setIsStreaming(false);
         setThinkingDuration(0);
@@ -212,6 +214,27 @@ export function useStreamingMessages({
                     // Handle structured tool messages (for UI status display)
                     if (parsedInfo.toolMessage) {
                         updateToolCalls(parsedInfo.toolMessage);
+                    }
+
+                    const nextConversationMode =
+                        parsedInfo.modeMessage?.mode ||
+                        parsedInfo.entityRuntime?.conversationMode ||
+                        null;
+                    if (nextConversationMode) {
+                        setConversationModeData({
+                            mode: nextConversationMode,
+                            label:
+                                parsedInfo.modeMessage?.label ||
+                                nextConversationMode,
+                            reason:
+                                parsedInfo.modeMessage?.reason ||
+                                parsedInfo.entityRuntime?.modeMessage?.reason ||
+                                null,
+                            source:
+                                parsedInfo.modeMessage?.source ||
+                                parsedInfo.entityRuntime?.modeMessage?.source ||
+                                null,
+                        });
                     }
 
                     // Handle app commands - the clean, formalized structure
@@ -509,6 +532,7 @@ export function useStreamingMessages({
         streamingContent,
         ephemeralContent,
         toolCalls,
+        conversationModeData,
         stopStreaming,
         setIsStreaming,
         setSubscriptionId,

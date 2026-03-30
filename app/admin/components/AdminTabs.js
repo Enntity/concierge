@@ -10,6 +10,7 @@ import {
     Package,
     MessageSquare,
     Heart,
+    Sparkles,
     Loader2,
 } from "lucide-react";
 
@@ -27,6 +28,12 @@ const TABS = [
         label: "Entities",
         icon: Package,
         path: "/admin/entities",
+    },
+    {
+        value: "model-profiles",
+        label: "Profiles",
+        icon: Sparkles,
+        path: "/admin/model-profiles",
     },
     {
         value: "pulse",

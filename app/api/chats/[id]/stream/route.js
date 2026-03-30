@@ -70,7 +70,6 @@ export async function POST(req, { params }) {
             aiName,
             title,
             entityId,
-            model,
             userInfo,
         } = body;
 
@@ -118,7 +117,6 @@ export async function POST(req, { params }) {
                 chatId: id,
                 stream: true,
                 entityId: finalEntityId,
-                model: model || currentUser.agentModel || undefined,
                 userInfo,
             },
             fetchPolicy: "network-only",

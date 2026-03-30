@@ -752,11 +752,6 @@ function MessageInput({
                                 <VoiceButton
                                     onClick={() => {
                                         if (entityId && activeChatId) {
-                                            // Determine model: user preference > entity preference > default
-                                            const voiceModel =
-                                                user?.agentModel ||
-                                                entity?.preferredModel ||
-                                                null;
                                             startVoiceSession({
                                                 entityId,
                                                 chatId: activeChatId,
@@ -767,7 +762,6 @@ function MessageInput({
                                                 aiName: entityName,
                                                 userName:
                                                     user?.name || user?.email,
-                                                model: voiceModel,
                                             });
                                         }
                                     }}

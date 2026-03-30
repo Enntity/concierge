@@ -1004,11 +1004,6 @@ export default function EntityOnboarding({
                             aiName: onboardingEntity.name,
                             title: "Entity Onboarding",
                             entityId: onboardingEntity.id,
-                            // Model priority: user override > entity preferred > default
-                            model:
-                                user.agentModel ||
-                                onboardingEntity.preferredModel ||
-                                undefined,
                             userInfo: composeUserDateTimeInfo(),
                         }),
                     },
@@ -1109,11 +1104,6 @@ export default function EntityOnboarding({
                                 aiName: createdEntity.name,
                                 title: createdEntity.name,
                                 entityId,
-                                // Model priority: user override > entity preferred > default
-                                model:
-                                    user.agentModel ||
-                                    createdEntity.preferredModel ||
-                                    undefined,
                                 userInfo: composeUserDateTimeInfo(),
                             }),
                         }).catch(console.error);
@@ -1260,11 +1250,6 @@ export default function EntityOnboarding({
                             aiName: onboardingEntity.name,
                             title: "Entity Onboarding",
                             entityId: onboardingEntity.id,
-                            // Model priority: user override > entity preferred > default
-                            model:
-                                user.agentModel ||
-                                onboardingEntity.preferredModel ||
-                                undefined,
                             userInfo: composeUserDateTimeInfo(),
                         }),
                     },
