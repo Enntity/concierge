@@ -25,6 +25,14 @@ function transformToCitation(content) {
         .replace(/\[upload\]/g, ":cd_upload");
 }
 
+function normalizePlainTextBulletLists(content) {
+    if (typeof content !== "string" || !content.includes("•")) {
+        return content;
+    }
+
+    return content.replace(/(^|\n)([ \t]*)•[ \t]+/g, "$1$2- ");
+}
+
 // Rehype plugin to restore currency placeholders after markdown parsing
 function restoreCurrency(placeholders) {
     return (tree) => {
@@ -419,7 +427,7 @@ function convertMessageToMarkdown(
     for (const [key, value] of placeholders) {
         text = text.split(key).join(value);
     }
-    const protectedPayload = text;
+    const protectedPayload = normalizePlainTextBulletLists(text);
 
     // Some models, like GPT-4o, will use inline LaTeX math markdown
     // and we need to change it here so that the markdown parser can

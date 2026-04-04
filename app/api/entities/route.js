@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../utils/auth";
 import { getEntitiesCollection, isValidEntityId } from "./_lib";
+import { refreshEntityAvatar } from "./avatar-refresh.js";
 import { getClient, QUERIES } from "../../../src/graphql";
 
 /**
@@ -79,7 +80,11 @@ export async function GET(req) {
                     throw new Error(entities.error);
                 }
 
-                return NextResponse.json(entities);
+                const refreshedEntities = await Promise.all(
+                    entities.map((entity) => refreshEntityAvatar(entity)),
+                );
+
+                return NextResponse.json(refreshedEntities);
             }
         } catch (cortexError) {
             console.warn(
@@ -137,7 +142,8 @@ async function getEntityFromMongoDB(entityId, contextId) {
             entityData.secretKeys = Object.keys(entityData.secrets);
             delete entityData.secrets;
         }
-        return NextResponse.json([entityData]); // Always return array for consistency
+        const refreshedEntity = await refreshEntityAvatar(entityData);
+        return NextResponse.json([refreshedEntity]); // Always return array for consistency
     } finally {
         if (client) {
             await client.close().catch(console.error);
@@ -183,15 +189,17 @@ async function getEntitiesFromMongoDB(contextId, includeSystem) {
         }
 
         const entitiesArray = await collection.find(query).toArray();
-        const entities = entitiesArray.map((e) => {
-            const { _id, ...entityData } = e;
-            // Strip encrypted secret values — only expose key names
-            if (entityData.secrets) {
-                entityData.secretKeys = Object.keys(entityData.secrets);
-                delete entityData.secrets;
-            }
-            return entityData;
-        });
+        const entities = await Promise.all(
+            entitiesArray.map(async (e) => {
+                const { _id, ...entityData } = e;
+                // Strip encrypted secret values — only expose key names
+                if (entityData.secrets) {
+                    entityData.secretKeys = Object.keys(entityData.secrets);
+                    delete entityData.secrets;
+                }
+                return refreshEntityAvatar(entityData);
+            }),
+        );
 
         return NextResponse.json(entities);
     } finally {

@@ -19,9 +19,14 @@ import {
     parseAssistantPayloadItem,
 } from "../../utils/assistantInlinePayload";
 import CopyButton from "../CopyButton";
+import SignedImage from "../common/media/SignedImage";
 import MediaCard from "./MediaCard";
 import { convertMessageToMarkdown } from "./ChatMessage";
 import { AuthContext } from "../../App";
+import {
+    ConversationModeInfoButton,
+    normalizeConversationModeData,
+} from "./ConversationModeInfo";
 
 const MemoizedMarkdownMessage = React.memo(
     ({ message, onLoad, onMermaidFix }) => {
@@ -119,6 +124,7 @@ const getInlineUserIdentity = (currentUser) => {
             normalizedUser.profilePicture ||
             normalizedUser.avatar ||
             null,
+        blobPath: normalizedUser.profilePictureBlobPath || null,
         name: normalizedUser.name || normalizedUser.fullName || "User",
         initials:
             normalizedUser.initials ||
@@ -131,56 +137,6 @@ const getInlineUserIdentity = (currentUser) => {
             ),
     };
 };
-
-const normalizeConversationModeData = (value) => {
-    if (!value) return null;
-    const mode = String(value.mode || value.conversationMode || "").trim();
-    if (!mode) return null;
-    return {
-        mode,
-        label:
-            value.label ||
-            mode.charAt(0).toUpperCase() + mode.slice(1).replace(/_/g, " "),
-        reason: value.reason || null,
-        source: value.source || null,
-    };
-};
-
-const getConversationModeBadgeClasses = (mode = "") => {
-    switch (String(mode).toLowerCase()) {
-        case "research":
-            return "border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300";
-        case "agentic":
-            return "border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300";
-        case "creative":
-            return "border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300";
-        case "nsfw":
-            return "border-fuchsia-200/80 bg-fuchsia-50 text-fuchsia-700 dark:border-fuchsia-500/30 dark:bg-fuchsia-500/10 dark:text-fuchsia-300";
-        default:
-            return "border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300";
-    }
-};
-
-export const ConversationModeBadge = React.memo(function ConversationModeBadge({
-    modeData,
-    className = "",
-}) {
-    const normalized = normalizeConversationModeData(modeData);
-    if (!normalized) return null;
-
-    return (
-        <div className={classNames("flex", className)}>
-            <span
-                className={classNames(
-                    "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]",
-                    getConversationModeBadgeClasses(normalized.mode),
-                )}
-            >
-                {normalized.label}
-            </span>
-        </div>
-    );
-});
 
 const ToolEventStatusIcon = ({ status }) => {
     if (status === "thinking") {
@@ -213,10 +169,20 @@ const ToolEventItem = React.memo(function ToolEventItem({
                 <div className="relative w-full rounded-md border border-sky-200/25 bg-sky-100/35 px-3 py-2 dark:border-white/10 dark:bg-slate-500/20">
                     <div className="absolute top-1/2 start-3 flex h-5 w-5 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full bg-sky-200/85 dark:bg-sky-900/35">
                         {inlineUser.picture ? (
-                            <img
+                            <SignedImage
                                 src={inlineUser.picture}
+                                blobPath={inlineUser.blobPath}
                                 alt={inlineUser.name}
                                 className="h-full w-full object-cover"
+                                fallback={
+                                    inlineUser.initials ? (
+                                        <span className="text-[9px] font-medium leading-none text-sky-600 dark:text-sky-400">
+                                            {inlineUser.initials}
+                                        </span>
+                                    ) : (
+                                        <span className="h-1.5 w-1.5 rounded-full bg-sky-600 dark:bg-sky-400" />
+                                    )
+                                }
                             />
                         ) : inlineUser.initials ? (
                             <span className="text-[9px] font-medium leading-none text-sky-600 dark:text-sky-400">
@@ -531,180 +497,182 @@ const buildChronologicalBlocks = (items) => {
     return [...blocks, ...thinkingItems];
 };
 
-export const InlineAssistantPayload = React.memo(function InlineAssistantPayload({
-    items = [],
-    message,
-    onLoad,
-    onMermaidFix,
-    isStreaming = false,
-    defaultThinkingDuration = 0,
-    currentUser = null,
-}) {
-    const { t } = useTranslation();
-    const normalizedItems = useMemo(
-        () => (Array.isArray(items) ? items.filter(Boolean) : []),
-        [items],
-    );
-    const stableMessageId = String(
-        message?._clientId ||
-            message?.sentTime ||
-            message?.id ||
-            message?._id ||
-            message?.taskId ||
-            "assistant",
-    );
+export const InlineAssistantPayload = React.memo(
+    function InlineAssistantPayload({
+        items = [],
+        message,
+        onLoad,
+        onMermaidFix,
+        isStreaming = false,
+        defaultThinkingDuration = 0,
+        currentUser = null,
+    }) {
+        const { t } = useTranslation();
+        const normalizedItems = useMemo(
+            () => (Array.isArray(items) ? items.filter(Boolean) : []),
+            [items],
+        );
+        const stableMessageId = String(
+            message?._clientId ||
+                message?.sentTime ||
+                message?.id ||
+                message?._id ||
+                message?.taskId ||
+                "assistant",
+        );
 
-    const { bodyBlocks, footerBlocks } = useMemo(() => {
-        if (!normalizedItems.length) {
-            return { bodyBlocks: [], footerBlocks: [] };
-        }
-
-        const chronologicalItems = [];
-        const occurrenceCounts = new Map();
-
-        normalizedItems.forEach((item, index) => {
-            const parsed = parseAssistantPayloadItem(item);
-            const baseKey = JSON.stringify(parsed || item || index);
-            const occurrence = occurrenceCounts.get(baseKey) || 0;
-            occurrenceCounts.set(baseKey, occurrence + 1);
-
-            if (isBlankPayloadItem(item, parsed)) {
-                return;
+        const { bodyBlocks, footerBlocks } = useMemo(() => {
+            if (!normalizedItems.length) {
+                return { bodyBlocks: [], footerBlocks: [] };
             }
 
-            chronologicalItems.push({
-                item,
-                parsed,
-                key: `${stableMessageId}-${baseKey}-${occurrence}`,
-            });
-        });
+            const chronologicalItems = [];
+            const occurrenceCounts = new Map();
 
-        const blocks = buildChronologicalBlocks(chronologicalItems);
-        const nextBodyBlocks = [];
-        const nextFooterBlocks = [];
+            normalizedItems.forEach((item, index) => {
+                const parsed = parseAssistantPayloadItem(item);
+                const baseKey = JSON.stringify(parsed || item || index);
+                const occurrence = occurrenceCounts.get(baseKey) || 0;
+                occurrenceCounts.set(baseKey, occurrence + 1);
 
-        blocks.forEach((block) => {
-            if (
-                block.type === "item" &&
-                isSummaryOnlyThinkingItem(block.parsed)
-            ) {
-                if (isStreaming) {
-                    nextFooterBlocks.push(block);
+                if (isBlankPayloadItem(item, parsed)) {
+                    return;
                 }
-                return;
-            }
-            nextBodyBlocks.push(block);
-        });
 
-        return {
-            bodyBlocks: nextBodyBlocks,
-            footerBlocks: nextFooterBlocks,
-        };
-    }, [isStreaming, normalizedItems, stableMessageId]);
-
-    if (!normalizedItems.length) {
-        return null;
-    }
-
-    const markdownFinalRender = !isStreaming;
-
-    const renderStandardItem = ({ item, parsed, key }) => {
-        if (!parsed) {
-            if (typeof item !== "string" || item.trim().length === 0) {
-                return null;
-            }
-            return (
-                <div key={key}>
-                    {convertMessageToMarkdown(
-                        {
-                            ...message,
-                            payload: typeof item === "string" ? item : "",
-                        },
-                        markdownFinalRender,
-                        onLoad,
-                        onMermaidFix,
-                    )}
-                </div>
-            );
-        }
-
-        if (parsed.type === ASSISTANT_PAYLOAD_ITEM_TYPES.THINKING) {
-            return (
-                <ThinkingItem
-                    key={key}
-                    item={parsed}
-                    isStreaming={isStreaming}
-                    defaultDuration={defaultThinkingDuration}
-                    onLoad={onLoad}
-                    onMermaidFix={onMermaidFix}
-                />
-            );
-        }
-
-        if (parsed.type === ASSISTANT_PAYLOAD_ITEM_TYPES.TEXT) {
-            if (
-                typeof parsed.text !== "string" ||
-                parsed.text.trim().length === 0
-            ) {
-                return null;
-            }
-            return (
-                <div key={key}>
-                    {convertMessageToMarkdown(
-                        {
-                            ...message,
-                            payload: parsed.text || "",
-                        },
-                        markdownFinalRender,
-                        onLoad,
-                        onMermaidFix,
-                    )}
-                </div>
-            );
-        }
-
-        if (isArtifactPayloadItem(parsed)) {
-            return renderMediaPayloadItem({
-                item: parsed,
-                key,
-                onLoad,
-                t,
+                chronologicalItems.push({
+                    item,
+                    parsed,
+                    key: `${stableMessageId}-${baseKey}-${occurrence}`,
+                });
             });
+
+            const blocks = buildChronologicalBlocks(chronologicalItems);
+            const nextBodyBlocks = [];
+            const nextFooterBlocks = [];
+
+            blocks.forEach((block) => {
+                if (
+                    block.type === "item" &&
+                    isSummaryOnlyThinkingItem(block.parsed)
+                ) {
+                    if (isStreaming) {
+                        nextFooterBlocks.push(block);
+                    }
+                    return;
+                }
+                nextBodyBlocks.push(block);
+            });
+
+            return {
+                bodyBlocks: nextBodyBlocks,
+                footerBlocks: nextFooterBlocks,
+            };
+        }, [isStreaming, normalizedItems, stableMessageId]);
+
+        if (!normalizedItems.length) {
+            return null;
         }
 
-        return null;
-    };
+        const markdownFinalRender = !isStreaming;
 
-    return (
-        <div className="flex flex-col">
-            {bodyBlocks.length ? (
-                <div className="flex flex-col gap-2">
-                    {bodyBlocks.map((block, index) => {
-                        if (block.type === "tool_group") {
-                            return (
-                                <ToolEventGroup
-                                    key={`${stableMessageId}-tool-group-${index}`}
-                                    items={block.items}
-                                    currentUser={currentUser}
-                                />
-                            );
-                        }
+        const renderStandardItem = ({ item, parsed, key }) => {
+            if (!parsed) {
+                if (typeof item !== "string" || item.trim().length === 0) {
+                    return null;
+                }
+                return (
+                    <div key={key}>
+                        {convertMessageToMarkdown(
+                            {
+                                ...message,
+                                payload: typeof item === "string" ? item : "",
+                            },
+                            markdownFinalRender,
+                            onLoad,
+                            onMermaidFix,
+                        )}
+                    </div>
+                );
+            }
 
-                        return renderStandardItem(block);
-                    })}
-                </div>
-            ) : null}
-            {footerBlocks.map((block) => (
-                <div
-                    key={block.key}
-                    className={classNames(bodyBlocks.length ? "mt-1" : "")}
-                >
-                    {renderStandardItem(block)}
-                </div>
-            ))}
-        </div>
-    );
-});
+            if (parsed.type === ASSISTANT_PAYLOAD_ITEM_TYPES.THINKING) {
+                return (
+                    <ThinkingItem
+                        key={key}
+                        item={parsed}
+                        isStreaming={isStreaming}
+                        defaultDuration={defaultThinkingDuration}
+                        onLoad={onLoad}
+                        onMermaidFix={onMermaidFix}
+                    />
+                );
+            }
+
+            if (parsed.type === ASSISTANT_PAYLOAD_ITEM_TYPES.TEXT) {
+                if (
+                    typeof parsed.text !== "string" ||
+                    parsed.text.trim().length === 0
+                ) {
+                    return null;
+                }
+                return (
+                    <div key={key}>
+                        {convertMessageToMarkdown(
+                            {
+                                ...message,
+                                payload: parsed.text || "",
+                            },
+                            markdownFinalRender,
+                            onLoad,
+                            onMermaidFix,
+                        )}
+                    </div>
+                );
+            }
+
+            if (isArtifactPayloadItem(parsed)) {
+                return renderMediaPayloadItem({
+                    item: parsed,
+                    key,
+                    onLoad,
+                    t,
+                });
+            }
+
+            return null;
+        };
+
+        return (
+            <div className="flex flex-col">
+                {bodyBlocks.length ? (
+                    <div className="flex flex-col gap-2">
+                        {bodyBlocks.map((block, index) => {
+                            if (block.type === "tool_group") {
+                                return (
+                                    <ToolEventGroup
+                                        key={`${stableMessageId}-tool-group-${index}`}
+                                        items={block.items}
+                                        currentUser={currentUser}
+                                    />
+                                );
+                            }
+
+                            return renderStandardItem(block);
+                        })}
+                    </div>
+                ) : null}
+                {footerBlocks.map((block) => (
+                    <div
+                        key={block.key}
+                        className={classNames(bodyBlocks.length ? "mt-1" : "")}
+                    >
+                        {renderStandardItem(block)}
+                    </div>
+                ))}
+            </div>
+        );
+    },
+);
 
 const TaskPlaceholder = ({ message, onTaskStatusUpdate }) => {
     const { data: serverTask } = useTask(message.taskId);
@@ -1015,6 +983,10 @@ const BotMessage = ({
             className="flex bg-white dark:bg-gray-800 ps-1 pt-1 relative group rounded-b-lg rounded-tl-lg rtl:rounded-tl-none rtl:rounded-tr-lg border border-gray-300 dark:border-gray-600"
         >
             <div className="flex items-center gap-2 absolute top-3 end-3 z-10">
+                <ConversationModeInfoButton
+                    modeData={modeData}
+                    className="opacity-0 group-hover:opacity-80 hover:opacity-100 transition-opacity pointer-events-auto"
+                />
                 <CopyButton
                     item={
                         typeof message.payload === "string"
@@ -1036,10 +1008,6 @@ const BotMessage = ({
                         ref={(el) => messageRef(el, message.id)}
                     >
                         <React.Fragment key={`md-${message.id}`}>
-                            <ConversationModeBadge
-                                modeData={modeData}
-                                className="mb-2"
-                            />
                             {message.taskId && task ? (
                                 <TaskPlaceholder
                                     message={message}

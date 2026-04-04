@@ -10,6 +10,7 @@ import { useOnboarding } from "../contexts/OnboardingContext";
 import { useEntities } from "../hooks/useEntities";
 import axios from "../../app/utils/axios-client";
 import usePushNotifications from "../hooks/usePushNotifications";
+import SignedImage from "./common/media/SignedImage";
 
 const UserOptions = ({ show, handleClose }) => {
     const { t } = useTranslation();
@@ -267,10 +268,19 @@ const UserOptions = ({ show, handleClose }) => {
                                     </div>
                                     <div className="relative flex-shrink-0">
                                         {profilePicture ? (
-                                            <img
+                                            <SignedImage
                                                 src={profilePicture}
+                                                blobPath={
+                                                    user?.profilePictureBlobPath ||
+                                                    null
+                                                }
                                                 alt={t("Profile picture")}
                                                 className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                                                fallback={
+                                                    <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center border border-gray-300 dark:border-gray-600">
+                                                        <User className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                                                    </div>
+                                                }
                                             />
                                         ) : (
                                             <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center border border-gray-300 dark:border-gray-600">
@@ -297,10 +307,19 @@ const UserOptions = ({ show, handleClose }) => {
                                 <>
                                     <div className="relative flex-shrink-0">
                                         {profilePicture ? (
-                                            <img
+                                            <SignedImage
                                                 src={profilePicture}
+                                                blobPath={
+                                                    user?.profilePictureBlobPath ||
+                                                    null
+                                                }
                                                 alt={t("Profile picture")}
                                                 className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                                                fallback={
+                                                    <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center border border-gray-300 dark:border-gray-600">
+                                                        <User className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                                                    </div>
+                                                }
                                             />
                                         ) : (
                                             <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center border border-gray-300 dark:border-gray-600">

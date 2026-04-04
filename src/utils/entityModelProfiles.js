@@ -13,6 +13,27 @@ export const MODEL_POLICY_KEYS = [
     "routingModel",
 ];
 
+export const MODEL_POLICY_REASONING_KEYS = [
+    "primaryReasoningEffort",
+    "orientationReasoningEffort",
+    "planningReasoningEffort",
+    "researchReasoningEffort",
+    "childReasoningEffort",
+    "synthesisReasoningEffort",
+    "verificationReasoningEffort",
+    "compressionReasoningEffort",
+    "routingReasoningEffort",
+];
+
+function normalizeReasoningEffort(value) {
+    const normalized = String(value || "")
+        .trim()
+        .toLowerCase();
+    return ["none", "low", "medium", "high"].includes(normalized)
+        ? normalized
+        : null;
+}
+
 const DEFAULT_MODEL_PROFILE_TEMPLATES = [
     {
         slug: "balanced",
@@ -63,6 +84,43 @@ const DEFAULT_MODEL_PROFILE_TEMPLATES = [
             verificationModel: ["oai-gpt54", "oai-gpt52", "oai-gpt41"],
             compressionModel: ["oai-gpt54-mini", "oai-gpt41-nano"],
             routingModel: ["oai-gpt54-mini", "oai-gpt41-nano"],
+        },
+    },
+    {
+        slug: "gemini",
+        name: "Gemini",
+        description:
+            "Uses Gemini 3 Flash for core replies and Gemini 3.1 Flash Lite for routing and background work.",
+        candidates: {
+            primaryModel: ["gemini-flash-3-vision"],
+            orientationModel: ["gemini-flash-3-vision"],
+            planningModel: ["gemini-flash-3-vision"],
+            researchModel: ["gemini-flash-31-lite-vision"],
+            childModel: ["gemini-flash-31-lite-vision"],
+            synthesisModel: ["gemini-flash-3-vision"],
+            verificationModel: ["gemini-flash-3-vision"],
+            compressionModel: ["gemini-flash-31-lite-vision"],
+            routingModel: ["gemini-flash-31-lite-vision"],
+        },
+        reasoning: {
+            synthesisReasoningEffort: "high",
+        },
+    },
+    {
+        slug: "claude",
+        name: "Claude",
+        description:
+            "Uses Claude Sonnet 4.6 for core replies and Claude Haiku for routing and background work.",
+        candidates: {
+            primaryModel: ["claude-46-sonnet"],
+            orientationModel: ["claude-46-sonnet"],
+            planningModel: ["claude-46-sonnet"],
+            researchModel: ["claude-46-haiku", "claude-45-haiku"],
+            childModel: ["claude-46-haiku", "claude-45-haiku"],
+            synthesisModel: ["claude-46-sonnet"],
+            verificationModel: ["claude-46-sonnet"],
+            compressionModel: ["claude-46-haiku", "claude-45-haiku"],
+            routingModel: ["claude-46-haiku", "claude-45-haiku"],
         },
     },
     {
@@ -120,7 +178,12 @@ const DEFAULT_MODEL_PROFILE_TEMPLATES = [
     },
 ];
 
-function resolveModelId(modelId, models, redirects) {
+function resolveModelId(
+    modelId,
+    models,
+    redirects,
+    { allowFallback = true } = {},
+) {
     if (!models?.length) return modelId;
 
     if (modelId && models.some((model) => model.modelId === modelId)) {
@@ -130,6 +193,10 @@ function resolveModelId(modelId, models, redirects) {
     const redirected = redirects?.[modelId];
     if (redirected && models.some((model) => model.modelId === redirected)) {
         return redirected;
+    }
+
+    if (!allowFallback) {
+        return null;
     }
 
     const defaultModel = models.find((model) => model.isDefault);
@@ -143,11 +210,19 @@ export function normalizeModelPolicy(modelPolicy = {}) {
             normalized[key] = modelPolicy[key];
         }
     }
+    for (const key of MODEL_POLICY_REASONING_KEYS) {
+        const normalizedEffort = normalizeReasoningEffort(modelPolicy?.[key]);
+        if (normalizedEffort) {
+            normalized[key] = normalizedEffort;
+        }
+    }
     return normalized;
 }
 
-function resolveTemplatePolicy(candidates = {}, { models, redirects } = {}) {
+function resolveTemplatePolicy(template = {}, { models, redirects } = {}) {
     const resolved = {};
+    const candidates = template?.candidates || {};
+    const reasoning = template?.reasoning || {};
 
     for (const key of MODEL_POLICY_KEYS) {
         const slotCandidates = Array.isArray(candidates[key])
@@ -158,11 +233,26 @@ function resolveTemplatePolicy(candidates = {}, { models, redirects } = {}) {
                 candidate,
                 models,
                 redirects,
+                { allowFallback: false },
             );
             if (resolvedCandidate) {
                 resolved[key] = resolvedCandidate;
                 break;
             }
+        }
+        if (!resolved[key] && slotCandidates.length > 0) {
+            resolved[key] = resolveModelId(
+                slotCandidates[0],
+                models,
+                redirects,
+            );
+        }
+    }
+
+    for (const key of MODEL_POLICY_REASONING_KEYS) {
+        const normalizedEffort = normalizeReasoningEffort(reasoning[key]);
+        if (normalizedEffort) {
+            resolved[key] = normalizedEffort;
         }
     }
 
@@ -188,7 +278,7 @@ export function getFallbackModelProfiles(options = {}) {
         name: template.name,
         description: template.description,
         isDefault: template.slug === DEFAULT_MODEL_PROFILE_ID,
-        modelPolicy: resolveTemplatePolicy(template.candidates, options),
+        modelPolicy: resolveTemplatePolicy(template, options),
     }));
 }
 
@@ -226,11 +316,7 @@ export function buildEntityModelPolicyFromProfile(profile) {
     };
 }
 
-export function getEntityModelProfileId(
-    modelPolicy,
-    profiles,
-    options = {},
-) {
+export function getEntityModelProfileId(modelPolicy, profiles, options = {}) {
     const resolvedProfiles = getResolvedModelProfiles(profiles, options);
     const defaultProfileId = getDefaultModelProfileId(profiles, options);
 
@@ -240,7 +326,9 @@ export function getEntityModelProfileId(
 
     if (
         typeof modelPolicy.profileId === "string" &&
-        resolvedProfiles.some((profile) => profile.slug === modelPolicy.profileId)
+        resolvedProfiles.some(
+            (profile) => profile.slug === modelPolicy.profileId,
+        )
     ) {
         return modelPolicy.profileId;
     }

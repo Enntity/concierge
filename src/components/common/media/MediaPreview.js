@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { Play, FileText } from "lucide-react";
 import { useFilePreview, renderFilePreview } from "../../chat/useFilePreview";
 import {
@@ -8,6 +8,7 @@ import {
     getYoutubeThumbnailUrl,
 } from "../../../utils/urlUtils";
 import { cn } from "@/lib/utils";
+import { useSignedFileUrl } from "../../../hooks/useSignedFileUrl";
 
 /**
  * MediaPreview - Renders a preview/thumbnail for any media type
@@ -44,16 +45,33 @@ function MediaPreview({
     t = (s) => s,
     textRenderer,
 }) {
+    const rawUrl = item?.url;
+    const { url: resolvedUrl, refreshOnError } = useSignedFileUrl({
+        url: rawUrl,
+        blobPath: item?.blobPath || null,
+    });
+
     // Use file preview hook for file type detection
     const fileType = useFilePreview(
-        item?.type === "file" ? item?.url : null,
+        item?.type === "file" ? resolvedUrl || rawUrl : null,
         item?.label,
         item?.mimeType,
     );
 
+    const handleMediaError = useCallback(
+        async (event) => {
+            const refreshedUrl = await refreshOnError();
+            if (!refreshedUrl) {
+                onError?.(event);
+            }
+        },
+        [onError, refreshOnError],
+    );
+
     if (!item) return null;
 
-    const { type, url, content, youtubeEmbedUrl, label } = item;
+    const { type, content, youtubeEmbedUrl, label } = item;
+    const url = resolvedUrl || rawUrl;
 
     // Text content
     if (type === "text") {
@@ -104,7 +122,7 @@ function MediaPreview({
                 )}
                 onClick={onClick}
                 onLoad={onLoad}
-                onError={onError}
+                onError={handleMediaError}
                 draggable={false}
             />
         );
@@ -132,7 +150,7 @@ function MediaPreview({
                     loop={autoPlay ? true : loop}
                     playsInline
                     onLoadedData={onLoad}
-                    onError={onError}
+                    onError={handleMediaError}
                 />
                 {showPlayButton && !autoPlay && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">

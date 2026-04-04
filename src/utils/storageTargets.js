@@ -133,8 +133,8 @@ export function buildMediaHelperListParams({
         const resolved = resolveStorageTarget({ storageTarget });
         return cleanObject({
             userId: resolved.userContextId || resolved.contextId,
-            fileScope: resolved.fileScope,
-            chatId: resolved.chatId,
+            fileScope: toNullableString(fileScope) || resolved.fileScope,
+            chatId: toNullableString(chatId) || resolved.chatId,
         });
     }
 
@@ -202,7 +202,9 @@ export function inferStorageTargetFromBlobPath(blobPath, userContextId = null) {
             : normalized;
 
     if (!relativePath) {
-        return userContextId ? createUserGlobalStorageTarget(userContextId) : null;
+        return userContextId
+            ? createUserGlobalStorageTarget(userContextId)
+            : null;
     }
 
     if (relativePath.startsWith("chats/")) {

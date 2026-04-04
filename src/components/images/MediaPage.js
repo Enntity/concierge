@@ -92,6 +92,7 @@ import { useFileUpload } from "./hooks/useFileUpload";
 import BulkActionsBar from "../common/BulkActionsBar";
 import FilterInput from "../common/FilterInput";
 import EmptyState from "../common/EmptyState";
+import { useSignedFileUrl } from "../../hooks/useSignedFileUrl";
 
 function MediaPage() {
     const { direction } = useContext(LanguageContext);
@@ -933,6 +934,10 @@ function MediaPage() {
                                                     >
                                                         <ChatImage
                                                             src={imageUrl}
+                                                            blobPath={
+                                                                image?.blobPath ||
+                                                                null
+                                                            }
                                                             alt={
                                                                 image.prompt ||
                                                                 ""
@@ -1174,8 +1179,7 @@ function MediaPage() {
                                         {getAvailableAspectRatios(
                                             selectedModel,
                                             mediaModels,
-                                        )
-                                            .length > 0 &&
+                                        ).length > 0 &&
                                             currentModelSettings.aspectRatio && (
                                                 <span className="px-1.5 py-0.5">
                                                     {currentModelSettings.aspectRatio ===
@@ -1199,7 +1203,8 @@ function MediaPage() {
                                                             s
                                                         </span>
                                                     )}
-                                                {selectedMediaModel?.mediaToggles
+                                                {selectedMediaModel
+                                                    ?.mediaToggles
                                                     ?.resolution &&
                                                     currentModelSettings.resolution && (
                                                         <span className="px-1.5 py-0.5">
@@ -1208,7 +1213,8 @@ function MediaPage() {
                                                             }
                                                         </span>
                                                     )}
-                                                {selectedMediaModel?.mediaToggles
+                                                {selectedMediaModel
+                                                    ?.mediaToggles
                                                     ?.generateAudio &&
                                                     currentModelSettings.generateAudio !==
                                                         undefined && (
@@ -1218,7 +1224,8 @@ function MediaPage() {
                                                                 : t("No Audio")}
                                                         </span>
                                                     )}
-                                                {selectedMediaModel?.mediaToggles
+                                                {selectedMediaModel
+                                                    ?.mediaToggles
                                                     ?.cameraFixed &&
                                                     currentModelSettings.cameraFixed && (
                                                         <span className="px-1.5 py-0.5">
@@ -1308,6 +1315,10 @@ function MediaPage() {
                                                                     <ChatImage
                                                                         src={
                                                                             imageUrl
+                                                                        }
+                                                                        blobPath={
+                                                                            image?.blobPath ||
+                                                                            null
                                                                         }
                                                                         alt={
                                                                             image.prompt ||
@@ -1737,7 +1748,11 @@ function SettingsDialog({
             // Set the selected model to the current one from the main component
             if (currentSelectedModel) {
                 setSelectedModel(
-                    resolveModelId(currentSelectedModel, mediaModels, redirects),
+                    resolveModelId(
+                        currentSelectedModel,
+                        mediaModels,
+                        redirects,
+                    ),
                 );
             }
             initializedRef.current = true;
@@ -1782,14 +1797,20 @@ function SettingsDialog({
     // Group and sort models for SettingsDialog
     const allModelNames = Object.keys(localSettings.models || {});
     const imageModels = allModelNames
-        .filter((name) => getModelType(name, localSettings, mediaModels) === "image")
+        .filter(
+            (name) =>
+                getModelType(name, localSettings, mediaModels) === "image",
+        )
         .sort((a, b) =>
             getModelDisplayName(a, mediaModels).localeCompare(
                 getModelDisplayName(b, mediaModels),
             ),
         );
     const videoModels = allModelNames
-        .filter((name) => getModelType(name, localSettings, mediaModels) === "video")
+        .filter(
+            (name) =>
+                getModelType(name, localSettings, mediaModels) === "video",
+        )
         .sort((a, b) =>
             getModelDisplayName(a, mediaModels).localeCompare(
                 getModelDisplayName(b, mediaModels),
@@ -1954,8 +1975,11 @@ function SettingsDialog({
                                             )
                                         }
                                     >
-                                        {(selectedModelMetadata?.availableResolutions ||
-                                            ["1080p"]).map((resolution) => (
+                                        {(
+                                            selectedModelMetadata?.availableResolutions || [
+                                                "1080p",
+                                            ]
+                                        ).map((resolution) => (
                                             <option
                                                 key={resolution}
                                                 value={resolution}
@@ -2018,7 +2042,8 @@ function SettingsDialog({
                         )}
 
                         {/* Optimize Prompt */}
-                        {selectedModelMetadata?.mediaToggles?.optimizePrompt && (
+                        {selectedModelMetadata?.mediaToggles
+                            ?.optimizePrompt && (
                             <div>
                                 <label className="flex items-center space-x-2">
                                     <input
@@ -2067,8 +2092,11 @@ function SettingsDialog({
                                         )
                                     }
                                 >
-                                    {(selectedModelMetadata?.availableImageSizes ||
-                                        ["2K"]).map((size) => (
+                                    {(
+                                        selectedModelMetadata?.availableImageSizes || [
+                                            "2K",
+                                        ]
+                                    ).map((size) => (
                                         <option key={size} value={size}>
                                             {size}
                                         </option>
@@ -2101,6 +2129,10 @@ function ImageModal({ show, image, onHide, mediaModels }) {
     const [newTag, setNewTag] = useState("");
     const updateTagsMutation = useUpdateMediaItemTags();
     const tagInputRef = useRef(null);
+    const { url: resolvedMediaUrl, refreshOnError } = useSignedFileUrl({
+        url: image?.url || null,
+        blobPath: image?.blobPath || null,
+    });
 
     // Initialize tags when image changes
     useEffect(() => {
@@ -2170,14 +2202,18 @@ function ImageModal({ show, image, onHide, mediaModels }) {
                     {image?.type === "video" ? (
                         <video
                             className="rounded-md w-full"
-                            src={image?.url}
+                            src={resolvedMediaUrl || image?.url}
                             controls
                             preload="metadata"
+                            onError={() => {
+                                void refreshOnError();
+                            }}
                         />
                     ) : (
                         <ChatImage
                             className="rounded-md w-full"
-                            src={image?.url}
+                            src={resolvedMediaUrl || image?.url}
+                            blobPath={image?.blobPath || null}
                             alt={image?.prompt}
                         />
                     )}

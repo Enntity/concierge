@@ -1,10 +1,12 @@
 "use client";
 
 import React from "react";
+import SignedImage from "../common/media/SignedImage";
 
 const ChatImage = React.memo(
     function ChatImage({
         src,
+        blobPath = null,
         alt = "",
         className = "min-w-[240px] max-w-[80%] [.docked_&]:max-w-[90%] rounded my-2 shadow-lg dark:shadow-black/30",
         style = {},
@@ -13,8 +15,9 @@ const ChatImage = React.memo(
         ...props
     }) {
         return (
-            <img
+            <SignedImage
                 src={src}
+                blobPath={blobPath}
                 alt={alt}
                 className={className}
                 style={{

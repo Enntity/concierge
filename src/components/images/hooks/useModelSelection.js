@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo } from "react";
-import {
-    groupAndSortModels,
-} from "../config/models.js";
+import { groupAndSortModels } from "../config/models.js";
 import { useMediaModels } from "../../../../app/queries/modelMetadata";
 
 export const useModelSelection = ({
@@ -15,7 +13,8 @@ export const useModelSelection = ({
 }) => {
     const { data: mediaModels } = useMediaModels();
     const modelMap = useMemo(
-        () => new Map((mediaModels || []).map((model) => [model.modelId, model])),
+        () =>
+            new Map((mediaModels || []).map((model) => [model.modelId, model])),
         [mediaModels],
     );
 

@@ -58,49 +58,56 @@ export async function POST(request) {
         }
 
         if (blobPath) {
-            if (
-                !user.contextId ||
-                !blobPath.startsWith(`${user.contextId}/`)
-            ) {
-                return NextResponse.json(
-                    { error: "Not authorized to access this file" },
-                    { status: 403 },
-                );
-            }
-
-            const storageTarget = inferStorageTargetFromBlobPath(
-                blobPath,
-                user.contextId,
-            );
-
-            if (!storageTarget || storageTarget.contextId !== user.contextId) {
-                return NextResponse.json(
-                    { error: "Not authorized to access this file" },
-                    { status: 403 },
-                );
-            }
-
-            try {
-                const signedFile = await signFileFromMediaService({
-                    blobPath,
-                    minutes: 60,
-                });
-
-                return NextResponse.json({
-                    exists: true,
-                    blobPath,
-                    refreshedUrl: signedFile.url,
-                    url: signedFile.url,
-                });
-            } catch (error) {
-                if (error.status === 404) {
-                    return NextResponse.json({ exists: false, blobPath });
+            if (!user.contextId || !blobPath.startsWith(`${user.contextId}/`)) {
+                if (!fileUrl) {
+                    return NextResponse.json(
+                        { error: "Not authorized to access this file" },
+                        { status: 403 },
+                    );
                 }
-
-                console.warn(
-                    `Error refreshing signed URL for ${blobPath}:`,
-                    error.message,
+            } else {
+                const storageTarget = inferStorageTargetFromBlobPath(
+                    blobPath,
+                    user.contextId,
                 );
+
+                if (
+                    !storageTarget ||
+                    storageTarget.contextId !== user.contextId
+                ) {
+                    if (!fileUrl) {
+                        return NextResponse.json(
+                            { error: "Not authorized to access this file" },
+                            { status: 403 },
+                        );
+                    }
+                } else {
+                    try {
+                        const signedFile = await signFileFromMediaService({
+                            blobPath,
+                            minutes: 60,
+                        });
+
+                        return NextResponse.json({
+                            exists: true,
+                            blobPath,
+                            refreshedUrl: signedFile.url,
+                            url: signedFile.url,
+                        });
+                    } catch (error) {
+                        if (error.status === 404) {
+                            return NextResponse.json({
+                                exists: false,
+                                blobPath,
+                            });
+                        }
+
+                        console.warn(
+                            `Error refreshing signed URL for ${blobPath}:`,
+                            error.message,
+                        );
+                    }
+                }
             }
         }
 

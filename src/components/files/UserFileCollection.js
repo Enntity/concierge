@@ -55,9 +55,8 @@ export default function UserFileCollection({
 
     const handleDelete = useCallback(
         async (filesToRemove) => {
-            const validFiles = (Array.isArray(filesToRemove)
-                ? filesToRemove
-                : [filesToRemove]
+            const validFiles = (
+                Array.isArray(filesToRemove) ? filesToRemove : [filesToRemove]
             )
                 .filter((file) => typeof file === "object")
                 .map((file) => ({

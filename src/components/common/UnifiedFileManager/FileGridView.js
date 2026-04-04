@@ -18,11 +18,7 @@ import {
     extractYoutubeVideoId,
     getYoutubeThumbnailUrl,
 } from "../../../utils/urlUtils";
-import {
-    getFileUrl,
-    getFilename,
-    formatFileSize,
-} from "../FileManager";
+import { getFileUrl, getFilename, formatFileSize } from "../FileManager";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -116,7 +112,9 @@ function FileGridCard({
                         {!mediaLoaded && (
                             <Loader2 className="w-6 h-6 animate-spin text-gray-300" />
                         )}
-                        <div className={mediaLoaded ? "w-full h-full" : "hidden"}>
+                        <div
+                            className={mediaLoaded ? "w-full h-full" : "hidden"}
+                        >
                             {thumbnail}
                         </div>
                     </>
@@ -170,7 +168,9 @@ function FileGridCard({
                                 </DropdownMenuItem>
                             )}
                             {enableFilenameEdit && onRename && (
-                                <DropdownMenuItem onSelect={() => onRename(file)}>
+                                <DropdownMenuItem
+                                    onSelect={() => onRename(file)}
+                                >
                                     <Pencil className="w-4 h-4 me-2" />
                                     {t("Rename")}
                                 </DropdownMenuItem>

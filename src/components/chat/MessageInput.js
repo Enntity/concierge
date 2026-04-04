@@ -70,6 +70,7 @@ export function buildFileMessagePart(urlData = {}) {
 // Displays the list of messages and a message input box.
 function MessageInput({
     onSend,
+    onAnticipate,
     loading,
     enableRag,
     placeholder,
@@ -152,7 +153,9 @@ function MessageInput({
             return textPart;
         }
 
-        const fileParts = urlsData.map((urlData) => buildFileMessagePart(urlData));
+        const fileParts = urlsData.map((urlData) =>
+            buildFileMessagePart(urlData),
+        );
 
         return [...textPart, ...fileParts];
     };
@@ -182,6 +185,41 @@ function MessageInput({
         }
     };
 
+    useEffect(() => {
+        if (typeof onAnticipate !== "function") {
+            return undefined;
+        }
+        if (
+            viewingReadOnlyChat ||
+            isEntityUnavailable ||
+            loading ||
+            isStreaming
+        ) {
+            return undefined;
+        }
+
+        const trimmedValue = inputValue.trim();
+        if (trimmedValue.length < 2) {
+            return undefined;
+        }
+
+        const anticipationTimer = setTimeout(() => {
+            onAnticipate({
+                trigger: "typing",
+                text: inputValue,
+            });
+        }, 250);
+
+        return () => clearTimeout(anticipationTimer);
+    }, [
+        inputValue,
+        isEntityUnavailable,
+        isStreaming,
+        loading,
+        onAnticipate,
+        viewingReadOnlyChat,
+    ]);
+
     const handleFormSubmit = async (event) => {
         event.preventDefault();
         if (isUploadingMedia) {
@@ -202,7 +240,7 @@ function MessageInput({
                     ? prepareMessage(inputValue)
                     : [JSON.stringify({ type: "text", text: inputValue })];
 
-            onSend(message);
+            await onSend(message);
             setInputValue("");
             setFiles([]);
             setUrlsData([]);
@@ -231,8 +269,7 @@ function MessageInput({
             const currentUrlsData = urlsData;
             const nextKey = getUrlDataIdentityKey(urlData);
             const isDuplicate = currentUrlsData.some(
-                (existingUrl) =>
-                    getUrlDataIdentityKey(existingUrl) === nextKey,
+                (existingUrl) => getUrlDataIdentityKey(existingUrl) === nextKey,
             );
             if (!isDuplicate) {
                 console.log("Adding new URL data:", urlData);
@@ -420,6 +457,14 @@ function MessageInput({
                             disabled={
                                 viewingReadOnlyChat || isEntityUnavailable
                             }
+                            onFocus={() => {
+                                if (typeof onAnticipate === "function") {
+                                    onAnticipate({
+                                        trigger: "focus",
+                                        text: inputValue,
+                                    });
+                                }
+                            }}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && !e.shiftKey) {
                                     e.preventDefault();

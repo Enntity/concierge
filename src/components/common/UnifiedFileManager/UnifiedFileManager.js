@@ -15,11 +15,7 @@ import {
     AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Spinner } from "@/components/ui/spinner";
-import {
-    getFileUrl,
-    getFilename,
-    FilePreviewDialog,
-} from "../FileManager";
+import { getFileUrl, getFilename, FilePreviewDialog } from "../FileManager";
 import { downloadSingleFile } from "../../../utils/fileDownloadUtils";
 import { useItemSelection } from "../../images/hooks/useItemSelection";
 import BulkActionsBar from "../BulkActionsBar";
@@ -427,7 +423,9 @@ export default function UnifiedFileManager({
         );
     }
 
-    const deleteFilenames = filesToDelete.map((file) => getFilename(file)).join(", ");
+    const deleteFilenames = filesToDelete
+        .map((file) => getFilename(file))
+        .join(", ");
 
     return (
         <div

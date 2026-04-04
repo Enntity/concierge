@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../utils/auth";
 import { getEntitiesCollection, isValidEntityId } from "../_lib";
+import { refreshEntityAvatar } from "../avatar-refresh.js";
 import { getClient, MUTATIONS } from "../../../../src/graphql";
 import { triggerPulseReschedule } from "../_pulse";
 import { encrypt } from "../../utils/crypto";
@@ -59,7 +60,8 @@ export async function GET(req, { params }) {
                 entityData.secretKeys = Object.keys(entityData.secrets);
                 delete entityData.secrets;
             }
-            return NextResponse.json(entityData);
+            const refreshedEntity = await refreshEntityAvatar(entityData);
+            return NextResponse.json(refreshedEntity);
         } finally {
             if (client) {
                 await client.close().catch(console.error);

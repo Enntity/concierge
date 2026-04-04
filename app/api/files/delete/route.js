@@ -40,7 +40,9 @@ export async function DELETE(request) {
         const filename =
             filenameParam ||
             getFilenameFromBlobPath(blobPath) ||
-            getFilenameFromBlobPath(extractBlobPathFromUrl(searchParams.get("url")));
+            getFilenameFromBlobPath(
+                extractBlobPathFromUrl(searchParams.get("url")),
+            );
 
         if (!filename) {
             return NextResponse.json(

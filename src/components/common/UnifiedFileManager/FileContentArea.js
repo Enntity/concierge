@@ -329,7 +329,12 @@ export default function FileContentArea({
                                         : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
                                 }`}
                                 onClick={(event) =>
-                                    onSelectFile(file, sortedFiles, index, event)
+                                    onSelectFile(
+                                        file,
+                                        sortedFiles,
+                                        index,
+                                        event,
+                                    )
                                 }
                                 onDoubleClick={(event) => {
                                     event.stopPropagation();
@@ -407,7 +412,10 @@ export default function FileContentArea({
                                             }`}
                                             onClick={(event) => {
                                                 if (enableFilenameEdit) {
-                                                    handleStartEdit(file, event);
+                                                    handleStartEdit(
+                                                        file,
+                                                        event,
+                                                    );
                                                 }
                                             }}
                                             title={filename}

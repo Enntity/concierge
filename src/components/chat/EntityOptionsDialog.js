@@ -21,9 +21,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import EntityIcon from "./EntityIcon";
-import {
-    useAgentModels,
-} from "../../../app/queries/modelMetadata";
+import { useAgentModels } from "../../../app/queries/modelMetadata";
 import { useModelProfiles } from "../../../app/queries/modelProfiles";
 import {
     buildEntityModelPolicyFromProfile,
@@ -65,7 +63,11 @@ export default function EntityOptionsDialog({
         getEntityModelProfileId(entity?.modelPolicy, modelProfiles, {
             models: agentModels,
             redirects,
-        }) || getDefaultModelProfileId(modelProfiles, { models: agentModels, redirects }),
+        }) ||
+            getDefaultModelProfileId(modelProfiles, {
+                models: agentModels,
+                redirects,
+            }),
     );
     const [reasoningEffort, setReasoningEffort] = useState(
         entity?.reasoningEffort || "medium",

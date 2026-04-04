@@ -5,12 +5,7 @@ export function useUpdateAiOptions() {
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
-        mutationFn: async ({
-            userId,
-            contextId,
-            aiName,
-            defaultEntityId,
-        }) => {
+        mutationFn: async ({ userId, contextId, aiName, defaultEntityId }) => {
             // persist it to user options in the database
             const response = await axios.post(`/api/options`, {
                 userId,
@@ -20,12 +15,7 @@ export function useUpdateAiOptions() {
             });
             return response.data;
         },
-        onMutate: async ({
-            userId,
-            contextId,
-            aiName,
-            defaultEntityId,
-        }) => {
+        onMutate: async ({ userId, contextId, aiName, defaultEntityId }) => {
             await queryClient.cancelQueries({ queryKey: ["currentUser"] });
             const previousUser = await queryClient.getQueryData([
                 "currentUser",

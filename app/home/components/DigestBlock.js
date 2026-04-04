@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import ReactTimeAgo from "react-time-ago";
+import SignedImage from "../../../src/components/common/media/SignedImage";
 import { convertMessageToMarkdown } from "../../../src/components/chat/ChatMessage";
 import { LanguageContext } from "../../../src/contexts/LanguageProvider";
 import Loader from "../../components/loader";
@@ -192,10 +193,20 @@ export default function DigestBlock({
                 {entity && (
                     <div className="flex items-center gap-1.5">
                         {entity.avatar?.image?.url ? (
-                            <img
+                            <SignedImage
                                 src={entity.avatar.image.url}
+                                blobPath={
+                                    entity?.avatar?.image?.blobPath || null
+                                }
                                 alt={entity.name}
                                 className="h-4 w-4 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700"
+                                fallback={
+                                    <span className="h-4 w-4 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-[8px] text-white font-medium">
+                                        {entity.avatarText ||
+                                            entity.name?.[0] ||
+                                            "?"}
+                                    </span>
+                                }
                             />
                         ) : (
                             <span className="h-4 w-4 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-[8px] text-white font-medium">

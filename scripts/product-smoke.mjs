@@ -64,7 +64,11 @@ async function waitForUrl(url, timeoutMs = 60_000) {
     while (Date.now() < deadline) {
         try {
             const response = await fetch(url, { redirect: "manual" });
-            if (response.ok || response.status === 302 || response.status === 307) {
+            if (
+                response.ok ||
+                response.status === 302 ||
+                response.status === 307
+            ) {
                 return;
             }
         } catch {
@@ -80,7 +84,9 @@ async function waitForUrl(url, timeoutMs = 60_000) {
 async function isUrlReachable(url) {
     try {
         const response = await fetch(url, { redirect: "manual" });
-        return response.ok || response.status === 302 || response.status === 307;
+        return (
+            response.ok || response.status === 302 || response.status === 307
+        );
     } catch {
         return false;
     }
@@ -272,7 +278,10 @@ async function listFolder({ contextId, fileScope, token }) {
     );
 
     const data = await response.json();
-    assert(Array.isArray(data), `${fileScope} listFolder did not return an array`);
+    assert(
+        Array.isArray(data),
+        `${fileScope} listFolder did not return an array`,
+    );
     return data;
 }
 
@@ -427,7 +436,9 @@ async function exerciseFileContract(contextId, token) {
         token,
     });
     assert(
-        profileFiles.some((file) => file.blobPath === profileUploadData.blobPath),
+        profileFiles.some(
+            (file) => file.blobPath === profileUploadData.blobPath,
+        ),
         "Uploaded profile picture was not listed in /profile",
     );
 
@@ -513,7 +524,9 @@ class CdpClient {
                 }
 
                 clearTimeout(listener.timer);
-                this.listeners = this.listeners.filter((item) => item !== listener);
+                this.listeners = this.listeners.filter(
+                    (item) => item !== listener,
+                );
                 listener.resolve(message.params || {});
             }
         });
@@ -694,7 +707,12 @@ async function evaluate(browser, sessionId, expression) {
     return result.value;
 }
 
-async function waitForEvaluation(browser, sessionId, expression, timeoutMs = 15_000) {
+async function waitForEvaluation(
+    browser,
+    sessionId,
+    expression,
+    timeoutMs = 15_000,
+) {
     const deadline = Date.now() + timeoutMs;
 
     while (Date.now() < deadline) {
@@ -783,7 +801,11 @@ async function runBrowserChecks(token) {
             log("Browser verified chat page");
         }
 
-        const adminStatus = await navigate(browser, page.sessionId, "/admin/queues");
+        const adminStatus = await navigate(
+            browser,
+            page.sessionId,
+            "/admin/queues",
+        );
         await waitForEvaluation(
             browser,
             page.sessionId,
@@ -804,7 +826,10 @@ async function runBrowserChecks(token) {
             adminState.pathname === "/admin/queues",
             `Admin queues navigation ended at ${adminState.pathname}`,
         );
-        assert(adminStatus === 200, `Admin queues page returned ${adminStatus}`);
+        assert(
+            adminStatus === 200,
+            `Admin queues page returned ${adminStatus}`,
+        );
         assert(
             adminState.htmlLength > 1_000,
             "Admin queues route rendered an unexpectedly small document in browser",
@@ -846,10 +871,7 @@ async function runBrowserChecks(token) {
     } finally {
         if (browser && page) {
             await browser
-                .send(
-                    "Target.closeTarget",
-                    { targetId: page.targetId },
-                )
+                .send("Target.closeTarget", { targetId: page.targetId })
                 .catch(() => {});
         }
 

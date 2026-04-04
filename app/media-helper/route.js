@@ -52,13 +52,17 @@ async function resolveAuthorizedFileTarget({
     routingInput = {},
     blobPath = null,
 } = {}) {
-    const normalizedBlobPath = blobPath ? String(blobPath).replace(/^\/+/, "") : null;
+    const normalizedBlobPath = blobPath
+        ? String(blobPath).replace(/^\/+/, "")
+        : null;
     if (
         normalizedBlobPath &&
         (!user?.contextId ||
             !normalizedBlobPath.startsWith(`${user.contextId}/`))
     ) {
-        const error = new Error("Not authorized to access files in this context");
+        const error = new Error(
+            "Not authorized to access files in this context",
+        );
         error.status = 403;
         throw error;
     }
@@ -225,13 +229,11 @@ export async function DELETE(request) {
 
         const { searchParams } = new URL(request.url);
         const routingInput = buildRoutingInput(searchParams);
-        const prefix = searchParams.get("prefix") || searchParams.get("requestId");
+        const prefix =
+            searchParams.get("prefix") || searchParams.get("requestId");
 
         if (prefix) {
-            if (
-                !user.contextId ||
-                !prefix.startsWith(`${user.contextId}/`)
-            ) {
+            if (!user.contextId || !prefix.startsWith(`${user.contextId}/`)) {
                 return jsonError(
                     "Not authorized to access files in this context",
                     403,
@@ -249,7 +251,10 @@ export async function DELETE(request) {
             searchParams.get("filename") || getFilenameFromBlobPath(blobPath);
 
         if (!filename && !blobPath) {
-            return jsonError("Please provide filename, blobPath, or prefix", 400);
+            return jsonError(
+                "Please provide filename, blobPath, or prefix",
+                400,
+            );
         }
 
         const { storageTarget } = await resolveAuthorizedFileTarget({

@@ -986,5 +986,8 @@
     "Reset zoom and pan": "إعادة تعيين التكبير والتمرير",
     "Reset": "إعادة تعيين",
     "Copy SVG": "نسخ SVG",
-    "Failed to render diagram": "فشل في عرض المخطط"
+    "Failed to render diagram": "فشل في عرض المخطط",
+    "Thinking with duration": "جاري التفكير لمدة {{duration}} ثانية",
+    "Thought for duration": "فكرت لمدة {{duration}} ثانية",
+    "Repeated count": "×{{value}}"
 }

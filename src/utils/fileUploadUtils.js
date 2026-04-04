@@ -6,18 +6,17 @@ import {
 } from "./storageTargets";
 
 function normalizeUploadResult(data, defaults = {}) {
-    const publicUrl =
-        (typeof data?.url === "string" ? data.url : null) ||
-        null;
+    const publicUrl = (typeof data?.url === "string" ? data.url : null) || null;
 
     return {
         ...data,
         url: publicUrl,
-        blobPath:
-            data?.blobPath ||
-            extractBlobPathFromUrl(publicUrl),
+        blobPath: data?.blobPath || extractBlobPathFromUrl(publicUrl),
         displayFilename:
-            data?.displayFilename || data?.filename || defaults.filename || null,
+            data?.displayFilename ||
+            data?.filename ||
+            defaults.filename ||
+            null,
         filename: data?.filename || defaults.filename || null,
     };
 }

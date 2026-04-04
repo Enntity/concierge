@@ -2,6 +2,15 @@
  * Shared message accumulation logic for streaming messages
  * Extracted from useStreamingMessages hook for server-side use
  */
+import {
+    appendAssistantTextChunk,
+    appendAssistantThinkingChunk,
+    appendAssistantThinkingSummary,
+    buildAssistantPayloadFromItems,
+    createAssistantToolEventItem,
+    updateAssistantThinkingDuration,
+    upsertAssistantToolEvent,
+} from "../../../src/utils/assistantInlinePayload.js";
 
 export class StreamAccumulator {
     constructor() {
@@ -10,6 +19,10 @@ export class StreamAccumulator {
         this.hasReceivedPersistent = false;
         this.accumulatedInfo = {};
         this.toolCallsMap = new Map(); // UI status tracking (icon, userMessage, status)
+        this.inlinePayloadItems = [];
+        this.toolEventIndexMap = new Map();
+        this.activeTextIndex = null;
+        this.activeThinkingIndex = null;
         this.toolHistory = null;
         this.thinkingStartTime = null;
         this.accumulatedThinkingTime = 0;
@@ -98,6 +111,15 @@ export class StreamAccumulator {
 
                 if (isEphemeral) {
                     this.ephemeralContent += content;
+                    const nextInline = appendAssistantThinkingChunk(
+                        this.inlinePayloadItems,
+                        content,
+                        this.getThinkingDuration(),
+                        this.activeThinkingIndex,
+                    );
+                    this.inlinePayloadItems = nextInline.items;
+                    this.activeThinkingIndex = nextInline.index;
+                    this.activeTextIndex = null;
                     // If we're receiving ephemeral content, we should be thinking
                     if (!this.isThinking) {
                         if (this.thinkingStartTime !== null) {
@@ -112,16 +134,19 @@ export class StreamAccumulator {
                     this.isThinking = true;
                 } else {
                     // This is persistent content
-                    if (this.isThinking && this.thinkingStartTime !== null) {
-                        const elapsed = Math.floor(
-                            (Date.now() - this.thinkingStartTime) / 1000,
-                        );
-                        this.accumulatedThinkingTime += elapsed;
-                        this.thinkingStartTime = null;
-                    }
-                    this.isThinking = false;
                     this.streamingMessage += content;
                     this.hasReceivedPersistent = true;
+                    const nextText = appendAssistantTextChunk(
+                        this.inlinePayloadItems,
+                        content,
+                        this.activeTextIndex,
+                    );
+                    this.inlinePayloadItems = updateAssistantThinkingDuration(
+                        nextText.items,
+                        this.activeThinkingIndex,
+                        this.getThinkingDuration(),
+                    );
+                    this.activeTextIndex = nextText.index;
                 }
                 return true;
             }
@@ -149,20 +174,53 @@ export class StreamAccumulator {
         const { type, callId, icon, userMessage, success, error } = toolMessage;
 
         if (type === "start") {
-            this.toolCallsMap.set(callId, {
+            const nextToolState = {
                 icon: icon || "🛠️",
                 userMessage: userMessage || "Running tool...",
                 status: "thinking",
-            });
+                error: null,
+                presentation: toolMessage.presentation || "default",
+            };
+            this.toolCallsMap.set(callId, nextToolState);
+            const nextInline = upsertAssistantToolEvent(
+                this.inlinePayloadItems,
+                createAssistantToolEventItem({
+                    callId,
+                    ...nextToolState,
+                }),
+                this.toolEventIndexMap.get(callId) ?? null,
+            );
+            this.inlinePayloadItems = nextInline.items;
+            this.toolEventIndexMap.set(callId, nextInline.index);
+            this.activeTextIndex = null;
+            this.activeThinkingIndex = null;
         } else if (type === "finish") {
             const existing = this.toolCallsMap.get(callId);
-            if (existing) {
-                this.toolCallsMap.set(callId, {
-                    ...existing,
-                    status: success ? "completed" : "failed",
-                    error: error || null,
-                });
-            }
+            const nextToolState = {
+                ...(existing || {}),
+                icon: icon || existing?.icon || "🛠️",
+                userMessage:
+                    userMessage || existing?.userMessage || "Running tool...",
+                status: success ? "completed" : "failed",
+                error: error || null,
+                presentation:
+                    toolMessage.presentation ||
+                    existing?.presentation ||
+                    "default",
+            };
+            this.toolCallsMap.set(callId, nextToolState);
+            const nextInline = upsertAssistantToolEvent(
+                this.inlinePayloadItems,
+                createAssistantToolEventItem({
+                    callId,
+                    ...nextToolState,
+                }),
+                this.toolEventIndexMap.get(callId) ?? null,
+            );
+            this.inlinePayloadItems = nextInline.items;
+            this.toolEventIndexMap.set(callId, nextInline.index);
+            this.activeTextIndex = null;
+            this.activeThinkingIndex = null;
         }
     }
 
@@ -198,6 +256,22 @@ export class StreamAccumulator {
             finalContent = this.ephemeralContent;
         }
 
+        const finalDuration = this.getThinkingDuration();
+        const finalizedInlineItems =
+            this.inlinePayloadItems.length > 0
+                ? appendAssistantThinkingSummary(
+                      updateAssistantThinkingDuration(
+                          this.inlinePayloadItems,
+                          this.activeThinkingIndex,
+                          finalDuration,
+                      ),
+                      finalDuration,
+                  )
+                : [];
+        const finalPayload =
+            buildAssistantPayloadFromItems(finalizedInlineItems) ||
+            finalContent;
+
         const toolString = JSON.stringify({
             ...this.accumulatedInfo,
             citations: this.accumulatedInfo.citations || [],
@@ -209,7 +283,7 @@ export class StreamAccumulator {
         const hasEphemeralContent = finalEphemeralContent || hasToolCalls;
 
         return {
-            payload: finalContent,
+            payload: finalPayload,
             tool: toolString,
             sentTime: new Date().toISOString(),
             direction: "incoming",
@@ -220,7 +294,7 @@ export class StreamAccumulator {
             ephemeralContent: hasEphemeralContent
                 ? finalEphemeralContent || ""
                 : undefined,
-            thinkingDuration: this.getThinkingDuration(),
+            thinkingDuration: finalDuration,
             toolCalls: hasToolCalls ? finalToolCalls : null,
             toolHistory: this.toolHistory || null,
         };
@@ -242,6 +316,10 @@ export class StreamAccumulator {
         this.hasReceivedPersistent = false;
         this.accumulatedInfo = {};
         this.toolCallsMap.clear();
+        this.inlinePayloadItems = [];
+        this.toolEventIndexMap.clear();
+        this.activeTextIndex = null;
+        this.activeThinkingIndex = null;
         this.toolHistory = null;
         this.thinkingStartTime = null;
         this.accumulatedThinkingTime = 0;

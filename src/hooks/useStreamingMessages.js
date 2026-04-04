@@ -1,6 +1,13 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+    appendAssistantTextChunk,
+    appendAssistantThinkingChunk,
+    createAssistantToolEventItem,
+    updateAssistantThinkingDuration,
+    upsertAssistantToolEvent,
+} from "../utils/assistantInlinePayload";
 
 /**
  * AppCommand types supported by the streaming message handler:
@@ -31,6 +38,7 @@ export function useStreamingMessages({
     const [streamingContent, setStreamingContent] = useState("");
     const [ephemeralContent, setEphemeralContent] = useState("");
     const [toolCalls, setToolCalls] = useState([]);
+    const [inlinePayloadItems, setInlinePayloadItems] = useState([]);
     const [conversationModeData, setConversationModeData] = useState(null);
     const [thinkingDuration, setThinkingDuration] = useState(0);
     const [isThinking, setIsThinking] = useState(false);
@@ -38,6 +46,10 @@ export function useStreamingMessages({
     const accumulatedThinkingTimeRef = useRef(0);
     const isThinkingRef = useRef(false);
     const toolCallsMapRef = useRef(new Map());
+    const inlinePayloadItemsRef = useRef([]);
+    const toolEventIndexMapRef = useRef(new Map());
+    const activeTextIndexRef = useRef(null);
+    const activeThinkingIndexRef = useRef(null);
     const streamReaderRef = useRef(null);
 
     // Record start time when streaming begins
@@ -74,6 +86,7 @@ export function useStreamingMessages({
         setStreamingContent("");
         setEphemeralContent("");
         setToolCalls([]);
+        setInlinePayloadItems([]);
         setConversationModeData(null);
         setSubscriptionId(null);
         setIsStreaming(false);
@@ -85,6 +98,10 @@ export function useStreamingMessages({
         startTimeRef.current = null;
         accumulatedThinkingTimeRef.current = 0;
         toolCallsMapRef.current.clear();
+        inlinePayloadItemsRef.current = [];
+        toolEventIndexMapRef.current.clear();
+        activeTextIndexRef.current = null;
+        activeThinkingIndexRef.current = null;
         streamReaderRef.current = null;
     }, []);
 
@@ -111,34 +128,90 @@ export function useStreamingMessages({
         const { type, status, callId, icon, userMessage, success, error } =
             toolInfo;
         const actionType = status || type; // Support both formats
+        const existingIndex = toolEventIndexMapRef.current.get(callId) ?? null;
+        const existingToolState = toolCallsMapRef.current.get(callId) || {};
+        let nextToolState = existingToolState;
+        let nextToolEvent = null;
 
         if (actionType === "start") {
-            toolCallsMapRef.current.set(callId, {
+            nextToolState = {
                 icon: icon || "🛠️",
                 userMessage: userMessage || "Running tool...",
                 status: "thinking",
+                error: null,
+                presentation: toolInfo.presentation || "default",
+            };
+            toolCallsMapRef.current.set(callId, nextToolState);
+            nextToolEvent = createAssistantToolEventItem({
+                callId,
+                ...nextToolState,
             });
         } else if (actionType === "complete" || actionType === "finish") {
-            const existing = toolCallsMapRef.current.get(callId);
-            if (existing) {
-                toolCallsMapRef.current.set(callId, {
-                    ...existing,
-                    status: success ? "completed" : "failed",
-                    error: error || null,
-                });
-            }
+            nextToolState = {
+                ...existingToolState,
+                icon: icon || existingToolState.icon || "🛠️",
+                userMessage:
+                    userMessage ||
+                    existingToolState.userMessage ||
+                    "Running tool...",
+                status: success ? "completed" : "failed",
+                error: error || null,
+                presentation:
+                    toolInfo.presentation ||
+                    existingToolState.presentation ||
+                    "default",
+            };
+            toolCallsMapRef.current.set(callId, nextToolState);
+            nextToolEvent = createAssistantToolEventItem({
+                callId,
+                ...nextToolState,
+            });
         }
 
-        setToolCalls(Array.from(toolCallsMapRef.current.values()));
+        if (nextToolEvent) {
+            const nextInline = upsertAssistantToolEvent(
+                inlinePayloadItemsRef.current,
+                nextToolEvent,
+                existingIndex,
+            );
+            inlinePayloadItemsRef.current = nextInline.items;
+            toolEventIndexMapRef.current.set(callId, nextInline.index);
+            activeTextIndexRef.current = null;
+            activeThinkingIndexRef.current = null;
+            setInlinePayloadItems(nextInline.items);
+        }
+
+        setToolCalls(
+            Array.from(toolCallsMapRef.current.values()).map(
+                ({ index, ...toolCall }) => toolCall,
+            ),
+        );
     }, []);
 
     const updateStreamingContent = useCallback(
         (newContent, isEphemeral = false) => {
             if (newContent.trim() === "") return;
 
+            const previousContent = isEphemeral
+                ? ephemeralContentRef.current
+                : streamingMessageRef.current;
+            const contentDelta = newContent.startsWith(previousContent)
+                ? newContent.slice(previousContent.length)
+                : newContent;
+
             if (isEphemeral) {
                 ephemeralContentRef.current = newContent;
                 setEphemeralContent(newContent);
+                const nextInline = appendAssistantThinkingChunk(
+                    inlinePayloadItemsRef.current,
+                    contentDelta,
+                    thinkingDuration,
+                    activeThinkingIndexRef.current,
+                );
+                inlinePayloadItemsRef.current = nextInline.items;
+                activeThinkingIndexRef.current = nextInline.index;
+                activeTextIndexRef.current = null;
+                setInlinePayloadItems(nextInline.items);
 
                 const currentlyThinking = isThinkingRef.current || isThinking;
                 if (!currentlyThinking && isStreaming) {
@@ -156,22 +229,24 @@ export function useStreamingMessages({
                     startTimeRef.current = Date.now();
                 }
             } else {
-                const wasThinking = isThinkingRef.current || isThinking;
-                if (wasThinking && startTimeRef.current !== null) {
-                    const elapsed = Math.floor(
-                        (Date.now() - startTimeRef.current) / 1000,
-                    );
-                    accumulatedThinkingTimeRef.current += elapsed;
-                    startTimeRef.current = null;
-                }
-                setIsThinking(false);
-                isThinkingRef.current = false;
                 streamingMessageRef.current = newContent;
                 hasReceivedPersistentRef.current = true;
                 setStreamingContent(newContent);
+                const nextText = appendAssistantTextChunk(
+                    inlinePayloadItemsRef.current,
+                    contentDelta,
+                    activeTextIndexRef.current,
+                );
+                inlinePayloadItemsRef.current = updateAssistantThinkingDuration(
+                    nextText.items,
+                    activeThinkingIndexRef.current,
+                    thinkingDuration,
+                );
+                activeTextIndexRef.current = nextText.index;
+                setInlinePayloadItems(inlinePayloadItemsRef.current);
             }
         },
-        [isStreaming, isThinking],
+        [isStreaming, isThinking, thinkingDuration],
     );
 
     // Refs to hold latest values for SSE effect
@@ -221,19 +296,34 @@ export function useStreamingMessages({
                         parsedInfo.entityRuntime?.conversationMode ||
                         null;
                     if (nextConversationMode) {
+                        const routeMode =
+                            parsedInfo.entityRuntime?.routeMode || null;
+                        const routeReason =
+                            parsedInfo.entityRuntime?.routeReason || null;
+                        const routeSource =
+                            parsedInfo.entityRuntime?.routeSource ||
+                            parsedInfo.modeMessage?.source ||
+                            parsedInfo.entityRuntime?.modeMessage?.source ||
+                            null;
+                        const directTool =
+                            parsedInfo.entityRuntime?.directTool || null;
                         setConversationModeData({
                             mode: nextConversationMode,
                             label:
                                 parsedInfo.modeMessage?.label ||
                                 nextConversationMode,
+                            conversationMode:
+                                parsedInfo.entityRuntime?.conversationMode ||
+                                nextConversationMode,
                             reason:
                                 parsedInfo.modeMessage?.reason ||
                                 parsedInfo.entityRuntime?.modeMessage?.reason ||
                                 null,
-                            source:
-                                parsedInfo.modeMessage?.source ||
-                                parsedInfo.entityRuntime?.modeMessage?.source ||
-                                null,
+                            source: routeSource,
+                            routeMode,
+                            routeReason,
+                            routeSource,
+                            directTool,
                         });
                     }
 
@@ -532,6 +622,7 @@ export function useStreamingMessages({
         streamingContent,
         ephemeralContent,
         toolCalls,
+        inlinePayloadItems,
         conversationModeData,
         stopStreaming,
         setIsStreaming,

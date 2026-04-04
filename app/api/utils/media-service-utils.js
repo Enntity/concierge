@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import config from "../../../config/index.js";
 import {
     buildMediaHelperFileParams,
@@ -28,7 +27,10 @@ export function normalizeMediaServiceUpload(data, defaults = {}) {
         blobPath: blobPath || null,
         filename: filename || null,
         displayFilename:
-            data?.displayFilename || defaults.displayFilename || filename || null,
+            data?.displayFilename ||
+            defaults.displayFilename ||
+            filename ||
+            null,
     };
 }
 
@@ -196,7 +198,10 @@ export async function signFileFromMediaService({
     });
 }
 
-export function findMediaServiceFile(files, { blobPath = null, filename = null } = {}) {
+export function findMediaServiceFile(
+    files,
+    { blobPath = null, filename = null } = {},
+) {
     if (!Array.isArray(files) || (!blobPath && !filename)) {
         return null;
     }
@@ -255,8 +260,7 @@ export async function uploadBufferToMediaService(
                 filename: metadata.filename,
                 displayFilename: metadata.filename,
                 blobPath:
-                    metadata.blobPath ||
-                    extractBlobPathFromUrl(metadata.url),
+                    metadata.blobPath || extractBlobPathFromUrl(metadata.url),
             },
         );
 
@@ -268,7 +272,7 @@ export async function uploadBufferToMediaService(
     } catch (error) {
         console.error("Error uploading to media service:", error);
         return {
-            error: NextResponse.json(
+            error: Response.json(
                 {
                     error:
                         "Failed to upload to media service: " + error.message,
@@ -280,10 +284,7 @@ export async function uploadBufferToMediaService(
     }
 }
 
-export async function importUrlToMediaService(
-    remoteUrl,
-    options = {},
-) {
+export async function importUrlToMediaService(remoteUrl, options = {}) {
     if (!remoteUrl) {
         throw new Error("remoteUrl is required");
     }

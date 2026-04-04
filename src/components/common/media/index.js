@@ -9,3 +9,4 @@ export {
 export { default as MediaPreview } from "./MediaPreview";
 export { default as MediaZoomDialog } from "./MediaZoomDialog";
 export { default as MediaLabelOverlay } from "./MediaLabelOverlay";
+export { default as SignedImage } from "./SignedImage";

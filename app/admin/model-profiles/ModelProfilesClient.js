@@ -59,11 +59,7 @@ function normalizeProfiles(profiles = [], persistedIds = new Set()) {
 
 export default function ModelProfilesClient() {
     const { data: agentModels } = useAgentModels();
-    const {
-        data: storedProfiles,
-        isLoading,
-        refetch,
-    } = useModelProfiles();
+    const { data: storedProfiles, isLoading, refetch } = useModelProfiles();
     const [profiles, setProfiles] = useState([]);
     const [savingId, setSavingId] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
@@ -278,9 +274,7 @@ export default function ModelProfilesClient() {
                                         </Badge>
                                     )}
                                     {!profile.persisted && (
-                                        <Badge variant="outline">
-                                            Unsaved
-                                        </Badge>
+                                        <Badge variant="outline">Unsaved</Badge>
                                     )}
                                 </div>
                             </div>
@@ -292,7 +286,9 @@ export default function ModelProfilesClient() {
                                             ? "secondary"
                                             : "outline"
                                     }
-                                    onClick={() => setDefaultProfile(profile.id)}
+                                    onClick={() =>
+                                        setDefaultProfile(profile.id)
+                                    }
                                 >
                                     <Sparkles className="mr-2 h-4 w-4" />
                                     Set Default
@@ -379,7 +375,9 @@ export default function ModelProfilesClient() {
                                             {MODEL_SLOT_LABELS[key]}
                                         </label>
                                         <Select
-                                            value={profile.modelPolicy?.[key] || ""}
+                                            value={
+                                                profile.modelPolicy?.[key] || ""
+                                            }
                                             onValueChange={(value) =>
                                                 updatePolicy(
                                                     profile.id,

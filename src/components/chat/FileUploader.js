@@ -260,9 +260,7 @@ export default function FileUploader({
     // Use default user contextId for chat files
     const contextId = user?.contextId || null;
     const storageTarget =
-        contextId && chatId
-            ? createChatStorageTarget(contextId, chatId)
-            : null;
+        contextId && chatId ? createChatStorageTarget(contextId, chatId) : null;
     const [inputUrl, setInputUrl] = useState("");
     const [showUrlInput, setShowUrlInput] = useState(false);
     const fileInputRef = useRef(null);
@@ -672,7 +670,10 @@ export default function FileUploader({
                         lastBytesPerMs = totalBytes / totalTime;
                     }
 
-                    if (isSupportedFileUrl(fileObj?.name) && !responseData.url) {
+                    if (
+                        isSupportedFileUrl(fileObj?.name) &&
+                        !responseData.url
+                    ) {
                         processingFilesRef.current.delete(fileId);
                         updateFileStatus(fileId, {
                             status: "error",
@@ -688,9 +689,7 @@ export default function FileUploader({
                         ...responseData,
                         displayFilename: fileObj.name,
                         blobPath:
-                            responseData.blobPath ||
-                            responseData.name ||
-                            null,
+                            responseData.blobPath || responseData.name || null,
                     };
 
                     if (

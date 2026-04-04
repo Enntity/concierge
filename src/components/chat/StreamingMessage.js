@@ -1,214 +1,64 @@
-import React, {
-    useEffect,
-    useRef,
-    useState,
-    useCallback,
-    useMemo,
-} from "react";
-import { useContext } from "react";
+import React, { useContext } from "react";
+import { useTranslation } from "react-i18next";
 import classNames from "../../../app/utils/class-names";
-import Loader from "../../../app/components/loader";
 import { AuthContext } from "../../App";
-import { ConversationModeBadge, InlineAssistantPayload } from "./BotMessage";
-import { buildLegacyInlineAssistantPayloadItems } from "../../utils/assistantInlinePayload";
+import { InlineAssistantPayload } from "./BotMessage";
+import {
+    ASSISTANT_PAYLOAD_ITEM_TYPES,
+    parseAssistantPayloadItem,
+} from "../../utils/assistantInlinePayload";
 
-// Memoize the content component to prevent re-renders when only the loader position changes
-const StreamingContent = React.memo(function StreamingContent({
-    content,
-    onContentUpdate,
-}) {
-    const contentRef = useRef(null);
-    const inlineItems = useMemo(
-        () =>
-            content
-                ? [JSON.stringify({ type: "text", text: content })]
-                : [],
-        [content],
-    );
+const formatLocalizedNumber = (language, value) => {
+    try {
+        return new Intl.NumberFormat(language).format(value);
+    } catch {
+        return String(value);
+    }
+};
 
-    useEffect(() => {
-        if (contentRef.current) {
-            // Ensure we call onContentUpdate after the content has been rendered
-            requestAnimationFrame(() => {
-                onContentUpdate(contentRef.current);
-            });
+const hasRenderableInlineItems = (items = []) =>
+    Array.isArray(items) &&
+    items.some((item) => {
+        const parsed = parseAssistantPayloadItem(item);
+        if (!parsed) {
+            return typeof item === "string" && item.trim().length > 0;
         }
-    }, [content, onContentUpdate]);
+        if (
+            parsed.type === ASSISTANT_PAYLOAD_ITEM_TYPES.TEXT ||
+            parsed.type === ASSISTANT_PAYLOAD_ITEM_TYPES.THINKING
+        ) {
+            return (
+                typeof parsed.text === "string" && parsed.text.trim().length > 0
+            );
+        }
+        return true;
+    });
 
-    return (
-        <div
-            ref={contentRef}
-            className="chat-message-bot relative break-words text-gray-800 dark:text-gray-100"
-        >
-            <InlineAssistantPayload
-                items={inlineItems}
-                message={{
-                    id: "streaming-inline-text",
-                    sender: "enntity",
-                }}
-                isStreaming={true}
-            />
-        </div>
+const hasInlineThinkingItem = (items = []) =>
+    Array.isArray(items) &&
+    items.some(
+        (item) =>
+            parseAssistantPayloadItem(item)?.type ===
+            ASSISTANT_PAYLOAD_ITEM_TYPES.THINKING,
     );
-});
 
 const StreamingMessage = React.memo(function StreamingMessage({
     content,
-    ephemeralContent,
-    toolCalls,
-    conversationModeData,
-    bot,
+    inlinePayloadItems = [],
     thinkingDuration,
     isThinking,
-    selectedEntityId,
-    entities,
-    entityIconSize,
 }) {
-    const contentContainerRef = useRef(null); // Ref for the non-ephemeral content container
+    const { t, i18n } = useTranslation();
     const { user } = useContext(AuthContext);
-    const [loaderPosition, setLoaderPosition] = useState({ x: 0, y: 0 });
-    const [showLoader, setShowLoader] = useState(true);
-    const lastUpdateRef = useRef(Date.now());
-    const loaderTimeoutRef = useRef(null);
-    const inlineItems = useMemo(
-        () =>
-            buildLegacyInlineAssistantPayloadItems({
-                ephemeralContent,
-                toolCalls,
-                thinkingDuration,
-            }),
-        [ephemeralContent, thinkingDuration, toolCalls],
-    );
+    const hasInlineItems = hasRenderableInlineItems(inlinePayloadItems);
     const hasStreamingText =
         typeof content === "string" && content.trim().length > 0;
-
-    // Track if we've ever shown ephemeral content
-    useEffect(() => {
-        if (ephemeralContent) {
-            setShowLoader(false);
-        }
-    }, [ephemeralContent]);
-
-    const calculateLoaderPosition = useCallback(() => {
-        const LOADER_ORB_SIZE = 12; // small loader is w-3 h-3 = 12px
-
-        const containerNode = contentContainerRef.current;
-        if (!containerNode) return;
-
-        // Determine the last element with content within the non-ephemeral content area
-        const targetNode = containerNode.querySelector(".chat-message-bot");
-
-        if (!targetNode) {
-            return;
-        }
-
-        const walker = document.createTreeWalker(
-            targetNode, // Search within the target node
-            NodeFilter.SHOW_TEXT,
-            {
-                acceptNode: (node) => {
-                    if (!node.textContent.trim()) {
-                        return NodeFilter.FILTER_SKIP;
-                    }
-                    return NodeFilter.FILTER_ACCEPT;
-                },
-            },
-        );
-
-        let lastTextNode = null;
-        let lastNodeRect = null;
-
-        while (walker.nextNode()) {
-            const node = walker.currentNode;
-            const range = document.createRange();
-            range.selectNodeContents(node);
-            const rects = range.getClientRects();
-
-            if (rects.length > 0) {
-                lastTextNode = node;
-                lastNodeRect = rects[rects.length - 1];
-            }
-        }
-
-        if (lastTextNode && lastNodeRect) {
-            const range = document.createRange();
-            range.setStart(lastTextNode, lastTextNode.textContent.length);
-            range.setEnd(lastTextNode, lastTextNode.textContent.length);
-
-            const textEndRect = range.getBoundingClientRect();
-            const containerRect = containerNode.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(
-                lastTextNode.parentElement,
-            );
-            const fontSize = parseFloat(computedStyle.fontSize);
-
-            // Calculate position relative to the container
-            const x =
-                textEndRect.right -
-                containerRect.left +
-                Math.min(fontSize * 0.25, 4) +
-                5;
-            // Vertically center the loader orb with the text.
-            // lastNodeRect.height includes line-height padding and descenders,
-            // so we bias upward by ~15% of the line height to align with the
-            // visual center of the glyphs rather than the line box center.
-            const y =
-                lastNodeRect.top -
-                containerRect.top +
-                (lastNodeRect.height - LOADER_ORB_SIZE) / 2 -
-                lastNodeRect.height * 0.35;
-
-            setLoaderPosition({ x, y });
-        }
-    }, []);
-
-    const handleContentUpdate = useCallback(
-        (contentNode) => {
-            // contentNode here is the StreamingContent's div
-            if (!contentNode || !contentContainerRef.current) return;
-
-            if (contentNode.textContent?.trim() === "") return;
-
-            const now = Date.now();
-
-            // Clear any existing loader timeout
-            if (loaderTimeoutRef.current) {
-                clearTimeout(loaderTimeoutRef.current);
-                loaderTimeoutRef.current = null;
-            }
-
-            // If we're actively streaming, hide the loader and schedule showing it
-            if (now - lastUpdateRef.current < 200) {
-                setShowLoader(false);
-            }
-
-            // Always schedule the loader to appear after 200ms
-            loaderTimeoutRef.current = setTimeout(() => {
-                setShowLoader(true);
-                calculateLoaderPosition(); // Call without args
-            }, 200);
-
-            lastUpdateRef.current = now;
-        },
-        [calculateLoaderPosition], // Removed direct contentNodeRef dependency
+    const hasVisibleContent = hasInlineItems || hasStreamingText;
+    const showThinkingFooter = !hasInlineThinkingItem(inlinePayloadItems);
+    const localizedDuration = formatLocalizedNumber(
+        i18n.language,
+        thinkingDuration,
     );
-
-    // Update loader position when content changes (or ephemeral content appears)
-    useEffect(() => {
-        if (showLoader) {
-            // Debounce or throttle this if it causes performance issues
-            calculateLoaderPosition();
-        }
-    }, [content, showLoader, calculateLoaderPosition]);
-
-    // Cleanup timeout
-    useEffect(() => {
-        return () => {
-            if (loaderTimeoutRef.current) {
-                clearTimeout(loaderTimeoutRef.current);
-            }
-        };
-    }, []);
 
     return (
         <div className="flex bg-white dark:bg-gray-800 ps-1 pt-1 relative group rounded-b-lg rounded-tl-lg rtl:rounded-tl-none rtl:rounded-tr-lg border border-cyan-400/50 dark:border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.15)] dark:shadow-[0_0_15px_rgba(34,211,238,0.25)]">
@@ -218,16 +68,21 @@ const StreamingMessage = React.memo(function StreamingMessage({
                 )}
             >
                 <div className="flex flex-col">
-                    <ConversationModeBadge
-                        modeData={conversationModeData}
-                        className="mb-2"
-                    />
-                    {inlineItems.length > 0 ? (
-                        <div className="mb-2">
+                    {hasVisibleContent ? (
+                        <div className="chat-message-bot relative break-words text-gray-800 dark:text-gray-100">
                             <InlineAssistantPayload
-                                items={inlineItems}
+                                items={
+                                    hasInlineItems
+                                        ? inlinePayloadItems
+                                        : [
+                                              JSON.stringify({
+                                                  type: "text",
+                                                  text: content,
+                                              }),
+                                          ]
+                                }
                                 message={{
-                                    id: "streaming-inline-meta",
+                                    id: "streaming-inline-payload",
                                     sender: "enntity",
                                 }}
                                 isStreaming={Boolean(isThinking)}
@@ -236,28 +91,11 @@ const StreamingMessage = React.memo(function StreamingMessage({
                             />
                         </div>
                     ) : null}
-                    {hasStreamingText ? (
-                        <div className="relative" ref={contentContainerRef}>
-                            <StreamingContent
-                                content={content}
-                                onContentUpdate={handleContentUpdate}
-                            />
-                            {showLoader && (
-                                <div className="pointer-events-none absolute top-0 left-0 w-full h-full">
-                                    <div
-                                        className="absolute transition-transform duration-100 ease-out"
-                                        style={{
-                                            transform: `translate(${loaderPosition.x}px, ${loaderPosition.y}px)`,
-                                        }}
-                                    >
-                                        <Loader size="small" delay={0} />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ) : showLoader ? (
-                        <div className="pt-1 ps-1">
-                            <Loader size="small" delay={0} />
+                    {showThinkingFooter ? (
+                        <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-transparent bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 dark:from-gray-100 dark:via-gray-400 dark:to-gray-100 bg-clip-text animate-shimmer bg-[length:200%_100%]">
+                            {t("Thinking with duration", {
+                                duration: localizedDuration,
+                            })}
                         </div>
                     ) : null}
                 </div>

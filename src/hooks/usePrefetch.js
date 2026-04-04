@@ -7,11 +7,7 @@ import { useEffect, useCallback, useRef } from "react";
 import axios from "../../app/utils/axios-client";
 
 // All navigable routes in the app
-const PREFETCH_ROUTES = [
-    "/home",
-    "/chat",
-    "/media",
-];
+const PREFETCH_ROUTES = ["/home", "/chat", "/media"];
 
 // Public routes that don't require auth
 const PUBLIC_ROUTES = ["/auth/login", "/auth/error", "/privacy", "/published"];

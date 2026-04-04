@@ -1,4 +1,5 @@
 import React from "react";
+import SignedImage from "../common/media/SignedImage";
 
 // Accept an optional size prop (defaults to 'small' if not provided)
 const EntityIcon = ({ entity, size = "sm" }) => {
@@ -27,10 +28,26 @@ const EntityIcon = ({ entity, size = "sm" }) => {
     // Check for avatar image first
     if (entity?.avatar?.image?.url) {
         return (
-            <img
+            <SignedImage
                 src={entity.avatar.image.url}
+                blobPath={entity?.avatar?.image?.blobPath || null}
                 alt={entity?.name || "Entity"}
                 className={`${sizeClasses} rounded-full object-cover`}
+                fallback={
+                    entity?.avatar?.text ? (
+                        <div
+                            className={`flex items-center justify-center ${sizeClasses} ${textSizeClasses}`}
+                        >
+                            {entity.avatar.text}
+                        </div>
+                    ) : (
+                        <div
+                            className={`flex items-center justify-center font-bold ${sizeClasses} ${textSizeClasses} ${entity?.bgColorClass || "bg-sky-500"} rounded-full ${entity?.textColorClass || "text-white"}`}
+                        >
+                            {entity?.name ? entity.name[0].toUpperCase() : "?"}
+                        </div>
+                    )
+                }
             />
         );
     }

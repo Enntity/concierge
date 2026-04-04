@@ -24,8 +24,8 @@ export const getPrivacyContent = (language) => {
                             address, and profile picture (when provided)
                         </li>
                         <li>
-                            <strong>Usage Data:</strong> Chat messages,
-                            media content, and interactions with our services
+                            <strong>Usage Data:</strong> Chat messages, media
+                            content, and interactions with our services
                         </li>
                         <li>
                             <strong>Technical Data:</strong> IP address, browser

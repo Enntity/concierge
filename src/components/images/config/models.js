@@ -66,11 +66,7 @@ export const getModelType = (modelName, settings = {}, mediaModels = []) => {
     return apiModel?.category || "image";
 };
 
-export const groupAndSortModels = (
-    models,
-    settings,
-    mediaModels = [],
-) => {
+export const groupAndSortModels = (models, settings, mediaModels = []) => {
     const image = [];
     const video = [];
 
@@ -119,7 +115,10 @@ export const mergeNewModels = (
 
     const apiDefaults = buildDefaultSettings(mediaModels);
     const apiIds = new Set(mediaModels.map((model) => model.modelId));
-    const remappedModels = remapModelSettings(existingSettings.models, redirects);
+    const remappedModels = remapModelSettings(
+        existingSettings.models,
+        redirects,
+    );
     const cleanedModels = {};
 
     for (const [modelId, value] of Object.entries(remappedModels)) {
@@ -169,10 +168,8 @@ export const migrateSettings = (oldSettings = {}, redirects = {}) => {
             defaultDuration: oldSettings.video?.defaultDuration || 5,
             defaultGenerateAudio:
                 oldSettings.video?.defaultGenerateAudio || false,
-            defaultResolution:
-                oldSettings.video?.defaultResolution || "1080p",
-            defaultCameraFixed:
-                oldSettings.video?.defaultCameraFixed || false,
+            defaultResolution: oldSettings.video?.defaultResolution || "1080p",
+            defaultCameraFixed: oldSettings.video?.defaultCameraFixed || false,
         },
     };
 };

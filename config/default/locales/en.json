@@ -315,5 +315,8 @@
     "Reset zoom and pan": "Reset zoom and pan",
     "Reset": "Reset",
     "Copy SVG": "Copy SVG",
-    "Failed to render diagram": "Failed to render diagram"
+    "Failed to render diagram": "Failed to render diagram",
+    "Thinking with duration": "Thinking for {{duration}}s",
+    "Thought for duration": "Thought for {{duration}}s",
+    "Repeated count": "x{{value}}"
 }

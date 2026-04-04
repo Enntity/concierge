@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "../../../utils/auth";
 import { isValidEntityId } from "../../_lib";
 import { getClient, MUTATIONS } from "../../../../../src/graphql";
+import { extractBlobPathFromUrl } from "../../../../../src/utils/storageTargets.js";
 
 /**
  * PATCH /api/entities/[entityId]/avatar
@@ -36,6 +37,10 @@ export async function PATCH(req, { params }) {
 
         const body = await req.json();
         const { imageUrl } = body;
+        const imageBlobPath =
+            typeof body?.imageBlobPath === "string"
+                ? body.imageBlobPath.replace(/^\/+/, "")
+                : extractBlobPathFromUrl(imageUrl);
 
         if (!imageUrl || typeof imageUrl !== "string") {
             return NextResponse.json(
@@ -52,6 +57,7 @@ export async function PATCH(req, { params }) {
                 entityId,
                 contextId: user.contextId,
                 avatarImageUrl: imageUrl,
+                avatarImageBlobPath: imageBlobPath || undefined,
             },
         });
 

@@ -22,7 +22,9 @@ function validatePayload(body = {}) {
     const description = String(body.description || "").trim();
 
     if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
-        return { error: "slug must use lowercase letters, numbers, and hyphens" };
+        return {
+            error: "slug must use lowercase letters, numbers, and hyphens",
+        };
     }
 
     if (!name) {

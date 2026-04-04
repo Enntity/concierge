@@ -863,6 +863,7 @@ const SYS_UPDATE_ENTITY = gql`
         $avatarText: String
         $avatarDescription: String
         $avatarImageUrl: String
+        $avatarImageBlobPath: String
         $voice: String
         $pulseEnabled: Boolean
         $pulseWakeIntervalMinutes: Float
@@ -891,6 +892,7 @@ const SYS_UPDATE_ENTITY = gql`
             avatarText: $avatarText
             avatarDescription: $avatarDescription
             avatarImageUrl: $avatarImageUrl
+            avatarImageBlobPath: $avatarImageBlobPath
             voice: $voice
             secrets: $secrets
             pulseEnabled: $pulseEnabled

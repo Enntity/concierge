@@ -29,12 +29,13 @@ import {
     GridBackground,
 } from "../../../app/auth/components/AuthBackground";
 import AnimatedLogo from "../common/AnimatedLogo";
+import SignedImage from "../common/media/SignedImage";
 import { composeUserDateTimeInfo } from "../../utils/datetimeUtils";
 
 /**
  * Generate avatar image via server endpoint
  * Handles Gemini generation + cloud upload
- * Returns the image URL or null on failure
+ * Returns the image URL/blobPath pair or null on failure
  */
 const generateAvatarImage = async (avatarText) => {
     try {
@@ -50,7 +51,14 @@ const generateAvatarImage = async (avatarText) => {
                 imageUrl.substring(0, 50) + "...",
             );
         }
-        return imageUrl || null;
+        if (!imageUrl) {
+            return null;
+        }
+
+        return {
+            url: imageUrl,
+            blobPath: response.data?.blobPath || null,
+        };
     } catch (error) {
         console.error("[Onboarding] Avatar generation failed:", error.message);
         return null;
@@ -455,6 +463,7 @@ const ContactingScreen = ({
     entityName,
     avatarIcon,
     avatarImageUrl,
+    avatarImageBlobPath,
     isConnected,
 }) => {
     const { t } = useTranslation();
@@ -532,10 +541,23 @@ const ContactingScreen = ({
                         }}
                     >
                         {avatarImageUrl && showAvatar ? (
-                            <img
+                            <SignedImage
                                 src={avatarImageUrl}
+                                blobPath={avatarImageBlobPath || null}
                                 alt={entityName}
                                 className={`w-full h-full object-cover transition-all duration-700 ${avatarRevealed ? "avatar-image-reveal" : "opacity-0 scale-110 blur-sm"}`}
+                                fallback={
+                                    <span
+                                        className="select-none transition-all duration-500"
+                                        style={{
+                                            filter: "drop-shadow(0 0 20px rgba(34, 211, 238, 0.5))",
+                                            animation:
+                                                "emoji-float 3s ease-in-out infinite",
+                                        }}
+                                    >
+                                        {avatarIcon || "?"}
+                                    </span>
+                                }
                             />
                         ) : (
                             <span
@@ -659,6 +681,7 @@ export default function EntityOnboarding({
     const [prefetchedChatId, setPrefetchedChatId] = useState(null);
     const [actualEntityId, setActualEntityId] = useState(null);
     const [avatarImageUrl, setAvatarImageUrl] = useState(null);
+    const [avatarImageBlobPath, setAvatarImageBlobPath] = useState(null);
     const [isFading, setIsFading] = useState(false);
     const [errorMessage, setErrorMessage] = useState(null); // For error display
 
@@ -670,6 +693,7 @@ export default function EntityOnboarding({
     // Refs for parallel avatar generation
     const avatarGenerationStartedRef = useRef(false);
     const generatedAvatarUrlRef = useRef(null);
+    const generatedAvatarBlobPathRef = useRef(null);
 
     // State to track when avatar generation completes (success or failure)
     // Using state so effects can react to it
@@ -707,6 +731,7 @@ export default function EntityOnboarding({
         // - We haven't already sent the update
         // - We don't already have an avatar from Cortex (first-wins)
         const generatedUrl = generatedAvatarUrlRef.current;
+        const generatedBlobPath = generatedAvatarBlobPathRef.current;
         if (!actualEntityId || !generatedUrl || avatarUpdateSentRef.current) {
             return;
         }
@@ -718,6 +743,7 @@ export default function EntityOnboarding({
         axios
             .patch(`/api/entities/${actualEntityId}/avatar`, {
                 imageUrl: generatedUrl,
+                imageBlobPath: generatedBlobPath,
             })
             .then((response) => {
                 if (response.data?.success) {
@@ -726,6 +752,7 @@ export default function EntityOnboarding({
                     );
                     // Ensure we're showing the generated avatar
                     setAvatarImageUrl(generatedUrl);
+                    setAvatarImageBlobPath(generatedBlobPath || null);
                     // Refresh entities list so sidebar shows new avatar
                     refetchEntities();
                 }
@@ -814,15 +841,23 @@ export default function EntityOnboarding({
                     );
 
                     generateAvatarImage(avatarDescription)
-                        .then((url) => {
+                        .then((avatarImage) => {
                             setAvatarGenerationDone(true);
-                            if (url) {
+                            if (avatarImage?.url) {
                                 console.log(
                                     "[Onboarding] Parallel avatar ready, storing URL",
                                 );
-                                generatedAvatarUrlRef.current = url;
+                                generatedAvatarUrlRef.current = avatarImage.url;
+                                generatedAvatarBlobPathRef.current =
+                                    avatarImage.blobPath || null;
                                 // If we don't have an avatar yet from Cortex, use ours
-                                setAvatarImageUrl((current) => current || url);
+                                setAvatarImageUrl(
+                                    (current) => current || avatarImage.url,
+                                );
+                                setAvatarImageBlobPath(
+                                    (current) =>
+                                        current || avatarImage.blobPath || null,
+                                );
                             } else {
                                 console.log(
                                     "[Onboarding] Avatar generation returned no URL",
@@ -885,6 +920,7 @@ export default function EntityOnboarding({
             setPrefetchedChatId(null);
             setActualEntityId(null);
             setAvatarImageUrl(null);
+            setAvatarImageBlobPath(null);
             setIsFading(false);
             setInputValue("");
             setErrorMessage(null);
@@ -897,6 +933,7 @@ export default function EntityOnboarding({
             // Reset parallel avatar generation state
             avatarGenerationStartedRef.current = false;
             generatedAvatarUrlRef.current = null;
+            generatedAvatarBlobPathRef.current = null;
             avatarUpdateSentRef.current = false;
             setAvatarGenerationDone(false);
             // Reset failover timer
@@ -1063,6 +1100,9 @@ export default function EntityOnboarding({
                             // Capture avatar image URL if available
                             if (match.avatar?.image?.url) {
                                 setAvatarImageUrl(match.avatar.image.url);
+                                setAvatarImageBlobPath(
+                                    match.avatar.image.blobPath || null,
+                                );
                             }
                         }
                     }
@@ -1361,6 +1401,7 @@ export default function EntityOnboarding({
                             "?"
                         }
                         avatarImageUrl={avatarImageUrl}
+                        avatarImageBlobPath={avatarImageBlobPath}
                         isConnected={onboardingChatReady}
                     />
                 ) : (

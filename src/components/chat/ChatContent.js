@@ -28,6 +28,10 @@ import { composeUserDateTimeInfo } from "../../utils/datetimeUtils";
 import { useEntityOverlay } from "../../contexts/EntityOverlayContext";
 import { useEntities } from "../../hooks/useEntities";
 import { useVoice } from "../../contexts/VoiceContext";
+import {
+    appendDraftPayloadToConversation,
+    buildModelPayloadFromStoredPayload,
+} from "../../utils/assistantInlinePayload";
 
 const contextMessageCount = 50;
 
@@ -117,6 +121,13 @@ function ChatContent({
     );
     const publicChatOwner = viewingChat?.owner;
     const isChatLoading = chat?.isChatLoading;
+    const anticipationRef = useRef({
+        key: "",
+        timestamp: 0,
+    });
+    const anticipationRequestRef = useRef(null);
+    const streamHandshakeRef = useRef(null);
+    const sendStartingRef = useRef(false);
 
     // Check file URLs in the background and replace missing files with placeholders
     const checkedFilesRef = useRef({ checked: new Set(), chatId: null });
@@ -326,6 +337,14 @@ function ChatContent({
         hideOverlay();
     }, [selectedEntityIdFromProp, hideOverlay]);
 
+    useEffect(
+        () => () => {
+            anticipationRequestRef.current?.abort();
+            streamHandshakeRef.current?.abort();
+        },
+        [],
+    );
+
     // Register callback to persist voice transcripts to chat when session ends
     useEffect(() => {
         registerOnSessionEnd(
@@ -417,6 +436,7 @@ function ChatContent({
         streamingContent,
         ephemeralContent,
         toolCalls,
+        inlinePayloadItems,
         conversationModeData,
         stopStreaming,
         setIsStreaming,
@@ -451,8 +471,206 @@ function ChatContent({
         [queryClient],
     );
 
+    const getModelConversationPayload = useCallback(
+        (message) => {
+            if (message?.taskId) {
+                const notification = queryClient.getQueryData([
+                    "tasks",
+                    message.taskId,
+                ]);
+                if (notification) {
+                    return `Status: ${notification.status}\n                Progress: ${notification.progress || 0}\n                Type: ${notification.type}\n                Original Message: ${message.payload}`;
+                }
+            }
+
+            return buildModelPayloadFromStoredPayload(message?.payload);
+        },
+        [queryClient],
+    );
+
     // Add a ref to track which code requests have been processed
     const processedCodeRequestIds = useRef(new Set());
+
+    const buildConversationHistory = useCallback(
+        (baseMessages = memoizedMessages, draftPayload = null) => {
+            const conversation = (baseMessages || [])
+                .slice(-contextMessageCount)
+                .filter((m) => {
+                    if (!m.tool) return true;
+                    try {
+                        const tool = JSON.parse(m.tool);
+                        return !tool.hideFromModel;
+                    } catch (e) {
+                        console.error("Invalid JSON in tool:", e);
+                        return true;
+                    }
+                })
+                .flatMap((m) => {
+                    if (m.sender === "enntity") {
+                        const msgs = [];
+                        if (m.toolHistory && Array.isArray(m.toolHistory)) {
+                            for (const th of m.toolHistory) {
+                                if (
+                                    th.tool_calls &&
+                                    Array.isArray(th.tool_calls)
+                                ) {
+                                    msgs.push({
+                                        ...th,
+                                        tool_calls: th.tool_calls.map((tc) =>
+                                            typeof tc === "string"
+                                                ? tc
+                                                : JSON.stringify(tc),
+                                        ),
+                                    });
+                                } else {
+                                    const normalizedContent =
+                                        buildModelPayloadFromStoredPayload(
+                                            th.content,
+                                        );
+                                    msgs.push({
+                                        ...th,
+                                        ...(normalizedContent !== null
+                                            ? {
+                                                  content: normalizedContent,
+                                              }
+                                            : {}),
+                                    });
+                                }
+                            }
+                        }
+                        const assistantContent =
+                            getModelConversationPayload(m);
+                        if (assistantContent !== null) {
+                            msgs.push({
+                                role: "assistant",
+                                content: assistantContent,
+                            });
+                        }
+                        return msgs;
+                    }
+                    const userContent = getModelConversationPayload(m);
+                    return [
+                        ...(userContent !== null
+                            ? [
+                                  {
+                                      role: "user",
+                                      content: userContent,
+                                  },
+                              ]
+                            : []),
+                    ];
+                });
+
+            return appendDraftPayloadToConversation(conversation, draftPayload);
+        },
+        [getModelConversationPayload, memoizedMessages],
+    );
+
+    const handleAnticipate = useCallback(
+        async ({ trigger = "typing", text = "" } = {}) => {
+            if (
+                !chatId ||
+                viewingReadOnlyChat ||
+                isEntityUnavailable ||
+                isStreaming ||
+                sendStartingRef.current
+            ) {
+                return;
+            }
+
+            const currentSelectedEntityId = selectedEntityIdFromProp || "";
+            if (!currentSelectedEntityId) {
+                return;
+            }
+
+            const normalizedText =
+                typeof text === "string" ? text.trim() : "";
+            if (trigger === "typing" && normalizedText.length < 2) {
+                return;
+            }
+
+            const dedupeKey = [
+                chatId,
+                currentSelectedEntityId,
+                normalizedText,
+            ].join("::");
+            const now = Date.now();
+            const ttlMs = trigger === "typing" ? 2000 : 15000;
+            if (
+                anticipationRef.current.key === dedupeKey &&
+                now - anticipationRef.current.timestamp < ttlMs
+            ) {
+                return;
+            }
+            anticipationRef.current = {
+                key: dedupeKey,
+                timestamp: now,
+            };
+
+            const conversation = buildConversationHistory(
+                memoizedMessages,
+                normalizedText
+                    ? [JSON.stringify({ type: "text", text: normalizedText })]
+                    : null,
+            );
+            const agentContext = user.contextId
+                ? [
+                      {
+                          contextId: user.contextId,
+                          contextKey: user.contextKey || "",
+                          default: true,
+                      },
+                  ]
+                : [];
+            const currentEntity = entities?.find(
+                (e) => e.id === currentSelectedEntityId,
+            );
+            const controller = new AbortController();
+            anticipationRequestRef.current?.abort();
+            anticipationRequestRef.current = controller;
+
+            fetch(`/api/chats/${chatId}/anticipate`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                signal: controller.signal,
+                body: JSON.stringify({
+                    conversation,
+                    agentContext,
+                    aiName: currentEntity?.name || user?.aiName,
+                    title: chat?.title,
+                    entityId: currentSelectedEntityId,
+                    userInfo: composeUserDateTimeInfo(),
+                    text: normalizedText,
+                    trigger,
+                }),
+            })
+                .catch((error) => {
+                    if (error?.name === "AbortError") {
+                        return;
+                    }
+                    console.debug("[anticipate] Warmup request failed", error);
+                })
+                .finally(() => {
+                    if (anticipationRequestRef.current === controller) {
+                        anticipationRequestRef.current = null;
+                    }
+                });
+        },
+        [
+            buildConversationHistory,
+            chat?.title,
+            chatId,
+            entities,
+            isEntityUnavailable,
+            isStreaming,
+            memoizedMessages,
+            selectedEntityIdFromProp,
+            user,
+            viewingReadOnlyChat,
+        ],
+    );
 
     const handleSend = useCallback(
         async (sendMessage, overrideMessages) => {
@@ -468,7 +686,13 @@ function ChatContent({
                       }
                     : sendMessage;
 
+            let controller = null;
+            let handshakeTimeout = null;
             try {
+                sendStartingRef.current = true;
+                anticipationRequestRef.current?.abort();
+                anticipationRequestRef.current = null;
+
                 // Reset streaming state (important before sending)
                 clearStreamingState();
 
@@ -494,57 +718,10 @@ function ChatContent({
                     selectedEntityId: selectedEntityIdFromProp,
                 });
 
-                // Prepare conversation history
-                const conversation = (overrideMessages || memoizedMessages)
-                    .slice(-contextMessageCount)
-                    .filter((m) => {
-                        if (!m.tool) return true;
-                        try {
-                            const tool = JSON.parse(m.tool);
-                            return !tool.hideFromModel;
-                        } catch (e) {
-                            console.error("Invalid JSON in tool:", e);
-                            return true;
-                        }
-                    })
-                    .flatMap((m) => {
-                        if (m.sender === "enntity") {
-                            const msgs = [];
-                            // Expand toolHistory into native format before the assistant text
-                            if (m.toolHistory && Array.isArray(m.toolHistory)) {
-                                for (const th of m.toolHistory) {
-                                    // Serialize tool_calls to strings for GraphQL schema compatibility
-                                    if (
-                                        th.tool_calls &&
-                                        Array.isArray(th.tool_calls)
-                                    ) {
-                                        msgs.push({
-                                            ...th,
-                                            tool_calls: th.tool_calls.map(
-                                                (tc) =>
-                                                    typeof tc === "string"
-                                                        ? tc
-                                                        : JSON.stringify(tc),
-                                            ),
-                                        });
-                                    } else {
-                                        msgs.push(th);
-                                    }
-                                }
-                            }
-                            msgs.push({
-                                role: "assistant",
-                                content: getMessagePayload(m),
-                            });
-                            return msgs;
-                        }
-                        return [{ role: "user", content: m.payload }];
-                    });
-
-                conversation.push({
-                    role: "user",
-                    content: optimisticUserMessage.payload,
-                });
+                const conversation = buildConversationHistory(
+                    overrideMessages || memoizedMessages,
+                    optimisticUserMessage.payload,
+                );
 
                 const { aiName } = user;
 
@@ -598,20 +775,24 @@ function ChatContent({
                         });
                 }
 
-                // Call agent via Next.js proxy (SSE streaming)
-                setIsStreaming(true);
-
                 // Get the current entity for display name fallback
                 const currentEntity = entities?.find(
                     (e) => e.id === currentSelectedEntityId,
                 );
 
                 // POST to stream endpoint with conversation data
+                controller = new AbortController();
+                streamHandshakeRef.current?.abort();
+                streamHandshakeRef.current = controller;
+                handshakeTimeout = setTimeout(() => {
+                    controller.abort();
+                }, 15000);
                 const response = await fetch(`/api/chats/${chatId}/stream`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
+                    signal: controller.signal,
                     body: JSON.stringify({
                         conversation,
                         agentContext,
@@ -621,6 +802,10 @@ function ChatContent({
                         userInfo,
                     }),
                 });
+                clearTimeout(handshakeTimeout);
+                if (streamHandshakeRef.current === controller) {
+                    streamHandshakeRef.current = null;
+                }
 
                 if (!response.ok) {
                     throw new Error(
@@ -630,12 +815,27 @@ function ChatContent({
 
                 // Clone the response so the body can be read (Response body can only be read once)
                 // Set the cloned response stream - useStreamingMessages will handle it
+                setIsStreaming(true);
                 setSubscriptionId(response.clone()); // Clone to allow reading the stream
+                sendStartingRef.current = false;
 
                 return;
             } catch (error) {
+                if (handshakeTimeout) {
+                    clearTimeout(handshakeTimeout);
+                }
+                sendStartingRef.current = false;
+                if (streamHandshakeRef.current === controller) {
+                    streamHandshakeRef.current = null;
+                }
                 setIsStreaming(false);
-                handleError(error);
+                handleError(
+                    error?.name === "AbortError"
+                        ? new Error(
+                              "The reply took too long to start. Please try again.",
+                          )
+                        : error,
+                );
 
                 // Use error messages directly without processing
                 const errorMessagesToUpdate = [
@@ -667,6 +867,7 @@ function ChatContent({
             chat,
             chatId,
             getMessagePayload,
+            buildConversationHistory,
             client,
             updateChatHook,
             handleError,
@@ -680,6 +881,27 @@ function ChatContent({
             entities,
         ],
     );
+
+    useEffect(() => {
+        if (
+            !chatId ||
+            !selectedEntityIdFromProp ||
+            viewingReadOnlyChat ||
+            isEntityUnavailable ||
+            isStreaming
+        ) {
+            return;
+        }
+
+        handleAnticipate({ trigger: "view", text: "" });
+    }, [
+        chatId,
+        handleAnticipate,
+        isEntityUnavailable,
+        isStreaming,
+        selectedEntityIdFromProp,
+        viewingReadOnlyChat,
+    ]);
 
     // Poll for completion only when: chat is loading AND we don't have an SSE connection
     // This handles the "nav back to a chat that was still loading" case
@@ -777,6 +999,7 @@ function ChatContent({
             publicChatOwner={publicChatOwner}
             loading={isChatLoading}
             onSend={handleSend}
+            onAnticipate={handleAnticipate}
             messages={memoizedMessages}
             container={container}
             displayState={displayState}
@@ -785,6 +1008,7 @@ function ChatContent({
             streamingContent={streamingContent}
             ephemeralContent={ephemeralContent}
             toolCalls={toolCalls}
+            inlinePayloadItems={inlinePayloadItems}
             conversationModeData={conversationModeData}
             onStopStreaming={stopStreaming}
             thinkingDuration={thinkingDuration}

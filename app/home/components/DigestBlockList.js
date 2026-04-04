@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import React, { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import SignedImage from "../../../src/components/common/media/SignedImage";
 import Loader from "../../components/loader";
 import {
     useCurrentUserDigest,
@@ -91,10 +92,21 @@ const HomeGreeting = React.memo(function HomeGreeting() {
                         {entity && (
                             <div className="flex-shrink-0">
                                 {entity.avatar?.image?.url ? (
-                                    <img
+                                    <SignedImage
                                         src={entity.avatar.image.url}
+                                        blobPath={
+                                            entity?.avatar?.image?.blobPath ||
+                                            null
+                                        }
                                         alt={entity.name || ""}
                                         className="h-6 w-6 rounded-full object-cover ring-1 ring-gray-200/50 dark:ring-gray-700/50"
+                                        fallback={
+                                            <span className="h-6 w-6 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-xs font-medium text-white ring-1 ring-gray-200/50 dark:ring-gray-700/50">
+                                                {entity.avatarText ||
+                                                    entity.name?.[0] ||
+                                                    "?"}
+                                            </span>
+                                        }
                                     />
                                 ) : (
                                     <span className="h-6 w-6 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-xs font-medium text-white ring-1 ring-gray-200/50 dark:ring-gray-700/50">
@@ -663,10 +675,21 @@ export function BlockEditForm({ block, entities, onChange }) {
                             <SelectItem key={entity.id} value={entity.id}>
                                 <span className="flex items-center gap-2">
                                     {entity.avatar?.image?.url ? (
-                                        <img
+                                        <SignedImage
                                             src={entity.avatar.image.url}
+                                            blobPath={
+                                                entity?.avatar?.image
+                                                    ?.blobPath || null
+                                            }
                                             alt={entity.name}
                                             className="h-4 w-4 rounded-full object-cover"
+                                            fallback={
+                                                <span className="h-4 w-4 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-[10px] text-white">
+                                                    {entity.avatarText ||
+                                                        entity.name?.[0] ||
+                                                        "?"}
+                                                </span>
+                                            }
                                         />
                                     ) : (
                                         <span className="h-4 w-4 rounded-full bg-gradient-to-br from-cyan-400 to-purple-400 flex items-center justify-center text-[10px] text-white">

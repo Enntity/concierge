@@ -113,7 +113,8 @@ function buildModelVariables(modelMetadata, prompt, settings, inputImages) {
                 variables.image_size = modelSettings.image_size;
             }
             inputImages.slice(0, 14).forEach((image, index) => {
-                const key = index === 0 ? "input_image" : `input_image_${index + 1}`;
+                const key =
+                    index === 0 ? "input_image" : `input_image_${index + 1}`;
                 variables[key] = image;
             });
             return variables;

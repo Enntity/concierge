@@ -27,6 +27,7 @@ import {
 } from "../../utils/assistantInlinePayload";
 import CopyButton from "../CopyButton";
 import ReplayButton from "../ReplayButton";
+import SignedImage from "../common/media/SignedImage";
 import MediaCard from "./MediaCard";
 import MediaGalleryCard from "./MediaGalleryCard";
 import { AuthContext } from "../../App";
@@ -35,10 +36,7 @@ import ScrollToBottom from "./ScrollToBottom";
 import StreamingMessage from "./StreamingMessage";
 import { useUpdateChat } from "../../../app/queries/chats";
 import { useApolloClient } from "@apollo/client";
-import {
-    purgeFile,
-    createFilePlaceholder,
-} from "../files/chatFileUtils";
+import { purgeFile, createFilePlaceholder } from "../files/chatFileUtils";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -158,7 +156,10 @@ const parseToolData = (toolString) => {
         return {
             avatarImage: toolObj.avatarImage,
             toolUsed: toolObj.toolUsed,
-            modeMessage: toolObj.modeMessage || toolObj.entityRuntime?.modeMessage || null,
+            modeMessage:
+                toolObj.modeMessage ||
+                toolObj.entityRuntime?.modeMessage ||
+                null,
             entityRuntime: toolObj.entityRuntime || null,
         };
     } catch (e) {
@@ -259,119 +260,150 @@ const MessageListContent = React.memo(function MessageListContent({
             } else {
                 const arr = newMessage.payload
                     .map((t, index2) => {
-                    try {
-                        const obj = JSON.parse(t);
+                        try {
+                            const obj = JSON.parse(t);
 
-                        // Show deleted file indicator if it's a deleted file placeholder
-                        if (
-                            obj.hideFromClient === true &&
-                            obj.isDeletedFile === true
-                        ) {
-                            const deletedFilename =
-                                obj.deletedFilename || "file";
-                            // Determine file type from extension for ghost card
-                            const deletedExt = getExtension(deletedFilename);
-                            let deletedType = "file";
+                            // Show deleted file indicator if it's a deleted file placeholder
                             if (
-                                isVideoUrl(deletedFilename) ||
-                                VIDEO_EXTENSIONS.includes(deletedExt)
+                                obj.hideFromClient === true &&
+                                obj.isDeletedFile === true
                             ) {
-                                deletedType = "video";
-                            } else if (IMAGE_EXTENSIONS.includes(deletedExt)) {
-                                deletedType = "image";
-                            }
+                                const deletedFilename =
+                                    obj.deletedFilename || "file";
+                                // Determine file type from extension for ghost card
+                                const deletedExt =
+                                    getExtension(deletedFilename);
+                                let deletedType = "file";
+                                if (
+                                    isVideoUrl(deletedFilename) ||
+                                    VIDEO_EXTENSIONS.includes(deletedExt)
+                                ) {
+                                    deletedType = "video";
+                                } else if (
+                                    IMAGE_EXTENSIONS.includes(deletedExt)
+                                ) {
+                                    deletedType = "image";
+                                }
 
-                            return (
-                                <MediaCard
-                                    key={`deleted-file-${index}-${index2}`}
-                                    type={deletedType}
-                                    src={null}
-                                    filename={deletedFilename}
-                                    isDeleted={true}
-                                    t={t}
-                                />
-                            );
-                        }
-
-                        // Skip other items marked to be hidden from client
-                        if (obj.hideFromClient === true) {
-                            return null;
-                        }
-                        if (obj.type === "text") {
-                            return obj.text;
-                        } else if (obj.type === "image_url") {
-                            const src = obj?.url || obj?.image_url?.url;
-                            const displayFilename =
-                                obj?.displayFilename || obj?.originalFilename;
-
-                            // Use display filename if available, otherwise extract from URL
-                            if (!src) {
-                                return null;
-                            }
-
-                            let filename;
-                            let ext;
-                            try {
-                                filename =
-                                    displayFilename ||
-                                    decodeURIComponent(getFilename(src));
-                                ext = getExtension(src);
-                            } catch (e) {
-                                console.error(
-                                    "Error extracting filename/extension:",
-                                    e,
-                                );
-                                return null;
-                            }
-
-                            // Handle audio files separately (keep existing audio player)
-                            if (isAudioUrl(src)) {
-                                return (
-                                    <audio
-                                        onLoadedData={() =>
-                                            handleMessageLoad(newMessage.id)
-                                        }
-                                        key={`audio-${index}-${index2}`}
-                                        src={src}
-                                        className="max-h-[20%] max-w-[100%] [.docked_&]:max-w-[80%] rounded-md border bg-white p-1 my-2 dark:border-neutral-700 dark:bg-neutral-800 shadow-lg dark:shadow-black/30"
-                                        controls
-                                    />
-                                );
-                            }
-
-                            // Handle document files with MediaCard
-                            if (DOC_EXTENSIONS.includes(ext)) {
                                 return (
                                     <MediaCard
-                                        key={`file-${index}-${index2}`}
-                                        type="file"
-                                        src={src}
-                                        filename={filename}
-                                        onDeleteFile={
-                                            onDeleteFile && t
-                                                ? () =>
-                                                      onDeleteFile(
-                                                          newMessage.id,
-                                                          index2,
-                                                      )
-                                                : undefined
-                                        }
+                                        key={`deleted-file-${index}-${index2}`}
+                                        type={deletedType}
+                                        src={null}
+                                        filename={deletedFilename}
+                                        isDeleted={true}
                                         t={t}
                                     />
                                 );
                             }
 
-                            // Handle videos (including YouTube)
-                            if (isVideoUrl(src)) {
-                                const youtubeEmbedUrl = getYoutubeEmbedUrl(src);
-                                if (youtubeEmbedUrl) {
+                            // Skip other items marked to be hidden from client
+                            if (obj.hideFromClient === true) {
+                                return null;
+                            }
+                            if (obj.type === "text") {
+                                return obj.text;
+                            } else if (obj.type === "image_url") {
+                                const src = obj?.url || obj?.image_url?.url;
+                                const displayFilename =
+                                    obj?.displayFilename ||
+                                    obj?.originalFilename;
+
+                                // Use display filename if available, otherwise extract from URL
+                                if (!src) {
+                                    return null;
+                                }
+
+                                let filename;
+                                let ext;
+                                try {
+                                    filename =
+                                        displayFilename ||
+                                        decodeURIComponent(getFilename(src));
+                                    ext = getExtension(src);
+                                } catch (e) {
+                                    console.error(
+                                        "Error extracting filename/extension:",
+                                        e,
+                                    );
+                                    return null;
+                                }
+
+                                // Handle audio files separately (keep existing audio player)
+                                if (isAudioUrl(src)) {
+                                    return (
+                                        <audio
+                                            onLoadedData={() =>
+                                                handleMessageLoad(newMessage.id)
+                                            }
+                                            key={`audio-${index}-${index2}`}
+                                            src={src}
+                                            className="max-h-[20%] max-w-[100%] [.docked_&]:max-w-[80%] rounded-md border bg-white p-1 my-2 dark:border-neutral-700 dark:bg-neutral-800 shadow-lg dark:shadow-black/30"
+                                            controls
+                                        />
+                                    );
+                                }
+
+                                // Handle document files with MediaCard
+                                if (DOC_EXTENSIONS.includes(ext)) {
                                     return (
                                         <MediaCard
-                                            key={`youtube-${index}-${index2}`}
-                                            type="youtube"
+                                            key={`file-${index}-${index2}`}
+                                            type="file"
                                             src={src}
                                             filename={filename}
-                                            youtubeEmbedUrl={youtubeEmbedUrl}
+                                            onDeleteFile={
+                                                onDeleteFile && t
+                                                    ? () =>
+                                                          onDeleteFile(
+                                                              newMessage.id,
+                                                              index2,
+                                                          )
+                                                    : undefined
+                                            }
+                                            t={t}
+                                        />
+                                    );
+                                }
+
+                                // Handle videos (including YouTube)
+                                if (isVideoUrl(src)) {
+                                    const youtubeEmbedUrl =
+                                        getYoutubeEmbedUrl(src);
+                                    if (youtubeEmbedUrl) {
+                                        return (
+                                            <MediaCard
+                                                key={`youtube-${index}-${index2}`}
+                                                type="youtube"
+                                                src={src}
+                                                filename={filename}
+                                                youtubeEmbedUrl={
+                                                    youtubeEmbedUrl
+                                                }
+                                                onLoad={() =>
+                                                    handleMessageLoad(
+                                                        newMessage.id,
+                                                    )
+                                                }
+                                                onDeleteFile={
+                                                    onDeleteFile && t
+                                                        ? () =>
+                                                              onDeleteFile(
+                                                                  newMessage.id,
+                                                                  index2,
+                                                              )
+                                                        : undefined
+                                                }
+                                                t={t}
+                                            />
+                                        );
+                                    }
+                                    return (
+                                        <MediaCard
+                                            key={`video-${index}-${index2}`}
+                                            type="video"
+                                            src={src}
+                                            filename={filename}
                                             onLoad={() =>
                                                 handleMessageLoad(newMessage.id)
                                             }
@@ -388,10 +420,12 @@ const MessageListContent = React.memo(function MessageListContent({
                                         />
                                     );
                                 }
+
+                                // Handle images
                                 return (
                                     <MediaCard
-                                        key={`video-${index}-${index2}`}
-                                        type="video"
+                                        key={`image-${index}-${index2}`}
+                                        type="image"
                                         src={src}
                                         filename={filename}
                                         onLoad={() =>
@@ -410,35 +444,11 @@ const MessageListContent = React.memo(function MessageListContent({
                                     />
                                 );
                             }
-
-                            // Handle images
-                            return (
-                                <MediaCard
-                                    key={`image-${index}-${index2}`}
-                                    type="image"
-                                    src={src}
-                                    filename={filename}
-                                    onLoad={() =>
-                                        handleMessageLoad(newMessage.id)
-                                    }
-                                    onDeleteFile={
-                                        onDeleteFile && t
-                                            ? () =>
-                                                  onDeleteFile(
-                                                      newMessage.id,
-                                                      index2,
-                                                  )
-                                            : undefined
-                                    }
-                                    t={t}
-                                />
-                            );
+                            return null;
+                        } catch (e) {
+                            console.error("Invalid JSON:", t);
+                            return t;
                         }
-                        return null;
-                    } catch (e) {
-                        console.error("Invalid JSON:", t);
-                        return t;
-                    }
                     })
                     .filter((item) => item !== null); // Remove null items (hidden from client)
 
@@ -449,7 +459,7 @@ const MessageListContent = React.memo(function MessageListContent({
                 let currentGroupData = []; // Track item data for gallery
 
                 arr.forEach((item, idx) => {
-                // Check if item is a MediaCard component (all media types: image, video, youtube, file)
+                    // Check if item is a MediaCard component (all media types: image, video, youtube, file)
                     const isMediaCard =
                         React.isValidElement(item) &&
                         (item.key?.includes("image-") ||
@@ -459,7 +469,7 @@ const MessageListContent = React.memo(function MessageListContent({
 
                     if (isMediaCard) {
                         currentGroup.push(item);
-                    // Extract item data for gallery usage
+                        // Extract item data for gallery usage
                         currentGroupData.push({
                             type: item.props.type,
                             url: item.props.src,
@@ -468,14 +478,17 @@ const MessageListContent = React.memo(function MessageListContent({
                             label: item.props.filename,
                             youtubeEmbedUrl: item.props.youtubeEmbedUrl,
                             messageId: newMessage.id,
-                            payloadIndex: parseInt(item.key?.split("-").pop(), 10),
+                            payloadIndex: parseInt(
+                                item.key?.split("-").pop(),
+                                10,
+                            ),
                             isDeleted: item.props.isDeleted,
                         });
                     } else {
                         if (currentGroup.length > 0) {
-                        // Use gallery for 2+ items, single card for 1 item
+                            // Use gallery for 2+ items, single card for 1 item
                             if (currentGroup.length > 1) {
-                            // Filter out deleted items for gallery
+                                // Filter out deleted items for gallery
                                 const validItems = currentGroupData.filter(
                                     (d) => !d.isDeleted,
                                 );
@@ -498,7 +511,7 @@ const MessageListContent = React.memo(function MessageListContent({
                                         </div>,
                                     );
                                 } else {
-                                // Only 1 valid item + deleted items, render individually
+                                    // Only 1 valid item + deleted items, render individually
                                     grouped.push(
                                         <div
                                             key={`media-group-${idx}`}
@@ -528,7 +541,7 @@ const MessageListContent = React.memo(function MessageListContent({
                 // Add any remaining media group
                 if (currentGroup.length > 0) {
                     if (currentGroup.length > 1) {
-                    // Filter out deleted items for gallery
+                        // Filter out deleted items for gallery
                         const validItems = currentGroupData.filter(
                             (d) => !d.isDeleted,
                         );
@@ -551,7 +564,7 @@ const MessageListContent = React.memo(function MessageListContent({
                                 </div>,
                             );
                         } else {
-                        // Only 1 valid item + deleted items, render individually
+                            // Only 1 valid item + deleted items, render individually
                             grouped.push(
                                 <div
                                     key={`media-group-end`}
@@ -656,6 +669,7 @@ const MessageList = React.memo(
             onSend,
             ephemeralContent,
             toolCalls,
+            inlinePayloadItems,
             conversationModeData,
             thinkingDuration,
             isThinking,
@@ -1224,10 +1238,22 @@ const MessageList = React.memo(
                         </div>
                         <div className="absolute top-3 start-3 flex items-center justify-center w-7 h-7 rounded-full bg-sky-200 dark:bg-sky-900/30 overflow-hidden border-2 border-gray-300 dark:border-gray-700">
                             {user?.picture || user?.profilePicture ? (
-                                <img
+                                <SignedImage
                                     src={user.picture || user.profilePicture}
+                                    blobPath={
+                                        user?.profilePictureBlobPath || null
+                                    }
                                     alt={user?.name || "User"}
                                     className="w-full h-full object-cover"
+                                    fallback={
+                                        user?.initials ? (
+                                            <span className="text-sm font-medium text-sky-600 dark:text-sky-400 leading-none">
+                                                {user.initials}
+                                            </span>
+                                        ) : (
+                                            <span className="h-2 w-2 rounded-full bg-sky-600 dark:bg-sky-400" />
+                                        )
+                                    }
                                 />
                             ) : user?.initials ? (
                                 <span className="text-sm font-medium text-sky-600 dark:text-sky-400 leading-none">
@@ -1329,17 +1355,11 @@ const MessageList = React.memo(
                                     >
                                         <StreamingMessage
                                             content={streamingContent}
-                                            ephemeralContent={ephemeralContent}
-                                            toolCalls={toolCalls}
-                                            conversationModeData={
-                                                conversationModeData
+                                            inlinePayloadItems={
+                                                inlinePayloadItems
                                             }
-                                            bot={bot}
                                             thinkingDuration={thinkingDuration}
                                             isThinking={isThinking}
-                                            selectedEntityId={selectedEntityId}
-                                            entities={entities}
-                                            entityIconSize={entityIconSize}
                                         />
                                     </div>
                                 );

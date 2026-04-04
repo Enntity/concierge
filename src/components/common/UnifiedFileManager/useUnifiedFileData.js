@@ -148,10 +148,7 @@ export function useUnifiedFileData({
         };
     }, [loadFiles, reloadToken]);
 
-    const userPrefix = useMemo(
-        () => (userId ? `${userId}/` : ""),
-        [userId],
-    );
+    const userPrefix = useMemo(() => (userId ? `${userId}/` : ""), [userId]);
 
     const tree = useMemo(
         () => buildFolderTree(files, userPrefix, chatId),

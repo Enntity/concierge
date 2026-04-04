@@ -407,6 +407,52 @@ describe("MessageInput", () => {
         });
     });
 
+    describe("Latency anticipation", () => {
+        it("emits a focus anticipation signal", () => {
+            const mockOnAnticipate = jest.fn();
+            renderMessageInput({
+                onAnticipate: mockOnAnticipate,
+                autoFocus: false,
+            });
+
+            const input = screen.getByPlaceholderText("Send a message");
+            fireEvent.focus(input);
+
+            expect(mockOnAnticipate).toHaveBeenCalledWith({
+                trigger: "focus",
+                text: "",
+            });
+        });
+
+        it("emits a debounced typing anticipation signal", () => {
+            jest.useFakeTimers();
+            const mockOnAnticipate = jest.fn();
+            renderMessageInput({
+                onAnticipate: mockOnAnticipate,
+                autoFocus: false,
+            });
+
+            const input = screen.getByPlaceholderText("Send a message");
+            fireEvent.change(input, { target: { value: "Hello there" } });
+
+            act(() => {
+                jest.advanceTimersByTime(249);
+            });
+            expect(mockOnAnticipate).not.toHaveBeenCalled();
+
+            act(() => {
+                jest.advanceTimersByTime(1);
+            });
+
+            expect(mockOnAnticipate).toHaveBeenCalledWith({
+                trigger: "typing",
+                text: "Hello there",
+            });
+
+            jest.useRealTimers();
+        });
+    });
+
     describe("Pasting functionality", () => {
         it("should handle text paste via default", async () => {
             renderMessageInput();
@@ -836,7 +882,9 @@ describe("MessageInput", () => {
                     JSON.stringify({ type: "text", text: "Test message" }),
                 ]);
             });
-            expect(input.value).toBe("");
+            await waitFor(() => {
+                expect(input.value).toBe("");
+            });
         });
 
         it("should not submit on Enter when loading", () => {
@@ -857,6 +905,35 @@ describe("MessageInput", () => {
 
             expect(mockOnSend).not.toHaveBeenCalled();
             // Optionally check if input value contains newline, though TextareaAutosize might handle actual rendering
+        });
+
+        it("waits for async onSend before clearing the input", async () => {
+            let resolveSend;
+            const asyncOnSend = jest.fn(
+                () =>
+                    new Promise((resolve) => {
+                        resolveSend = resolve;
+                    }),
+            );
+
+            renderMessageInput({ onSend: asyncOnSend });
+            const input = screen.getByPlaceholderText("Send a message");
+            const submitButton = screen.getByTestId("send-button");
+
+            fireEvent.change(input, { target: { value: "Slow send" } });
+            fireEvent.click(submitButton);
+
+            await waitFor(() => {
+                expect(asyncOnSend).toHaveBeenCalledTimes(1);
+            });
+            expect(input.value).toBe("Slow send");
+
+            await act(async () => {
+                resolveSend();
+                await Promise.resolve();
+            });
+
+            expect(input.value).toBe("");
         });
     });
 
@@ -904,7 +981,9 @@ describe("MessageInput", () => {
                     JSON.stringify({ type: "text", text: "Test message" }),
                 ]);
             });
-            expect(input.value).toBe("");
+            await waitFor(() => {
+                expect(input.value).toBe("");
+            });
         });
 
         it("should maintain input value when loading", () => {

@@ -5,6 +5,7 @@ import { LanguageContext } from "../contexts/LanguageProvider";
 import { useTranslation } from "react-i18next";
 import React from "react";
 import { SignOutButton } from "../components/SignOutButton";
+import SignedImage from "../components/common/media/SignedImage";
 
 export default function ProfileDropdown({
     user,
@@ -20,10 +21,16 @@ export default function ProfileDropdown({
             <div>
                 <Menu.Button className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-500 overflow-hidden border-2 border-gray-300 dark:border-gray-600">
                     {user?.profilePicture || user?.picture ? (
-                        <img
+                        <SignedImage
                             src={user.profilePicture || user.picture}
+                            blobPath={user?.profilePictureBlobPath || null}
                             alt={name || "User"}
                             className="w-full h-full object-cover"
+                            fallback={
+                                <span className="text-sm font-medium leading-none text-white">
+                                    {initials}
+                                </span>
+                            }
                         />
                     ) : (
                         <span className="text-sm font-medium leading-none text-white">

@@ -27,9 +27,9 @@ export const useFileUpload = ({
                     serverUrl,
                 });
 
-                    if (data?.url) {
-                        // Create media item in database
-                        const mediaItemData = {
+                if (data?.url) {
+                    // Create media item in database
+                    const mediaItemData = {
                         taskId: `upload-${Date.now()}`,
                         cortexRequestId: `upload-${Date.now()}`,
                         prompt: t("Uploaded image"),

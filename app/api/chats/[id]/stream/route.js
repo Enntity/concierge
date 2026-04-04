@@ -182,6 +182,10 @@ export async function POST(req, { params }) {
                     }
                 };
 
+                // Flush headers/body immediately so the client gets a live SSE response
+                // even if the first backend progress event takes a while to arrive.
+                sendEvent("progress", { progress: 0 });
+
                 const closeStream = () => {
                     if (!clientConnected) return;
                     try {

@@ -27,7 +27,9 @@ export default function Footer() {
     const copyrightText = t("footer_copyright", { year: currentYear });
 
     // Get the provider icon for the current agent model
-    const defaultModelId = agentModels?.find((model) => model.isDefault)?.modelId;
+    const defaultModelId = agentModels?.find(
+        (model) => model.isDefault,
+    )?.modelId;
     const provider = getProviderFromModelId(defaultModelId, agentModels);
 
     const getProviderIcon = () => {

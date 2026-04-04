@@ -78,6 +78,7 @@ function ChatBackgroundSparkles() {
 const ChatMessages = React.memo(function ChatMessages({
     messages = [],
     onSend,
+    onAnticipate,
     loading,
     container,
     displayState,
@@ -87,6 +88,7 @@ const ChatMessages = React.memo(function ChatMessages({
     streamingContent,
     ephemeralContent,
     toolCalls,
+    inlinePayloadItems,
     conversationModeData,
     isStreaming,
     onStopStreaming,
@@ -145,6 +147,7 @@ const ChatMessages = React.memo(function ChatMessages({
                     aiName={aiName}
                     ephemeralContent={ephemeralContent}
                     toolCalls={toolCalls}
+                    inlinePayloadItems={inlinePayloadItems}
                     conversationModeData={conversationModeData}
                     thinkingDuration={thinkingDuration}
                     isThinking={isThinking}
@@ -165,6 +168,7 @@ const ChatMessages = React.memo(function ChatMessages({
                     container={container}
                     displayState={displayState}
                     onSend={handleSendCallback}
+                    onAnticipate={onAnticipate}
                     isStreaming={isStreaming}
                     onStopStreaming={onStopStreaming}
                     isEntityUnavailable={isEntityUnavailable}

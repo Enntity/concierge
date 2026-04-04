@@ -76,8 +76,7 @@ export async function DELETE(req, { params }) {
         }
 
         const blobPath =
-            mediaItem.blobPath ||
-            extractBlobPathFromUrl(mediaItem.url);
+            mediaItem.blobPath || extractBlobPathFromUrl(mediaItem.url);
         const filename =
             mediaItem.filename || getFilenameFromBlobPath(blobPath);
         const storageTarget =

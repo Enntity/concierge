@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import {
     Dialog,
     DialogContent,
@@ -11,6 +11,8 @@ import { Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFilePreview, renderFilePreview } from "../../chat/useFilePreview";
 import { downloadSingleFile } from "../../../utils/fileDownloadUtils";
 import { cn } from "@/lib/utils";
+import { useSignedFileUrl } from "../../../hooks/useSignedFileUrl";
+import SignedImage from "./SignedImage";
 
 /**
  * MediaZoomDialog - Fullscreen dialog for viewing media
@@ -55,12 +57,20 @@ function MediaZoomDialog({
     className = "",
     children,
 }) {
+    const rawUrl = item?.url;
+    const { url: resolvedUrl, refreshOnError } = useSignedFileUrl({
+        url: rawUrl,
+        blobPath: item?.blobPath || null,
+    });
+
     // File type detection for file items
     const fileType = useFilePreview(
-        item?.type === "file" ? item?.url : null,
+        item?.type === "file" ? resolvedUrl || rawUrl : null,
         item?.label,
         item?.mimeType,
     );
+
+    const itemUrl = resolvedUrl || rawUrl;
 
     const hasMultiple = items.length > 1;
     const shouldShowNav = showNavigation ?? hasMultiple;
@@ -91,7 +101,7 @@ function MediaZoomDialog({
         e?.stopPropagation?.();
         if (onDownload) {
             onDownload(item);
-        } else if (item?.url) {
+        } else if (itemUrl) {
             // Use display filename, falling back through various property names
             const filename =
                 item.displayFilename ||
@@ -100,9 +110,19 @@ function MediaZoomDialog({
                 item.filename ||
                 item.name ||
                 "download";
-            await downloadSingleFile(item.url, filename);
+            await downloadSingleFile(itemUrl, filename);
         }
     };
+
+    const handleMediaError = useCallback(
+        async (event) => {
+            const refreshedUrl = await refreshOnError();
+            if (!refreshedUrl) {
+                event?.preventDefault?.();
+            }
+        },
+        [refreshOnError],
+    );
 
     // Determine dialog title for accessibility
     const getTitle = () => {
@@ -145,8 +165,9 @@ function MediaZoomDialog({
         // Image
         if (type === "image") {
             return (
-                <img
-                    src={url}
+                <SignedImage
+                    src={itemUrl}
+                    blobPath={item?.blobPath || null}
                     alt={label || t("Image")}
                     className="max-w-full max-h-[80vh] w-auto h-auto object-contain rounded-lg"
                 />
@@ -157,18 +178,19 @@ function MediaZoomDialog({
         if (type === "video") {
             return (
                 <video
-                    src={url}
+                    src={itemUrl}
                     controls
                     autoPlay
                     className="max-w-full max-h-[80vh] w-auto h-auto rounded-lg"
                     preload="metadata"
+                    onError={handleMediaError}
                 />
             );
         }
 
         // YouTube
         if (type === "youtube") {
-            const embedUrl = youtubeEmbedUrl || url;
+            const embedUrl = youtubeEmbedUrl || itemUrl;
             const autoplayUrl = embedUrl
                 ? `${embedUrl}${embedUrl.includes("?") ? "&" : "?"}autoplay=1`
                 : embedUrl;
@@ -190,9 +212,9 @@ function MediaZoomDialog({
         }
 
         // File
-        if (type === "file" && url) {
+        if (type === "file" && itemUrl) {
             const preview = renderFilePreview({
-                src: url,
+                src: itemUrl,
                 filename: label,
                 fileType,
                 className:
@@ -210,7 +232,7 @@ function MediaZoomDialog({
     // Should show download button?
     const canDownload =
         showDownload &&
-        item?.url &&
+        itemUrl &&
         item?.type !== "youtube" &&
         item?.type !== "text";
 

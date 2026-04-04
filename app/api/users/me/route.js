@@ -1,10 +1,6 @@
 import { getCurrentUser } from "../../utils/auth";
+import { refreshManagedImage } from "../../entities/avatar-refresh.js";
 import {
-    findMediaServiceFile,
-    listFilesFromMediaService,
-} from "../../utils/media-service-utils.js";
-import {
-    createProfileStorageTarget,
     extractBlobPathFromUrl,
     getFilenameFromBlobPath,
 } from "../../../../src/utils/storageTargets.js";
@@ -22,19 +18,22 @@ async function serializeUser(user) {
     }
 
     try {
-        const files = await listFilesFromMediaService({
-            storageTarget: createProfileStorageTarget(user.contextId),
-        });
-        const profileFile = findMediaServiceFile(files, {
+        const refreshedProfilePicture = await refreshManagedImage({
+            url: userJson.profilePicture,
             blobPath,
             filename,
         });
 
-        if (profileFile?.url) {
-            userJson.profilePicture = profileFile.url;
-        }
+        userJson.profilePicture = refreshedProfilePicture?.url || null;
+        userJson.profilePictureBlobPath =
+            refreshedProfilePicture?.blobPath ||
+            userJson.profilePictureBlobPath;
+        userJson.profilePictureFilename =
+            refreshedProfilePicture?.filename ||
+            userJson.profilePictureFilename;
     } catch (error) {
         console.warn("Failed to refresh profile picture URL:", error.message);
+        userJson.profilePicture = null;
     }
 
     return userJson;

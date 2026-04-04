@@ -108,6 +108,7 @@ function ImageTile({
         ? {
               type: image.type || "image",
               url,
+              blobPath: image?.blobPath || null,
               label: prompt,
           }
         : null;
@@ -215,17 +216,18 @@ function ImageTile({
                                 setShowErrorDialog={setShowErrorDialog}
                             />
                         )}
-                        {!isSafetyBlocked && (code || actualErrorMessage || isFailed) && (
-                            <OtherError
-                                t={t}
-                                message={message}
-                                error={error}
-                                result={result}
-                                image={image}
-                                onRegenerate={onRegenerate}
-                                setShowErrorDialog={setShowErrorDialog}
-                            />
-                        )}
+                        {!isSafetyBlocked &&
+                            (code || actualErrorMessage || isFailed) && (
+                                <OtherError
+                                    t={t}
+                                    message={message}
+                                    error={error}
+                                    result={result}
+                                    image={image}
+                                    onRegenerate={onRegenerate}
+                                    setShowErrorDialog={setShowErrorDialog}
+                                />
+                            )}
                         {(expired || loadError) && hasValidUrl && (
                             <ExpiredImageComponent
                                 t={t}
@@ -402,10 +404,14 @@ function ErrorTileCard({
 function BadRequestError({ t, setShowErrorDialog }) {
     return (
         <ErrorTileCard
-            icon={<ShieldAlert className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
+            icon={
+                <ShieldAlert className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            }
             eyebrow={t("Safety")}
             title={t("Blocked by model safety")}
-            description={t("This prompt was blocked by the model safety filter.")}
+            description={t(
+                "This prompt was blocked by the model safety filter.",
+            )}
             hint={t("Try a less explicit prompt or adjust the request.")}
             onClick={(e) => {
                 e.stopPropagation();
@@ -445,7 +451,9 @@ function OtherError({
 
     return (
         <ErrorTileCard
-            icon={<AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />}
+            icon={
+                <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            }
             eyebrow={t("Error")}
             title={t("Generation failed")}
             description={actualErrorMessage}
@@ -524,13 +532,17 @@ function NoImageError({
 
     return (
         <ErrorTileCard
-            icon={<AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />}
+            icon={
+                <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            }
             eyebrow={t("Error")}
             title={t("No media returned")}
             description={actualErrorMessage}
             hint={
                 image.type === "video"
-                    ? t("Try a different prompt if the provider returned no output.")
+                    ? t(
+                          "Try a different prompt if the provider returned no output.",
+                      )
                     : t("Try regenerating or open details for the full error.")
             }
             onClick={(e) => {

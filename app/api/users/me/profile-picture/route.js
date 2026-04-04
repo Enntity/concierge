@@ -80,8 +80,7 @@ export async function POST(request) {
         }
 
         const { data } = uploadResult;
-        const nextBlobPath =
-            data.blobPath || extractBlobPathFromUrl(data.url);
+        const nextBlobPath = data.blobPath || extractBlobPathFromUrl(data.url);
         const nextFilename =
             data.filename || getFilenameFromBlobPath(nextBlobPath);
 
