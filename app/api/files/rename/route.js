@@ -88,6 +88,7 @@ export async function POST(request) {
             },
             body: JSON.stringify({
                 ...routingParams,
+                blobPath,
                 filename,
                 newFilename: newFilename.trim(),
             }),

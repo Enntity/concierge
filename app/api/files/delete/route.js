@@ -73,6 +73,9 @@ export async function DELETE(request) {
 
         const deleteUrl = new URL(mediaHelperUrl);
         deleteUrl.searchParams.set("filename", filename);
+        if (blobPath) {
+            deleteUrl.searchParams.set("blobPath", blobPath);
+        }
         for (const [key, value] of Object.entries(routingParams)) {
             deleteUrl.searchParams.set(key, value);
         }

@@ -79,7 +79,10 @@ export async function deleteFileFromMediaService({
     });
     const deleteUrl = new URL(mediaHelperUrl);
     deleteUrl.searchParams.set("filename", resolvedFilename);
-    appendQueryParams(deleteUrl, routingParams);
+    appendQueryParams(deleteUrl, {
+        ...routingParams,
+        blobPath,
+    });
 
     const response = await fetch(deleteUrl.toString(), {
         method: "DELETE",
@@ -340,6 +343,7 @@ export async function renameFileInMediaService({
         },
         body: JSON.stringify({
             ...routingParams,
+            blobPath,
             filename: resolvedFilename,
             newFilename,
         }),
