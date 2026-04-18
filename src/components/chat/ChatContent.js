@@ -32,6 +32,10 @@ import {
     appendDraftPayloadToConversation,
     buildModelPayloadFromStoredPayload,
 } from "../../utils/assistantInlinePayload";
+import {
+    createEmptySpeculativePreparation,
+    shouldTriggerPostReplyAnticipation,
+} from "./chatAnticipation";
 
 const contextMessageCount = 50;
 
@@ -128,6 +132,9 @@ function ChatContent({
     const anticipationRequestRef = useRef(null);
     const streamHandshakeRef = useRef(null);
     const sendStartingRef = useRef(false);
+    const pendingPostReplyAnticipationRef = useRef(false);
+    const postReplyAnticipationRef = useRef("");
+    const speculativePreparationRef = useRef(createEmptySpeculativePreparation());
 
     // Check file URLs in the background and replace missing files with placeholders
     const checkedFilesRef = useRef({ checked: new Set(), chatId: null });
@@ -329,6 +336,12 @@ function ChatContent({
         checkFiles();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [memoizedMessages, chatId, viewingReadOnlyChat, t, updateChatHook]);
+
+    useEffect(() => {
+        pendingPostReplyAnticipationRef.current = false;
+        postReplyAnticipationRef.current = "";
+        speculativePreparationRef.current = createEmptySpeculativePreparation();
+    }, [chatId]);
 
     const { showOverlay, hideOverlay } = useEntityOverlay();
 
@@ -592,6 +605,7 @@ function ChatContent({
             const dedupeKey = [
                 chatId,
                 currentSelectedEntityId,
+                trigger,
                 normalizedText,
             ].join("::");
             const now = Date.now();
@@ -646,6 +660,20 @@ function ChatContent({
                     trigger,
                 }),
             })
+                .then(async (response) => {
+                    if (!response.ok) {
+                        throw new Error(
+                            `Warmup request failed: ${response.status}`,
+                        );
+                    }
+                    const payload = await response.json();
+                    speculativePreparationRef.current = {
+                        chatId,
+                        entityId: currentSelectedEntityId,
+                        anticipation: payload?.anticipation || null,
+                        timestamp: Date.now(),
+                    };
+                })
                 .catch((error) => {
                     if (error?.name === "AbortError") {
                         return;
@@ -690,6 +718,7 @@ function ChatContent({
             let handshakeTimeout = null;
             try {
                 sendStartingRef.current = true;
+                pendingPostReplyAnticipationRef.current = false;
                 anticipationRequestRef.current?.abort();
                 anticipationRequestRef.current = null;
 
@@ -779,6 +808,17 @@ function ChatContent({
                 const currentEntity = entities?.find(
                     (e) => e.id === currentSelectedEntityId,
                 );
+                const speculativePreparation =
+                    speculativePreparationRef.current.chatId === chatId &&
+                    speculativePreparationRef.current.entityId ===
+                        currentSelectedEntityId &&
+                    Date.now() - speculativePreparationRef.current.timestamp <
+                        60000 &&
+                    speculativePreparationRef.current.anticipation
+                        ? JSON.stringify(
+                              speculativePreparationRef.current.anticipation,
+                          )
+                        : "";
 
                 // POST to stream endpoint with conversation data
                 controller = new AbortController();
@@ -800,6 +840,7 @@ function ChatContent({
                         title: chat?.title,
                         entityId: currentSelectedEntityId,
                         userInfo,
+                        speculativePreparation,
                     }),
                 });
                 clearTimeout(handshakeTimeout);
@@ -818,6 +859,7 @@ function ChatContent({
                 setIsStreaming(true);
                 setSubscriptionId(response.clone()); // Clone to allow reading the stream
                 sendStartingRef.current = false;
+                pendingPostReplyAnticipationRef.current = true;
 
                 return;
             } catch (error) {
@@ -825,6 +867,7 @@ function ChatContent({
                     clearTimeout(handshakeTimeout);
                 }
                 sendStartingRef.current = false;
+                pendingPostReplyAnticipationRef.current = false;
                 if (streamHandshakeRef.current === controller) {
                     streamHandshakeRef.current = null;
                 }
@@ -900,6 +943,35 @@ function ChatContent({
         isEntityUnavailable,
         isStreaming,
         selectedEntityIdFromProp,
+        viewingReadOnlyChat,
+    ]);
+
+    useEffect(() => {
+        const latestMessage = memoizedMessages[memoizedMessages.length - 1];
+        const { assistantKey, shouldTrigger } =
+            shouldTriggerPostReplyAnticipation({
+                chatId,
+                latestMessage,
+                viewingReadOnlyChat,
+                isEntityUnavailable,
+                isStreaming,
+                hasPendingReply: pendingPostReplyAnticipationRef.current,
+                previousAssistantKey: postReplyAnticipationRef.current,
+            });
+
+        if (!assistantKey || !shouldTrigger) {
+            return;
+        }
+
+        postReplyAnticipationRef.current = assistantKey;
+        pendingPostReplyAnticipationRef.current = false;
+        handleAnticipate({ trigger: "post_reply", text: "" });
+    }, [
+        chatId,
+        handleAnticipate,
+        isEntityUnavailable,
+        isStreaming,
+        memoizedMessages,
         viewingReadOnlyChat,
     ]);
 

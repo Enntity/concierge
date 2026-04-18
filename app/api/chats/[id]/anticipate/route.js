@@ -33,6 +33,7 @@ export async function POST(req, { params }) {
             entityId,
             userInfo,
             text,
+            trigger,
         } = body || {};
 
         const finalEntityId = entityId || chat.selectedEntityId || "";
@@ -56,6 +57,7 @@ export async function POST(req, { params }) {
                 stream: false,
                 entityId: finalEntityId,
                 userInfo,
+                trigger: typeof trigger === "string" ? trigger : "",
                 requestedOutput: "latency_prepare",
             },
             fetchPolicy: "network-only",

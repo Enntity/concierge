@@ -71,6 +71,7 @@ export async function POST(req, { params }) {
             title,
             entityId,
             userInfo,
+            speculativePreparation,
         } = body;
 
         // Require conversation for new streams
@@ -118,6 +119,10 @@ export async function POST(req, { params }) {
                 stream: true,
                 entityId: finalEntityId,
                 userInfo,
+                speculativePreparation:
+                    typeof speculativePreparation === "string"
+                        ? speculativePreparation
+                        : "",
             },
             fetchPolicy: "network-only",
         });

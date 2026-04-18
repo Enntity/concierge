@@ -189,7 +189,9 @@ const SYS_ENTITY_RUNTIME = gql`
         $userInfo: String
         $useMemory: Boolean
         $invocationType: String
+        $trigger: String
         $requestedOutput: String
+        $speculativePreparation: String
     ) {
         sys_entity_runtime(
             chatHistory: $chatHistory
@@ -205,7 +207,9 @@ const SYS_ENTITY_RUNTIME = gql`
             userInfo: $userInfo
             useMemory: $useMemory
             invocationType: $invocationType
+            trigger: $trigger
             requestedOutput: $requestedOutput
+            speculativePreparation: $speculativePreparation
         ) {
             result
             resultData
