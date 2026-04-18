@@ -6,6 +6,24 @@ import { getClient, MUTATIONS } from "../../../../src/graphql";
 import { triggerPulseReschedule } from "../_pulse";
 import { encrypt } from "../../utils/crypto";
 
+function sanitizeEntityForClient(entity = {}) {
+    const sanitized = { ...entity };
+
+    if (sanitized.secrets) {
+        sanitized.secretKeys = Object.keys(sanitized.secrets);
+        delete sanitized.secrets;
+    }
+
+    if (sanitized.workspace && typeof sanitized.workspace === "object") {
+        const workspace = { ...sanitized.workspace };
+        delete workspace.secret;
+        delete workspace.bootstrapSecret;
+        sanitized.workspace = workspace;
+    }
+
+    return sanitized;
+}
+
 /**
  * GET /api/entities/[entityId]
  * Get a single entity by ID
@@ -55,12 +73,9 @@ export async function GET(req, { params }) {
             }
 
             const { _id, ...entityData } = entity;
-            // Strip encrypted secret values — only expose key names
-            if (entityData.secrets) {
-                entityData.secretKeys = Object.keys(entityData.secrets);
-                delete entityData.secrets;
-            }
-            const refreshedEntity = await refreshEntityAvatar(entityData);
+            const refreshedEntity = await refreshEntityAvatar(
+                sanitizeEntityForClient(entityData),
+            );
             return NextResponse.json(refreshedEntity);
         } finally {
             if (client) {
@@ -497,12 +512,6 @@ export async function PATCH(req, { params }) {
 
                 const { _id, ...entityData } = updatedEntity;
 
-                // Strip encrypted secret values — only expose key names
-                if (entityData.secrets) {
-                    entityData.secretKeys = Object.keys(entityData.secrets);
-                    delete entityData.secrets;
-                }
-
                 // Trigger pulse reschedule if any pulse fields were updated
                 const pulseFieldsUpdated = parsed.updatedProperties?.some((p) =>
                     p.startsWith("pulse"),
@@ -518,7 +527,7 @@ export async function PATCH(req, { params }) {
 
                 return NextResponse.json({
                     success: true,
-                    entity: entityData,
+                    entity: sanitizeEntityForClient(entityData),
                     updatedProperties: parsed.updatedProperties,
                 });
             } finally {

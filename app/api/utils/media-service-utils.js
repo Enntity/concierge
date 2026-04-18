@@ -42,6 +42,21 @@ function getMediaHelperUrl() {
     return mediaHelperUrl;
 }
 
+function getMediaHelperAuthHeaders(headers = {}) {
+    const authHeaders = { ...headers };
+    const rawApiKeys = String(process.env.CORTEX_API_KEY || "").trim();
+    const apiKey = rawApiKeys
+        .split(",")
+        .map((value) => value.trim())
+        .find(Boolean);
+
+    if (apiKey && !authHeaders.Authorization) {
+        authHeaders.Authorization = `Bearer ${apiKey}`;
+    }
+
+    return authHeaders;
+}
+
 function appendQueryParams(url, params = {}) {
     for (const [key, value] of Object.entries(params)) {
         if (value != null && value !== "") {
@@ -86,9 +101,9 @@ export async function deleteFileFromMediaService({
 
     const response = await fetch(deleteUrl.toString(), {
         method: "DELETE",
-        headers: {
+        headers: getMediaHelperAuthHeaders({
             "Content-Type": "application/json",
-        },
+        }),
     });
 
     if (response.status === 404) {
@@ -115,9 +130,9 @@ export async function deletePrefixFromMediaService(prefix) {
 
     const response = await fetch(deleteUrl.toString(), {
         method: "DELETE",
-        headers: {
+        headers: getMediaHelperAuthHeaders({
             "Content-Type": "application/json",
-        },
+        }),
     });
 
     if (!response.ok) {
@@ -151,7 +166,9 @@ export async function listFilesFromMediaService({
     listUrl.searchParams.set("operation", "listFolder");
     appendQueryParams(listUrl, listParams);
 
-    const response = await fetch(listUrl.toString());
+    const response = await fetch(listUrl.toString(), {
+        headers: getMediaHelperAuthHeaders(),
+    });
     if (!response.ok) {
         await throwMediaServiceError(response, "Failed to list files");
     }
@@ -187,6 +204,7 @@ export async function signFileFromMediaService({
 
     const response = await fetch(signUrl.toString(), {
         method: "GET",
+        headers: getMediaHelperAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -250,6 +268,7 @@ export async function uploadBufferToMediaService(
 
         const uploadResponse = await fetch(mediaHelperUrl, {
             method: "POST",
+            headers: getMediaHelperAuthHeaders(),
             body: uploadFormData,
         });
 
@@ -303,6 +322,7 @@ export async function importUrlToMediaService(remoteUrl, options = {}) {
 
     const response = await fetch(importUrl.toString(), {
         method: "GET",
+        headers: getMediaHelperAuthHeaders(),
     });
 
     if (!response.ok) {
@@ -338,9 +358,9 @@ export async function renameFileInMediaService({
 
     const response = await fetch(renameUrl.toString(), {
         method: "POST",
-        headers: {
+        headers: getMediaHelperAuthHeaders({
             "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify({
             ...routingParams,
             blobPath,

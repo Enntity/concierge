@@ -4,6 +4,24 @@ import { getEntitiesCollection, isValidEntityId } from "./_lib";
 import { refreshEntityAvatar } from "./avatar-refresh.js";
 import { getClient, QUERIES } from "../../../src/graphql";
 
+function sanitizeEntityForClient(entity = {}) {
+    const sanitized = { ...entity };
+
+    if (sanitized.secrets) {
+        sanitized.secretKeys = Object.keys(sanitized.secrets);
+        delete sanitized.secrets;
+    }
+
+    if (sanitized.workspace && typeof sanitized.workspace === "object") {
+        const workspace = { ...sanitized.workspace };
+        delete workspace.secret;
+        delete workspace.bootstrapSecret;
+        sanitized.workspace = workspace;
+    }
+
+    return sanitized;
+}
+
 /**
  * GET /api/entities
  * Get all entities for the current user via cortex sys_get_entities pathway
@@ -137,12 +155,9 @@ async function getEntityFromMongoDB(entityId, contextId) {
         }
 
         const { _id, ...entityData } = entity;
-        // Strip encrypted secret values — only expose key names
-        if (entityData.secrets) {
-            entityData.secretKeys = Object.keys(entityData.secrets);
-            delete entityData.secrets;
-        }
-        const refreshedEntity = await refreshEntityAvatar(entityData);
+        const refreshedEntity = await refreshEntityAvatar(
+            sanitizeEntityForClient(entityData),
+        );
         return NextResponse.json([refreshedEntity]); // Always return array for consistency
     } finally {
         if (client) {
@@ -192,12 +207,9 @@ async function getEntitiesFromMongoDB(contextId, includeSystem) {
         const entities = await Promise.all(
             entitiesArray.map(async (e) => {
                 const { _id, ...entityData } = e;
-                // Strip encrypted secret values — only expose key names
-                if (entityData.secrets) {
-                    entityData.secretKeys = Object.keys(entityData.secrets);
-                    delete entityData.secrets;
-                }
-                return refreshEntityAvatar(entityData);
+                return refreshEntityAvatar(
+                    sanitizeEntityForClient(entityData),
+                );
             }),
         );
 

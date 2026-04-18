@@ -5,6 +5,22 @@ import { INVALID_FILENAME_CHARS } from "../../../../src/utils/fileDownloadUtils.
 import { resolveAuthorizedMediaRouting } from "../../utils/file-route-utils.js";
 import { getFilenameFromBlobPath } from "../../../../src/utils/storageTargets.js";
 
+function getMediaHelperHeaders() {
+    const headers = {
+        "Content-Type": "application/json",
+    };
+    const apiKey = String(process.env.CORTEX_API_KEY || "")
+        .split(",")
+        .map((value) => value.trim())
+        .find(Boolean);
+
+    if (apiKey) {
+        headers.Authorization = `Bearer ${apiKey}`;
+    }
+
+    return headers;
+}
+
 /**
  * POST /api/files/rename
  * Rename a file in folder-backed storage.
@@ -83,9 +99,7 @@ export async function POST(request) {
 
         const renameResponse = await fetch(renameUrl.toString(), {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: getMediaHelperHeaders(),
             body: JSON.stringify({
                 ...routingParams,
                 blobPath,

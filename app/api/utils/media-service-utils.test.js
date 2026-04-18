@@ -9,6 +9,7 @@ jest.mock("../../../config/index.js", () => ({
 
 describe("media-service-utils", () => {
     beforeEach(() => {
+        process.env.CORTEX_API_KEY = "test-key";
         global.fetch = jest.fn().mockResolvedValue({
             ok: true,
             status: 200,
@@ -22,6 +23,7 @@ describe("media-service-utils", () => {
 
     afterEach(() => {
         jest.resetModules();
+        delete process.env.CORTEX_API_KEY;
         delete global.fetch;
     });
 
@@ -47,6 +49,7 @@ describe("media-service-utils", () => {
             "user-1/global/report.pdf",
         );
         expect(options.method).toBe("DELETE");
+        expect(options.headers.Authorization).toBe("Bearer test-key");
     });
 
     test("renameFileInMediaService forwards blobPath when available", async () => {
@@ -72,5 +75,6 @@ describe("media-service-utils", () => {
         expect(body.blobPath).toBe("user-1/global/report.pdf");
         expect(body.filename).toBe("report.pdf");
         expect(body.newFilename).toBe("renamed.pdf");
+        expect(options.headers.Authorization).toBe("Bearer test-key");
     });
 });

@@ -7,6 +7,22 @@ import {
     getFilenameFromBlobPath,
 } from "../../../../src/utils/storageTargets.js";
 
+function getMediaHelperHeaders() {
+    const headers = {
+        "Content-Type": "application/json",
+    };
+    const apiKey = String(process.env.CORTEX_API_KEY || "")
+        .split(",")
+        .map((value) => value.trim())
+        .find(Boolean);
+
+    if (apiKey) {
+        headers.Authorization = `Bearer ${apiKey}`;
+    }
+
+    return headers;
+}
+
 /**
  * DELETE /api/files/delete
  * Delete a file from cloud storage using CFH (cortex-file-handler)
@@ -82,9 +98,7 @@ export async function DELETE(request) {
 
         const deleteResponse = await fetch(deleteUrl.toString(), {
             method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: getMediaHelperHeaders(),
         });
 
         if (!deleteResponse.ok) {
